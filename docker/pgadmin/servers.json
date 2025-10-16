@@ -1,0 +1,15 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "Bagizi PostgreSQL",
+      "Group": "Development",
+      "Host": "postgres",
+      "Port": 5432,
+      "MaintenanceDB": "bagizi_db",
+      "Username": "bagizi_user",
+      "Password": "bagizi_password",
+      "SSLMode": "prefer",
+      "Comment": "Bagizi-ID SaaS Platform Database"
+    }
+  }
+}

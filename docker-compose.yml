@@ -1,0 +1,96 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:17-alpine
+    container_name: bagizi-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: bagizi_db
+      POSTGRES_USER: bagizi_user
+      POSTGRES_PASSWORD: bagizi_password
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d
+    ports:
+      - "5432:5432"
+    networks:
+      - bagizi-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bagizi_user -d bagizi_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # pgAdmin for Database Management
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: bagizi-pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@bagizi.id
+      PGADMIN_DEFAULT_PASSWORD: bagizi_admin
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: 'False'
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+      - ./docker/pgadmin/servers.json:/pgadmin4/servers.json:ro
+    ports:
+      - "5050:80"
+    networks:
+      - bagizi-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: bagizi-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass bagizi_redis_password
+    volumes:
+      - redis_data:/data
+      - ./docker/redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    ports:
+      - "6379:6379"
+    networks:
+      - bagizi-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # Redis Commander (Optional - Redis GUI)
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: bagizi-redis-commander
+    restart: unless-stopped
+    environment:
+      - REDIS_HOSTS=local:bagizi-redis:6379:0:bagizi_redis_password
+      - HTTP_USER=admin
+      - HTTP_PASSWORD=bagizi_redis_admin
+    ports:
+      - "8081:8081"
+    networks:
+      - bagizi-network
+    depends_on:
+      redis:
+        condition: service_healthy
+
+# Volumes
+volumes:
+  postgres_data:
+    driver: local
+  pgadmin_data:
+    driver: local
+  redis_data:
+    driver: local
+
+# Networks
+networks:
+  bagizi-network:
+    driver: bridge
