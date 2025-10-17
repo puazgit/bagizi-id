@@ -17,9 +17,11 @@ import { ProductionStatus } from '@prisma/client'
  */
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
+    
     const session = await auth()
     if (!session?.user?.sppgId) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 })
@@ -33,7 +35,7 @@ export async function PATCH(
     // Check if production exists and belongs to user's SPPG
     const existing = await db.foodProduction.findUnique({
       where: {
-        id: params.id,
+        id,
         sppgId: session.user.sppgId,
       },
     })
@@ -100,7 +102,7 @@ export async function PATCH(
     // Update production
     const production = await db.foodProduction.update({
       where: {
-        id: params.id,
+        id,
       },
       data: updateData,
       include: {

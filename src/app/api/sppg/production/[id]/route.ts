@@ -15,9 +15,11 @@ import { db } from '@/lib/prisma'
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
+    
     const session = await auth()
     if (!session?.user?.sppgId) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 })
@@ -30,7 +32,7 @@ export async function GET(
 
     const production = await db.foodProduction.findUnique({
       where: {
-        id: params.id,
+        id,
         sppgId: session.user.sppgId,
       },
       include: {
@@ -101,9 +103,11 @@ export async function GET(
  */
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
+    
     const session = await auth()
     if (!session?.user?.sppgId) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 })
@@ -117,7 +121,7 @@ export async function PATCH(
     // Check if production exists and belongs to user's SPPG
     const existing = await db.foodProduction.findUnique({
       where: {
-        id: params.id,
+        id,
         sppgId: session.user.sppgId,
       },
     })
@@ -139,7 +143,7 @@ export async function PATCH(
     // Update production
     const production = await db.foodProduction.update({
       where: {
-        id: params.id,
+        id,
       },
       data: {
         programId: body.programId,
@@ -202,9 +206,11 @@ export async function PATCH(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
+    
     const session = await auth()
     if (!session?.user?.sppgId) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 })
@@ -218,7 +224,7 @@ export async function DELETE(
     // Check if production exists and belongs to user's SPPG
     const existing = await db.foodProduction.findUnique({
       where: {
-        id: params.id,
+        id,
         sppgId: session.user.sppgId,
       },
     })
@@ -230,7 +236,7 @@ export async function DELETE(
     // Delete production (cascade will handle quality checks)
     await db.foodProduction.delete({
       where: {
-        id: params.id,
+        id,
       },
     })
 

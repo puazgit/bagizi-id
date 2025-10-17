@@ -15,9 +15,11 @@ import { db } from '@/lib/prisma'
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
+    
     const session = await auth()
     if (!session?.user?.sppgId) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 })
@@ -31,7 +33,7 @@ export async function GET(
     // Check if production exists and belongs to user's SPPG
     const production = await db.foodProduction.findUnique({
       where: {
-        id: params.id,
+        id,
         sppgId: session.user.sppgId,
       },
     })
@@ -43,7 +45,7 @@ export async function GET(
     // Get quality checks
     const qualityChecks = await db.qualityControl.findMany({
       where: {
-        productionId: params.id,
+        productionId: id,
       },
       orderBy: {
         checkTime: 'desc',
@@ -72,9 +74,11 @@ export async function GET(
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
+    
     const session = await auth()
     if (!session?.user?.sppgId) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 })
@@ -88,7 +92,7 @@ export async function POST(
     // Check if production exists and belongs to user's SPPG
     const production = await db.foodProduction.findUnique({
       where: {
-        id: params.id,
+        id,
         sppgId: session.user.sppgId,
       },
     })
@@ -102,7 +106,7 @@ export async function POST(
     // Create quality check (using actual schema fields)
     const qualityCheck = await db.qualityControl.create({
       data: {
-        productionId: params.id,
+        productionId: id,
         checkType: body.checkType || 'GENERAL',
         checkTime: body.checkTime ? new Date(body.checkTime) : new Date(),
         checkedBy: body.checkedBy || session.user.id,
@@ -122,7 +126,7 @@ export async function POST(
     if (!body.passed && production.status === 'QUALITY_CHECK') {
       await db.foodProduction.update({
         where: {
-          id: params.id,
+          id,
         },
         data: {
           status: 'CANCELLED',
@@ -136,7 +140,7 @@ export async function POST(
     if (body.passed && production.status === 'QUALITY_CHECK') {
       await db.foodProduction.update({
         where: {
-          id: params.id,
+          id,
         },
         data: {
           status: 'COMPLETED',

@@ -19,17 +19,17 @@ export type { ProductionStatus, FoodProduction, QualityControl, NutritionMenu, N
 export interface ProductionWithRelations extends FoodProduction {
   sppg?: {
     id: string
-    sppgName: string
-    sppgCode: string
+    name: string
+    code: string
   }
   program?: {
     id: string
-    programName: string
+    name: string
   }
   menu?: {
     id: string
-    menuName: string
-    menuCode: string
+    name: string
+    code: string
     mealType: string
     servingSize: number
   }
@@ -99,7 +99,7 @@ export interface QualityCheckWithProduction extends QualityControl {
     id: string
     batchNumber: string
     menu?: {
-      menuName: string
+      name: string
     }
   }
 }
@@ -151,7 +151,7 @@ export interface RecipeStep {
  */
 export interface Recipe {
   menuId: string
-  menuName: string
+  menuName: string  // Keep as menuName for display purposes
   servingSize: number
   ingredients: RecipeIngredient[]
   steps: RecipeStep[]

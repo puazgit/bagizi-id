@@ -41,8 +41,34 @@ const QUERY_KEYS = {
 export function useProductions(filters: ProductionFilters = {}) {
   return useQuery({
     queryKey: QUERY_KEYS.list(filters),
-    queryFn: () => productionApi.getAll(filters),
-    select: (response) => response.data,
+    queryFn: async () => {
+      try {
+        console.log('[useProductions] Fetching with filters:', filters)
+        const response = await productionApi.getAll(filters)
+        console.log('[useProductions] API Response:', response)
+        
+        // Validate response structure
+        if (!response || typeof response !== 'object') {
+          console.error('[useProductions] Invalid response structure:', response)
+          throw new Error('Invalid response from API')
+        }
+        
+        if (!response.success) {
+          console.error('[useProductions] API returned error:', response.error)
+          throw new Error(response.error || 'API request failed')
+        }
+        
+        return response
+      } catch (error) {
+        console.error('[useProductions] Fetch error:', error)
+        throw error
+      }
+    },
+    select: (response) => {
+      console.log('[useProductions] Select response:', response)
+      console.log('[useProductions] Extracted data:', response?.data)
+      return response?.data || []
+    },
     staleTime: 3 * 60 * 1000, // 3 minutes (shorter for real-time production)
   })
 }

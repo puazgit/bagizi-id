@@ -45,17 +45,17 @@ export interface ProductionResponse {
   data?: FoodProduction & {
     sppg?: {
       id: string
-      sppgName: string
-      sppgCode: string
+      name: string
+      code: string
     }
     program?: {
       id: string
-      programName: string
+      name: string
     }
     menu?: {
       id: string
-      menuName: string
-      menuCode: string
+      name: string
+      code: string
       mealType: string
       servingSize: number
     }
@@ -72,17 +72,17 @@ export interface ProductionListResponse {
   data?: Array<FoodProduction & {
     sppg?: {
       id: string
-      sppgName: string
-      sppgCode: string
+      name: string
+      code: string
     }
     program?: {
       id: string
-      programName: string
+      name: string
     }
     menu?: {
       id: string
-      menuName: string
-      menuCode: string
+      name: string
+      code: string
       mealType: string
     }
     _count?: {
@@ -93,7 +93,7 @@ export interface ProductionListResponse {
     total: number
     page: number
     limit: number
-    totalPages: number
+    pages: number // Changed from totalPages to match API response
   }
   error?: string
 }
@@ -139,25 +139,53 @@ export const productionApi = {
    * @returns Promise with list of productions
    */
   async getAll(filters?: ProductionFilters): Promise<ProductionListResponse> {
-    const params = new URLSearchParams()
-    
-    if (filters) {
-      Object.entries(filters).forEach(([key, value]) => {
-        if (value !== undefined && value !== null && value !== '') {
-          params.append(key, String(value))
-        }
+    try {
+      const params = new URLSearchParams()
+      
+      if (filters) {
+        Object.entries(filters).forEach(([key, value]) => {
+          if (value !== undefined && value !== null && value !== '') {
+            params.append(key, String(value))
+          }
+        })
+      }
+
+      const url = `/api/sppg/production${params.toString() ? `?${params.toString()}` : ''}`
+      console.log('[productionApi.getAll] Fetching URL:', url)
+      
+      const response = await fetch(url, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include', // Include cookies for session
       })
-    }
+      
+      console.log('[productionApi.getAll] Response status:', response.status, response.statusText)
+      
+      if (!response.ok) {
+        const contentType = response.headers.get('content-type')
+        let errorMessage = 'Failed to fetch productions'
+        
+        if (contentType && contentType.includes('application/json')) {
+          const error = await response.json()
+          errorMessage = error.error || errorMessage
+          console.error('[productionApi.getAll] API error:', error)
+        } else {
+          const text = await response.text()
+          console.error('[productionApi.getAll] Non-JSON response:', text)
+          errorMessage = `Server error: ${response.status} ${response.statusText}`
+        }
+        
+        throw new Error(errorMessage)
+      }
 
-    const url = `/api/sppg/production${params.toString() ? `?${params.toString()}` : ''}`
-    const response = await fetch(url)
-    
-    if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.error || 'Failed to fetch productions')
+      const data = await response.json()
+      console.log('[productionApi.getAll] Success response:', data)
+      return data
+    } catch (error) {
+      console.error('[productionApi.getAll] Exception:', error)
+      throw error
     }
-
-    return response.json()
   },
 
   /**
