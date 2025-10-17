@@ -1,0 +1,391 @@
+/**
+ * @fileoverview Food Production API Client
+ * @module features/sppg/production/api/productionApi
+ * @description API client for food production operations with quality control
+ * @version Next.js 15.5.4 / Prisma 6.17.1
+ * @author Bagizi-ID Development Team
+ * @see {@link /docs/copilot-instructions.md} Development Guidelines
+ */
+
+import { FoodProduction, QualityControl, ProductionStatus } from '@prisma/client'
+
+// ============================================
+// TYPE DEFINITIONS
+// ============================================
+
+export interface ProductionFilters {
+  page?: number
+  limit?: number
+  search?: string // Search by batch number or menu name
+  status?: ProductionStatus | 'ALL'
+  startDate?: string // ISO date string
+  endDate?: string // ISO date string
+  menuId?: string
+  programId?: string
+}
+
+export interface ProductionInput {
+  programId: string
+  menuId: string
+  productionDate: Date | string
+  batchNumber?: string // Auto-generated if not provided
+  plannedPortions: number
+  plannedStartTime: Date | string
+  plannedEndTime: Date | string
+  headCook: string // User ID
+  assistantCooks?: string[] // Array of User IDs
+  supervisorId?: string // User ID
+  estimatedCost: number
+  targetTemperature?: number
+  notes?: string
+}
+
+export interface ProductionResponse {
+  success: boolean
+  data?: FoodProduction & {
+    sppg?: {
+      id: string
+      sppgName: string
+      sppgCode: string
+    }
+    program?: {
+      id: string
+      programName: string
+    }
+    menu?: {
+      id: string
+      menuName: string
+      menuCode: string
+      mealType: string
+      servingSize: number
+    }
+    qualityChecks?: QualityControl[]
+    _count?: {
+      qualityChecks: number
+    }
+  }
+  error?: string
+}
+
+export interface ProductionListResponse {
+  success: boolean
+  data?: Array<FoodProduction & {
+    sppg?: {
+      id: string
+      sppgName: string
+      sppgCode: string
+    }
+    program?: {
+      id: string
+      programName: string
+    }
+    menu?: {
+      id: string
+      menuName: string
+      menuCode: string
+      mealType: string
+    }
+    _count?: {
+      qualityChecks: number
+    }
+  }>
+  pagination?: {
+    total: number
+    page: number
+    limit: number
+    totalPages: number
+  }
+  error?: string
+}
+
+export interface QualityCheckInput {
+  checkType: 'HYGIENE' | 'TEMPERATURE' | 'TASTE' | 'APPEARANCE' | 'SAFETY'
+  parameter: string
+  expectedValue?: string
+  actualValue: string
+  passed: boolean
+  score?: number
+  severity?: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
+  notes?: string
+  recommendations?: string
+  actionRequired?: boolean
+  actionTaken?: string
+}
+
+export interface QualityCheckResponse {
+  success: boolean
+  data?: QualityControl
+  error?: string
+}
+
+export interface StatusUpdateInput {
+  reason?: string // For CANCELLED status
+  actualPortions?: number // For COMPLETED status
+  actualCost?: number // For COMPLETED status
+  actualTemperature?: number // For quality check
+  qualityPassed?: boolean // For quality check
+  wasteAmount?: number // For COMPLETED status
+  wasteNotes?: string // For COMPLETED status
+}
+
+// ============================================
+// API CLIENT
+// ============================================
+
+export const productionApi = {
+  /**
+   * Get all food productions with filters
+   * @param filters - Optional filters for querying productions
+   * @returns Promise with list of productions
+   */
+  async getAll(filters?: ProductionFilters): Promise<ProductionListResponse> {
+    const params = new URLSearchParams()
+    
+    if (filters) {
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          params.append(key, String(value))
+        }
+      })
+    }
+
+    const url = `/api/sppg/production${params.toString() ? `?${params.toString()}` : ''}`
+    const response = await fetch(url)
+    
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.error || 'Failed to fetch productions')
+    }
+
+    return response.json()
+  },
+
+  /**
+   * Get single production by ID with full details
+   * @param id - Production ID
+   * @returns Promise with production details including menu, recipe, and quality checks
+   */
+  async getById(id: string): Promise<ProductionResponse> {
+    const response = await fetch(`/api/sppg/production/${id}`)
+    
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.error || 'Failed to fetch production')
+    }
+
+    return response.json()
+  },
+
+  /**
+   * Create new food production
+   * @param data - Production data
+   * @returns Promise with created production
+   */
+  async create(data: ProductionInput): Promise<ProductionResponse> {
+    const response = await fetch('/api/sppg/production', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.error || 'Failed to create production')
+    }
+
+    return response.json()
+  },
+
+  /**
+   * Update existing production (only allowed for PLANNED status)
+   * @param id - Production ID
+   * @param data - Updated production data
+   * @returns Promise with updated production
+   */
+  async update(id: string, data: Partial<ProductionInput>): Promise<ProductionResponse> {
+    const response = await fetch(`/api/sppg/production/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.error || 'Failed to update production')
+    }
+
+    return response.json()
+  },
+
+  /**
+   * Delete production (only allowed for PLANNED status)
+   * @param id - Production ID
+   * @returns Promise with success status
+   */
+  async delete(id: string): Promise<{ success: boolean; error?: string }> {
+    const response = await fetch(`/api/sppg/production/${id}`, {
+      method: 'DELETE',
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.error || 'Failed to delete production')
+    }
+
+    return response.json()
+  },
+
+  /**
+   * Start production (PLANNED → PREPARING)
+   * @param id - Production ID
+   * @returns Promise with updated production
+   */
+  async startProduction(id: string): Promise<ProductionResponse> {
+    const response = await fetch(`/api/sppg/production/${id}/start`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.error || 'Failed to start production')
+    }
+
+    return response.json()
+  },
+
+  /**
+   * Start cooking phase (PREPARING → COOKING)
+   * @param id - Production ID
+   * @returns Promise with updated production
+   */
+  async startCooking(id: string): Promise<ProductionResponse> {
+    const response = await fetch(`/api/sppg/production/${id}/cook`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.error || 'Failed to start cooking')
+    }
+
+    return response.json()
+  },
+
+  /**
+   * Complete production (COOKING → QUALITY_CHECK)
+   * @param id - Production ID
+   * @param data - Actual production data (portions, cost, temperature, waste)
+   * @returns Promise with updated production
+   */
+  async completeProduction(id: string, data: StatusUpdateInput): Promise<ProductionResponse> {
+    const response = await fetch(`/api/sppg/production/${id}/complete`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.error || 'Failed to complete production')
+    }
+
+    return response.json()
+  },
+
+  /**
+   * Finalize production after quality check (QUALITY_CHECK → COMPLETED)
+   * @param id - Production ID
+   * @param qualityPassed - Whether production passed quality check
+   * @returns Promise with updated production
+   */
+  async finalizeProduction(id: string, qualityPassed: boolean): Promise<ProductionResponse> {
+    const response = await fetch(`/api/sppg/production/${id}/finalize`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ qualityPassed }),
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.error || 'Failed to finalize production')
+    }
+
+    return response.json()
+  },
+
+  /**
+   * Cancel production (any status → CANCELLED)
+   * @param id - Production ID
+   * @param reason - Cancellation reason
+   * @returns Promise with updated production
+   */
+  async cancelProduction(id: string, reason: string): Promise<ProductionResponse> {
+    const response = await fetch(`/api/sppg/production/${id}/cancel`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ reason }),
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.error || 'Failed to cancel production')
+    }
+
+    return response.json()
+  },
+
+  /**
+   * Add quality check to production
+   * @param id - Production ID
+   * @param data - Quality check data
+   * @returns Promise with created quality check
+   */
+  async addQualityCheck(id: string, data: QualityCheckInput): Promise<QualityCheckResponse> {
+    const response = await fetch(`/api/sppg/production/${id}/quality`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.error || 'Failed to add quality check')
+    }
+
+    return response.json()
+  },
+
+  /**
+   * Get quality checks for production
+   * @param id - Production ID
+   * @returns Promise with list of quality checks
+   */
+  async getQualityChecks(id: string): Promise<{ success: boolean; data?: QualityControl[]; error?: string }> {
+    const response = await fetch(`/api/sppg/production/${id}/quality`)
+    
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.error || 'Failed to fetch quality checks')
+    }
+
+    return response.json()
+  },
+}

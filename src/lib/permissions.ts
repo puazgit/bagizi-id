@@ -59,11 +59,12 @@ const rolePermissions: Record<UserRole, PermissionType[]> = {
     'WRITE',
     'MENU_MANAGE',
     'PROCUREMENT_MANAGE',
+    'PRODUCTION_MANAGE',  // ✅ Added for production access
     'USER_MANAGE',
   ],
 
   // SPPG Operational
-  SPPG_AHLI_GIZI: ['READ', 'WRITE', 'MENU_MANAGE', 'QUALITY_MANAGE'],
+  SPPG_AHLI_GIZI: ['READ', 'WRITE', 'MENU_MANAGE', 'QUALITY_MANAGE', 'PRODUCTION_MANAGE'],  // ✅ Added for production access
   SPPG_AKUNTAN: ['READ', 'WRITE', 'FINANCIAL_MANAGE', 'PROCUREMENT_MANAGE'],
   SPPG_PRODUKSI_MANAGER: [
     'READ',
@@ -78,7 +79,7 @@ const rolePermissions: Record<UserRole, PermissionType[]> = {
   SPPG_STAFF_DAPUR: ['READ', 'PRODUCTION_MANAGE'],
   SPPG_STAFF_DISTRIBUSI: ['READ', 'DISTRIBUTION_MANAGE'],
   SPPG_STAFF_ADMIN: ['READ', 'WRITE'],
-  SPPG_STAFF_QC: ['READ', 'QUALITY_MANAGE'],
+  SPPG_STAFF_QC: ['READ', 'QUALITY_MANAGE', 'PRODUCTION_MANAGE'],  // ✅ Added for production access
 
   // Limited
   SPPG_VIEWER: ['READ'],

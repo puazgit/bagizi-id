@@ -195,32 +195,56 @@ export function useAuth(): UseAuthReturn {
    * Check access to specific resource
    */
   const canAccess = useCallback((resource: string): boolean => {
-    if (!user) return false
+    if (!user) {
+      console.log('[canAccess] No user, denying access to:', resource)
+      return false
+    }
     
     // Platform admin can access everything
-    if (isAdminUser()) return true
+    if (isAdminUser()) {
+      console.log('[canAccess] Platform admin, granting access to:', resource)
+      return true
+    }
     
     // Resource-specific access logic
+    let hasAccess = false
     switch (resource) {
       case 'admin':
-        return isAdminUser()
+        hasAccess = isAdminUser()
+        break
       case 'sppg':
-        return isSppgUser() && !!user.sppgId
+        hasAccess = isSppgUser() && !!user.sppgId
+        break
       case 'menu':
-        return hasRole(['SPPG_KEPALA', 'SPPG_ADMIN', 'SPPG_AHLI_GIZI'])
+        hasAccess = hasRole(['SPPG_KEPALA', 'SPPG_ADMIN', 'SPPG_AHLI_GIZI'])
+        break
       case 'menu-planning':
-        return hasRole(['SPPG_KEPALA', 'SPPG_ADMIN', 'SPPG_AHLI_GIZI'])
+        hasAccess = hasRole(['SPPG_KEPALA', 'SPPG_ADMIN', 'SPPG_AHLI_GIZI'])
+        break
       case 'procurement':
-        return hasRole(['SPPG_KEPALA', 'SPPG_ADMIN', 'SPPG_AKUNTAN'])
+        hasAccess = hasRole(['SPPG_KEPALA', 'SPPG_ADMIN', 'SPPG_AKUNTAN'])
+        break
       case 'production':
-        return hasRole(['SPPG_KEPALA', 'SPPG_ADMIN', 'SPPG_PRODUKSI_MANAGER', 'SPPG_STAFF_DAPUR'])
+        hasAccess = hasRole(['SPPG_KEPALA', 'SPPG_ADMIN', 'SPPG_PRODUKSI_MANAGER', 'SPPG_STAFF_DAPUR', 'SPPG_STAFF_QC', 'SPPG_AHLI_GIZI'])
+        console.log('[canAccess] Production check:', {
+          resource,
+          userRole: user.userRole,
+          hasAccess,
+          allowedRoles: ['SPPG_KEPALA', 'SPPG_ADMIN', 'SPPG_PRODUKSI_MANAGER', 'SPPG_STAFF_DAPUR', 'SPPG_STAFF_QC', 'SPPG_AHLI_GIZI']
+        })
+        break
       case 'distribution':
-        return hasRole(['SPPG_KEPALA', 'SPPG_ADMIN', 'SPPG_DISTRIBUSI_MANAGER', 'SPPG_STAFF_DISTRIBUSI'])
+        hasAccess = hasRole(['SPPG_KEPALA', 'SPPG_ADMIN', 'SPPG_DISTRIBUSI_MANAGER', 'SPPG_STAFF_DISTRIBUSI'])
+        break
       case 'reports':
-        return isSppgUser() && !hasRole('SPPG_STAFF_DAPUR')
+        hasAccess = isSppgUser() && !hasRole('SPPG_STAFF_DAPUR')
+        break
       default:
-        return false
+        hasAccess = false
     }
+    
+    console.log('[canAccess] Access check:', { resource, userRole: user.userRole, hasAccess })
+    return hasAccess
   }, [user, isAdminUser, isSppgUser, hasRole])
   
   /**

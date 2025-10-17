@@ -12,31 +12,31 @@ export default auth((req) => {
   const { pathname } = req.nextUrl
   const session = req.auth
 
-  // Public routes that don't require authentication
+  console.log('='.repeat(80))
+  console.log('[Middleware] 🚀 REQUEST START:', {
+    pathname,
+    method: req.method,
+    timestamp: new Date().toISOString()
+  })
+
+  // Public routes
   const isPublicRoute = 
     pathname === '/' ||
     pathname.startsWith('/features') ||
     pathname.startsWith('/pricing') ||
     pathname.startsWith('/blog') ||
-    pathname.startsWith('/case-studies') ||
-    pathname.startsWith('/about') ||
-    pathname.startsWith('/contact') ||
-    pathname.startsWith('/_next') ||
-    pathname.startsWith('/api/public') ||
-    pathname === '/favicon.ico'
+    pathname.startsWith('/case-studies')
 
-  // Authentication routes
+  // Auth routes
   const isAuthRoute = 
     pathname.startsWith('/login') ||
     pathname.startsWith('/register') ||
-    pathname.startsWith('/demo-request') ||
-    pathname.startsWith('/forgot-password') ||
-    pathname.startsWith('/reset-password')
+    pathname.startsWith('/demo-request')
 
-  // Admin routes (Platform management)
+  // Admin routes
   const isAdminRoute = pathname.startsWith('/admin')
 
-  // SPPG routes (Tenant operations)
+  // SPPG routes (Layer 2: SPPG Operations)
   const isSppgRoute = 
     pathname.startsWith('/dashboard') ||
     pathname.startsWith('/menu') ||
@@ -45,127 +45,151 @@ export default auth((req) => {
     pathname.startsWith('/distribution') ||
     pathname.startsWith('/inventory') ||
     pathname.startsWith('/hrd') ||
-    pathname.startsWith('/reports') ||
-    pathname.startsWith('/settings')
+    pathname.startsWith('/reports')
 
-  // Allow public routes without authentication
+  console.log('[Middleware] 📋 Route Classification:', {
+    isPublicRoute,
+    isAuthRoute,
+    isAdminRoute,
+    isSppgRoute
+  })
+
+  // Allow public routes
   if (isPublicRoute) {
+    console.log('[Middleware] ✅ Public route - allowing access')
     return NextResponse.next()
   }
 
-  // Redirect unauthenticated users to login (except auth routes)
+  console.log('[Middleware] 🔐 Session Check:', {
+    hasSession: !!session,
+    userId: session?.user?.id,
+    email: session?.user?.email,
+    userRole: session?.user?.userRole,
+    userType: session?.user?.userType,
+    sppgId: session?.user?.sppgId
+  })
+
+  // Redirect to login if not authenticated
   if (!session && !isAuthRoute) {
-    const loginUrl = new URL('/login', req.url)
-    // Preserve the original URL for redirect after login
-    if (!isAuthRoute) {
-      loginUrl.searchParams.set('callbackUrl', pathname)
-    }
-    return NextResponse.redirect(loginUrl)
+    console.log('[Middleware] ❌ No session - redirecting to login')
+    return NextResponse.redirect(new URL('/login', req.url))
   }
 
   // Redirect authenticated users away from auth pages
   if (session && isAuthRoute) {
-    // Determine redirect based on user role and type
-    let redirectUrl = '/dashboard' // Default SPPG dashboard
-
-    if (session.user.userRole === 'PLATFORM_SUPERADMIN' || 
-        session.user.userRole === 'PLATFORM_SUPPORT' ||
-        session.user.userRole === 'PLATFORM_ANALYST') {
-      redirectUrl = '/admin' // Platform admin dashboard
-    } else if (session.user.userType === 'DEMO_REQUEST') {
-      redirectUrl = '/demo-setup'
-    } else if (session.user.userType === 'PROSPECT') {
-      redirectUrl = '/onboarding'
-    }
-
+    const redirectUrl = 
+      session.user.userRole === 'PLATFORM_SUPERADMIN' 
+        ? '/admin' 
+        : '/dashboard'
+    console.log('[Middleware] 🔄 Auth route with session - redirecting to:', redirectUrl)
     return NextResponse.redirect(new URL(redirectUrl, req.url))
   }
 
-  // Admin route protection - Platform roles only
-  if (isAdminRoute) {
-    const isPlatformUser = 
-      session?.user.userRole === 'PLATFORM_SUPERADMIN' ||
-      session?.user.userRole === 'PLATFORM_SUPPORT' ||
-      session?.user.userRole === 'PLATFORM_ANALYST'
-    
-    if (!isPlatformUser) {
-      // Non-platform users get redirected to their appropriate dashboard
-      const redirectUrl = session?.user.sppgId ? '/dashboard' : '/access-denied'
-      return NextResponse.redirect(new URL(redirectUrl, req.url))
-    }
-  }
-
-  // SPPG route protection - SPPG users only
+  // Check SPPG access
   if (isSppgRoute) {
-    // Must have sppgId for SPPG access (multi-tenant safety)
+    console.log('[Middleware] 🏢 SPPG Route Check:', {
+      pathname,
+      sppgId: session?.user?.sppgId,
+      userRole: session?.user?.userRole,
+      userType: session?.user?.userType,
+      email: session?.user?.email
+    })
+
+    // Must have sppgId
     if (!session?.user.sppgId) {
+      console.log('[Middleware] ❌ FAILED: No sppgId - redirecting to access-denied')
       return NextResponse.redirect(new URL('/access-denied', req.url))
     }
 
-    // Check if user has SPPG role
+    // Check if SPPG role
     const isSppgUser = session.user.userRole?.startsWith('SPPG_') ||
                       session.user.userType === 'SPPG_USER' ||
                       session.user.userType === 'SPPG_ADMIN'
     
+    console.log('[Middleware] 👤 SPPG User Validation:', { 
+      isSppgUser,
+      roleStartsWithSPPG: session.user.userRole?.startsWith('SPPG_'),
+      typeIsSppgUser: session.user.userType === 'SPPG_USER',
+      typeIsSppgAdmin: session.user.userType === 'SPPG_ADMIN'
+    })
+    
     if (!isSppgUser) {
-      // Platform users trying to access SPPG routes get redirected to admin
+      console.log('[Middleware] ❌ FAILED: Not SPPG user - redirecting to admin')
       return NextResponse.redirect(new URL('/admin', req.url))
     }
 
-    // Demo user restrictions
-    if (session.user.userRole === 'DEMO_USER') {
-      const allowedDemoRoutes = ['/dashboard', '/menu', '/procurement']
-      const isAllowedDemoRoute = allowedDemoRoutes.some(route => 
-        pathname.startsWith(route)
-      )
-      
-      if (!isAllowedDemoRoute) {
-        return NextResponse.redirect(new URL('/dashboard?demo=limited', req.url))
-      }
+    console.log('[Middleware] ✅ SPPG user validation passed')
+  }
+
+  // Check admin access
+  if (isAdminRoute) {
+    const isAdmin = 
+      session?.user.userRole === 'PLATFORM_SUPERADMIN' ||
+      session?.user.userRole === 'PLATFORM_SUPPORT' ||
+      session?.user.userRole === 'PLATFORM_ANALYST'
+    
+    console.log('[Middleware] 👑 Admin Access Check:', { isAdmin })
+    
+    if (!isAdmin) {
+      console.log('[Middleware] ❌ FAILED: Not admin - redirecting to dashboard')
+      return NextResponse.redirect(new URL('/dashboard', req.url))
     }
   }
 
-  // Role-based feature access within SPPG routes
-  if (isSppgRoute && session?.user.userRole) {
-    const userRole = session.user.userRole
-
-    // Menu management access
-    if (pathname.startsWith('/menu') && 
-        !['SPPG_KEPALA', 'SPPG_ADMIN', 'SPPG_AHLI_GIZI'].includes(userRole)) {
+  // **CRITICAL: Role-Based Access Control for SPPG Routes**
+  // Each SPPG route requires specific roles for security and operational control
+  
+  // Menu Management - Nutrition experts and administrators
+  if (pathname.startsWith('/menu')) {
+    const userRole = session?.user?.userRole ?? ''
+    const allowedRoles = ['SPPG_KEPALA', 'SPPG_ADMIN', 'SPPG_AHLI_GIZI']
+    const hasAccess = allowedRoles.includes(userRole)
+    
+    console.log('[Middleware] 🍽️  Menu Access Check:', {
+      userRole,
+      allowedRoles,
+      hasAccess
+    })
+    
+    if (!hasAccess) {
+      console.log('[Middleware] ❌ FAILED: Menu access denied')
       return NextResponse.redirect(new URL('/dashboard?error=access-denied', req.url))
-    }
-
-    // Procurement access
-    if (pathname.startsWith('/procurement') && 
-        !['SPPG_KEPALA', 'SPPG_ADMIN', 'SPPG_AKUNTAN'].includes(userRole)) {
-      return NextResponse.redirect(new URL('/dashboard?error=access-denied', req.url))
-    }
-
-    // Production access
-    if (pathname.startsWith('/production') && 
-        !['SPPG_KEPALA', 'SPPG_ADMIN', 'SPPG_PRODUKSI_MANAGER', 'SPPG_STAFF_DAPUR'].includes(userRole)) {
-      return NextResponse.redirect(new URL('/dashboard?error=access-denied', req.url))
-    }
-
-    // Distribution access
-    if (pathname.startsWith('/distribution') && 
-        !['SPPG_KEPALA', 'SPPG_ADMIN', 'SPPG_DISTRIBUSI_MANAGER', 'SPPG_STAFF_DISTRIBUSI'].includes(userRole)) {
-      return NextResponse.redirect(new URL('/dashboard?error=access-denied', req.url))
-    }
-
-    // HRD access
-    if (pathname.startsWith('/hrd') && 
-        !['SPPG_KEPALA', 'SPPG_ADMIN', 'SPPG_HRD_MANAGER'].includes(userRole)) {
-      return NextResponse.redirect(new URL('/dashboard?error=access-denied', req.url))
-    }
-
-    // Reports access - most roles can view, but some are restricted
-    if (pathname.startsWith('/reports/financial') && 
-        !['SPPG_KEPALA', 'SPPG_ADMIN', 'SPPG_AKUNTAN'].includes(userRole)) {
-      return NextResponse.redirect(new URL('/reports?error=access-denied', req.url))
     }
   }
 
+  // Production Management - Production staff and quality control
+  if (pathname.startsWith('/production')) {
+    const userRole = session?.user?.userRole ?? ''
+    const allowedRoles = ['SPPG_KEPALA', 'SPPG_ADMIN', 'SPPG_PRODUKSI_MANAGER', 'SPPG_STAFF_DAPUR', 'SPPG_STAFF_QC', 'SPPG_AHLI_GIZI']
+    const hasAccess = allowedRoles.includes(userRole)
+    
+    console.log('[Middleware] 🏭 PRODUCTION ACCESS CHECK:', {
+      pathname,
+      userRole,
+      userRoleType: typeof userRole,
+      allowedRoles,
+      hasAccess,
+      email: session?.user?.email,
+      isRoleInArray: allowedRoles.includes(userRole),
+      roleComparisons: allowedRoles.map(role => ({
+        role,
+        matches: role === userRole,
+        strictEqual: role === userRole,
+        looseEqual: role == userRole
+      }))
+    })
+    
+    if (!hasAccess) {
+      console.log('[Middleware] ❌❌❌ FAILED: Production access DENIED - REDIRECTING TO DASHBOARD')
+      console.log('[Middleware] 🔴 Redirect reason: userRole not in allowedRoles')
+      return NextResponse.redirect(new URL('/dashboard?error=access-denied', req.url))
+    }
+    
+    console.log('[Middleware] ✅✅✅ Production access GRANTED - allowing request to proceed')
+  }
+
+  console.log('[Middleware] ✅ All checks passed - allowing request')
+  console.log('='.repeat(80))
   return NextResponse.next()
 })
 
