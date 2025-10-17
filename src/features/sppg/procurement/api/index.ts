@@ -8,3 +8,4 @@
 export { procurementApi, procurementPlanApi, procurementOperations } from './procurementApi'
 export { supplierApi } from './supplierApi'
 export { statisticsApi } from './statisticsApi'
+export { planApi } from './planApi'
