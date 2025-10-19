@@ -11,7 +11,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useCallback } from 'react'
 import { toast } from 'sonner'
 import { useDashboardStore } from '../stores'
-import type { DashboardData, DashboardStats, ActivityItem, NotificationItem } from '../types'
+import { dashboardApi } from '../api'
+import type { DashboardData, ActivityItem, NotificationItem } from '../types'
 
 /**
  * Dashboard query keys for consistent cache management
@@ -25,165 +26,55 @@ export const dashboardKeys = {
 }
 
 /**
- * Dashboard API calls - Enterprise real-time data
+ * Helper function to get complete dashboard data
  */
-const dashboardApi = {
-  /**
-   * Get dashboard statistics from API
-   */
-  async getDashboardStats(): Promise<DashboardStats> {
-    const response = await fetch('/api/sppg/dashboard/stats', {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
+async function getDashboardData(): Promise<DashboardData> {
+  // Fetch all data in parallel for better performance
+  const [statsResult, activitiesResult, notificationsResult] = await Promise.all([
+    dashboardApi.getStats(),
+    dashboardApi.getActivities(10),
+    dashboardApi.getNotifications()
+  ])
+  
+  if (!statsResult.success || !activitiesResult.success || !notificationsResult.success) {
+    throw new Error('Failed to fetch dashboard data')
+  }
+  
+  return {
+    stats: statsResult.data!,
+    quickActions: [
+      {
+        id: '1',
+        title: 'Kelola Menu',
+        href: '/menu',
+        icon: 'ChefHat',
+        description: 'Buat dan kelola menu harian'
       },
-      credentials: 'include', // Include session cookies
-      cache: 'no-store' // Always fetch fresh data
-    })
-    
-    if (!response.ok) {
-      throw new Error(`Failed to fetch dashboard stats: ${response.statusText}`)
-    }
-    
-    const result = await response.json()
-    if (!result.success) {
-      throw new Error(result.error || 'Failed to fetch dashboard stats')
-    }
-    
-    return result.data
-  },
-
-  /**
-   * Get recent activities from API
-   */
-  async getActivities(): Promise<ActivityItem[]> {
-    const response = await fetch('/api/sppg/dashboard/activities', {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
+      {
+        id: '2',
+        title: 'Procurement',
+        href: '/procurement',
+        icon: 'Package',
+        description: 'Kelola pengadaan bahan baku'
       },
-      credentials: 'include',
-      cache: 'no-store'
-    })
-    
-    if (!response.ok) {
-      throw new Error(`Failed to fetch activities: ${response.statusText}`)
-    }
-    
-    const result = await response.json()
-    if (!result.success) {
-      throw new Error(result.error || 'Failed to fetch activities')
-    }
-    
-    return result.data
-  },
-
-  /**
-   * Get notifications from API
-   */
-  async getNotifications(): Promise<NotificationItem[]> {
-    const response = await fetch('/api/sppg/dashboard/notifications', {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
+      {
+        id: '3',
+        title: 'Distribusi',
+        href: '/distribution',
+        icon: 'Truck',
+        description: 'Monitor distribusi makanan'
       },
-      credentials: 'include',
-      cache: 'no-store'
-    })
-    
-    if (!response.ok) {
-      throw new Error(`Failed to fetch notifications: ${response.statusText}`)
-    }
-    
-    const result = await response.json()
-    if (!result.success) {
-      throw new Error(result.error || 'Failed to fetch notifications')
-    }
-    
-    return result.data
-  },
-
-  /**
-   * Get complete dashboard data
-   */
-  async getDashboardData(): Promise<DashboardData> {
-    // Fetch all data in parallel for better performance
-    const [stats, activities, notifications] = await Promise.all([
-      this.getDashboardStats(),
-      this.getActivities(),
-      this.getNotifications()
-    ])
-    
-    return {
-      stats,
-      quickActions: [
-        {
-          id: '1',
-          title: 'Kelola Menu',
-          href: '/menu',
-          icon: 'ChefHat',
-          description: 'Buat dan kelola menu harian'
-        },
-        {
-          id: '2',
-          title: 'Procurement',
-          href: '/procurement',
-          icon: 'Package',
-          description: 'Kelola pengadaan bahan baku'
-        },
-        {
-          id: '3',
-          title: 'Distribusi',
-          href: '/distribution',
-          icon: 'Truck',
-          description: 'Monitor distribusi makanan'
-        },
-        {
-          id: '4',
-          title: 'Laporan',
-          href: '/reports',
-          icon: 'TrendingUp',
-          description: 'Lihat laporan dan analitik'
-        }
-      ],
-      recentActivities: activities.slice(0, 10), // Show only 10 most recent
-      notifications: notifications.slice(0, 10), // Show only 10 most important
-      lastUpdated: new Date().toISOString()
-    }
-  },
-
-  /**
-   * Mark notification as read (to be implemented on backend)
-   */
-  async markNotificationRead(notificationId: string): Promise<void> {
-    const response = await fetch(`/api/sppg/dashboard/notifications/${notificationId}/read`, {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      credentials: 'include'
-    })
-    
-    if (!response.ok) {
-      throw new Error('Failed to mark notification as read')
-    }
-  },
-
-  /**
-   * Clear all notifications (to be implemented on backend)
-   */
-  async clearAllNotifications(): Promise<void> {
-    const response = await fetch('/api/sppg/dashboard/notifications/clear', {
-      method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      credentials: 'include'
-    })
-    
-    if (!response.ok) {
-      throw new Error('Failed to clear notifications')
-    }
+      {
+        id: '4',
+        title: 'Laporan',
+        href: '/reports',
+        icon: 'TrendingUp',
+        description: 'Lihat laporan dan analitik'
+      }
+    ],
+    recentActivities: activitiesResult.data!.slice(0, 10),
+    notifications: notificationsResult.data!.slice(0, 10),
+    lastUpdated: new Date().toISOString()
   }
 }
 
@@ -197,7 +88,7 @@ export function useDashboardData() {
 
   const query = useQuery({
     queryKey: dashboardKeys.all,
-    queryFn: () => dashboardApi.getDashboardData(),
+    queryFn: getDashboardData,
     staleTime: 1000 * 60 * 5, // 5 minutes
     gcTime: 1000 * 60 * 10, // 10 minutes
     refetchOnWindowFocus: true,
@@ -224,7 +115,13 @@ export function useDashboardData() {
 export function useDashboardStats() {
   return useQuery({
     queryKey: dashboardKeys.stats('current'),
-    queryFn: () => dashboardApi.getDashboardStats(),
+    queryFn: async () => {
+      const result = await dashboardApi.getStats()
+      if (!result.success || !result.data) {
+        throw new Error('Failed to fetch dashboard stats')
+      }
+      return result.data
+    },
     staleTime: 1000 * 60 * 2, // 2 minutes - more frequent for stats
     gcTime: 1000 * 60 * 5, // 5 minutes garbage collection
     refetchOnWindowFocus: true
@@ -239,7 +136,13 @@ export function useMarkNotificationRead() {
   const markNotificationRead = useDashboardStore(state => state.markNotificationRead)
 
   return useMutation({
-    mutationFn: (notificationId: string) => dashboardApi.markNotificationRead(notificationId),
+    mutationFn: async (notificationId: string) => {
+      const result = await dashboardApi.markNotificationRead(notificationId)
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to mark notification as read')
+      }
+      return result
+    },
     onSuccess: (_, notificationId) => {
       // Update store
       markNotificationRead(notificationId)
@@ -266,7 +169,13 @@ export function useClearNotifications() {
   const clearNotifications = useDashboardStore(state => state.clearNotifications)
 
   return useMutation({
-    mutationFn: () => dashboardApi.clearAllNotifications(),
+    mutationFn: async () => {
+      const result = await dashboardApi.clearNotifications()
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to clear notifications')
+      }
+      return result
+    },
     onSuccess: () => {
       // Update store
       clearNotifications()
@@ -276,7 +185,7 @@ export function useClearNotifications() {
         queryKey: dashboardKeys.all
       })
       
-      toast.success('Semua notifikasi berhasil dihapus')
+      toast.success('Semua notifikasi telah dihapus')
     },
     onError: (error) => {
       toast.error('Gagal menghapus notifikasi')

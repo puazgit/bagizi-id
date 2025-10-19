@@ -5,6 +5,7 @@
  */
 
 import { ProcurementPlan } from '@prisma/client'
+import { getBaseUrl, getFetchOptions } from '@/lib/api-utils'
 
 // ============================================
 // TYPE DEFINITIONS
@@ -96,7 +97,7 @@ export const planApi = {
   /**
    * Get all procurement plans with filters
    */
-  async getAll(filters?: ProcurementPlanFilters): Promise<ProcurementPlanListResponse> {
+  async getAll(filters?: ProcurementPlanFilters, headers?: HeadersInit): Promise<ProcurementPlanListResponse> {
     const params = new URLSearchParams()
     
     if (filters) {
@@ -107,8 +108,9 @@ export const planApi = {
       })
     }
 
-    const url = `/api/sppg/procurement/plans${params.toString() ? `?${params.toString()}` : ''}`
-    const response = await fetch(url)
+    const baseUrl = getBaseUrl()
+    const url = `${baseUrl}/api/sppg/procurement/plans${params.toString() ? `?${params.toString()}` : ''}`
+    const response = await fetch(url, getFetchOptions(headers))
     
     if (!response.ok) {
       const error = await response.json()
@@ -121,8 +123,9 @@ export const planApi = {
   /**
    * Get single procurement plan by ID
    */
-  async getById(id: string): Promise<ProcurementPlanResponse> {
-    const response = await fetch(`/api/sppg/procurement/plans/${id}`)
+  async getById(id: string, headers?: HeadersInit): Promise<ProcurementPlanResponse> {
+    const baseUrl = getBaseUrl()
+    const response = await fetch(`${baseUrl}/api/sppg/procurement/plans/${id}`, getFetchOptions(headers))
     
     if (!response.ok) {
       const error = await response.json()
@@ -135,12 +138,11 @@ export const planApi = {
   /**
    * Create new procurement plan
    */
-  async create(data: ProcurementPlanInput): Promise<ProcurementPlanResponse> {
-    const response = await fetch('/api/sppg/procurement/plans', {
+  async create(data: ProcurementPlanInput, headers?: HeadersInit): Promise<ProcurementPlanResponse> {
+    const baseUrl = getBaseUrl()
+    const response = await fetch(`${baseUrl}/api/sppg/procurement/plans`, {
+      ...getFetchOptions(headers),
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify(data),
     })
 
@@ -155,12 +157,11 @@ export const planApi = {
   /**
    * Update existing procurement plan
    */
-  async update(id: string, data: Partial<ProcurementPlanInput>): Promise<ProcurementPlanResponse> {
-    const response = await fetch(`/api/sppg/procurement/plans/${id}`, {
+  async update(id: string, data: Partial<ProcurementPlanInput>, headers?: HeadersInit): Promise<ProcurementPlanResponse> {
+    const baseUrl = getBaseUrl()
+    const response = await fetch(`${baseUrl}/api/sppg/procurement/plans/${id}`, {
+      ...getFetchOptions(headers),
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify(data),
     })
 
@@ -175,8 +176,10 @@ export const planApi = {
   /**
    * Delete procurement plan
    */
-  async delete(id: string): Promise<{ success: boolean; error?: string }> {
-    const response = await fetch(`/api/sppg/procurement/plans/${id}`, {
+  async delete(id: string, headers?: HeadersInit): Promise<{ success: boolean; error?: string }> {
+    const baseUrl = getBaseUrl()
+    const response = await fetch(`${baseUrl}/api/sppg/procurement/plans/${id}`, {
+      ...getFetchOptions(headers),
       method: 'DELETE',
     })
 
@@ -191,12 +194,11 @@ export const planApi = {
   /**
    * Approval workflow actions
    */
-  async approvalAction(id: string, action: ApprovalActionInput): Promise<ProcurementPlanResponse> {
-    const response = await fetch(`/api/sppg/procurement/plans/${id}/approval`, {
+  async approvalAction(id: string, action: ApprovalActionInput, headers?: HeadersInit): Promise<ProcurementPlanResponse> {
+    const baseUrl = getBaseUrl()
+    const response = await fetch(`${baseUrl}/api/sppg/procurement/plans/${id}/approval`, {
+      ...getFetchOptions(headers),
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify(action),
     })
 

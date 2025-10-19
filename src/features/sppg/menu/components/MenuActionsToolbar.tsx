@@ -27,6 +27,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { toast } from 'sonner'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { menuActionsApi } from '../api/menuActionsApi'
 
 interface MenuActionsToolbarProps {
   menuId: string
@@ -49,25 +50,15 @@ export function MenuActionsToolbar({
   const router = useRouter()
   const queryClient = useQueryClient()
 
-  // Calculate Cost Mutation
+  // Calculate Cost Mutation - Uses centralized API client
   const calculateCostMutation = useMutation({
-    mutationFn: async () => {
-      const response = await fetch(`/api/sppg/menu/${menuId}/calculate-cost`, {
-        method: 'POST',
-      })
-      
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Gagal menghitung biaya')
+    mutationFn: () => menuActionsApi.calculateCost(menuId),
+    onSuccess: (result) => {
+      if (!result.success || !result.data) {
+        throw new Error('Invalid response from server')
       }
-      
-      return response.json()
-    },
-    onSuccess: (data) => {
-      // Safe access to response data with defensive checks
-      // API returns: grandTotalCost and costPerPortion
-      const grandTotalCost = data?.data?.grandTotalCost ?? 0
-      const costPerPortion = data?.data?.costPerPortion ?? 0
+
+      const { grandTotalCost, costPerPortion } = result.data
       
       toast.success('Perhitungan biaya berhasil!', {
         description: `Total: Rp ${grandTotalCost.toLocaleString('id-ID')} | Per Porsi: Rp ${costPerPortion.toLocaleString('id-ID')}`
@@ -85,25 +76,15 @@ export function MenuActionsToolbar({
     },
   })
 
-  // Calculate Nutrition Mutation
+  // Calculate Nutrition Mutation - Uses centralized API client
   const calculateNutritionMutation = useMutation({
-    mutationFn: async () => {
-      const response = await fetch(`/api/sppg/menu/${menuId}/calculate-nutrition`, {
-        method: 'POST',
-      })
-      
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Gagal menghitung nutrisi')
+    mutationFn: () => menuActionsApi.calculateNutrition(menuId),
+    onSuccess: (result) => {
+      if (!result.success || !result.data) {
+        throw new Error('Invalid response from server')
       }
-      
-      return response.json()
-    },
-    onSuccess: (data) => {
-      // Safe access to response data with defensive checks
-      // API returns: { success: true, data: { totalCalories, totalProtein, ... } }
-      const totalCalories = data?.data?.totalCalories ?? 0
-      const totalProtein = data?.data?.totalProtein ?? 0
+
+      const { totalCalories, totalProtein } = result.data
       
       toast.success('Perhitungan nutrisi berhasil!', {
         description: `Kalori: ${totalCalories.toFixed(1)} kkal | Protein: ${totalProtein.toFixed(1)}g`

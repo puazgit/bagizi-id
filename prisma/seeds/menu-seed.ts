@@ -27,21 +27,21 @@ export async function seedMenu(
   prisma: PrismaClient,
   sppgs: SPPG[],
   users: User[]
-): Promise<void> {
+): Promise<{ id: string; name: string; sppgId: string }[]> {
   console.log('  → Creating Menu domain data...')
 
   // Get Purwakarta SPPG
   const purwakartaSppg = sppgs.find(s => s.code === 'SPPG-PWK-001')
   if (!purwakartaSppg) {
     console.log('  ⚠️  Purwakarta SPPG not found, skipping menu seed')
-    return
+    return []
   }
 
   // Get admin user for createdBy
   const adminUser = users.find(u => u.email === 'admin@sppg-purwakarta.com')
   if (!adminUser) {
     console.log('  ⚠️  Admin user not found, skipping menu seed')
-    return
+    return []
   }
 
   console.log('  → Creating Nutrition Programs...')
@@ -63,6 +63,13 @@ export async function seedMenu(
   await seedCostCalculations(prisma, menus, adminUser)
 
   console.log('  ✓ Menu domain data created successfully')
+  
+  // Return programs for school seeding
+  return programs.map(p => ({
+    id: p.id,
+    name: p.name,
+    sppgId: p.sppgId
+  }))
 }
 
 /**

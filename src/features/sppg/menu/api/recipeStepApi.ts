@@ -3,6 +3,7 @@
  * @version Next.js 15.5.4 / Fetch API
  */
 
+import { getBaseUrl, getFetchOptions } from '@/lib/api-utils'
 import type { 
   CreateRecipeStepInput, 
   UpdateRecipeStepInput,
@@ -14,8 +15,9 @@ export const recipeStepApi = {
   /**
    * Get all recipe steps for a menu
    */
-  async getAll(menuId: string): Promise<RecipeStepsListResponse> {
-    const response = await fetch(`/api/sppg/menu/${menuId}/recipe`)
+  async getAll(menuId: string, headers?: HeadersInit): Promise<RecipeStepsListResponse> {
+    const baseUrl = getBaseUrl()
+    const response = await fetch(`${baseUrl}/api/sppg/menu/${menuId}/recipe`, getFetchOptions(headers))
     
     if (!response.ok) {
       const error = await response.json()
@@ -28,12 +30,11 @@ export const recipeStepApi = {
   /**
    * Add new recipe step to menu
    */
-  async create(menuId: string, data: CreateRecipeStepInput): Promise<RecipeStepResponse> {
-    const response = await fetch(`/api/sppg/menu/${menuId}/recipe`, {
+  async create(menuId: string, data: CreateRecipeStepInput, headers?: HeadersInit): Promise<RecipeStepResponse> {
+    const baseUrl = getBaseUrl()
+    const response = await fetch(`${baseUrl}/api/sppg/menu/${menuId}/recipe`, {
+      ...getFetchOptions(headers),
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify(data),
     })
 
@@ -48,12 +49,11 @@ export const recipeStepApi = {
   /**
    * Update existing recipe step
    */
-  async update(menuId: string, stepId: string, data: UpdateRecipeStepInput): Promise<RecipeStepResponse> {
-    const response = await fetch(`/api/sppg/menu/${menuId}/recipe/${stepId}`, {
+  async update(menuId: string, stepId: string, data: UpdateRecipeStepInput, headers?: HeadersInit): Promise<RecipeStepResponse> {
+    const baseUrl = getBaseUrl()
+    const response = await fetch(`${baseUrl}/api/sppg/menu/${menuId}/recipe/${stepId}`, {
+      ...getFetchOptions(headers),
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify(data),
     })
 
@@ -68,8 +68,10 @@ export const recipeStepApi = {
   /**
    * Delete recipe step
    */
-  async delete(menuId: string, stepId: string): Promise<RecipeStepResponse> {
-    const response = await fetch(`/api/sppg/menu/${menuId}/recipe/${stepId}`, {
+  async delete(menuId: string, stepId: string, headers?: HeadersInit): Promise<RecipeStepResponse> {
+    const baseUrl = getBaseUrl()
+    const response = await fetch(`${baseUrl}/api/sppg/menu/${menuId}/recipe/${stepId}`, {
+      ...getFetchOptions(headers),
       method: 'DELETE',
     })
 

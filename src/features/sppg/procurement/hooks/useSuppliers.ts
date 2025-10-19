@@ -35,12 +35,15 @@ export const supplierKeys = {
 
 /**
  * Hook to fetch suppliers with optional filters
+ * Returns array of Suppliers directly
  */
 export function useSuppliers(filters?: Partial<SupplierFilters>) {
   return useQuery({
     queryKey: supplierKeys.list(filters),
-    queryFn: () => supplierApi.getSuppliers(filters),
-    select: (data) => data.data,
+    queryFn: async () => {
+      const response = await supplierApi.getSuppliers(filters)
+      return response.data?.data ?? []
+    },
     staleTime: 1000 * 60 * 5, // 5 minutes
   })
 }

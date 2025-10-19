@@ -1756,6 +1756,302 @@ interface ApiResponse<T> {
 }
 ```
 
+### 2a. **CRITICAL: Enterprise API Client Pattern** ⭐
+
+**ALWAYS use centralized API clients instead of direct `fetch()` calls in hooks/stores!**
+
+#### ✅ **Standard API Client Structure**
+
+All API clients MUST follow this enterprise pattern:
+
+```typescript
+// src/features/{layer}/{domain}/api/{resource}Api.ts
+import { getBaseUrl, getFetchOptions } from '@/lib/api-utils'
+import type { ApiResponse } from '@/lib/api-utils'
+
+/**
+ * {Resource} API client with enterprise patterns
+ * All methods support SSR via optional headers parameter
+ * 
+ * @example
+ * ```typescript
+ * // Client-side usage
+ * const result = await resourceApi.getAll()
+ * 
+ * // Server-side usage (SSR/RSC)
+ * const result = await resourceApi.getAll(undefined, headers())
+ * ```
+ */
+export const resourceApi = {
+  /**
+   * Fetch all resources with optional filtering
+   * @param filters - Optional filter parameters
+   * @param headers - Optional headers for SSR
+   * @returns Promise with API response
+   */
+  async getAll(
+    filters?: FilterType,
+    headers?: HeadersInit
+  ): Promise<ApiResponse<ResourceType[]>> {
+    const baseUrl = getBaseUrl()
+    
+    // Build query string if filters provided
+    const params = new URLSearchParams()
+    if (filters?.field) params.append('field', filters.field)
+    
+    const queryString = params.toString()
+    const url = queryString 
+      ? `${baseUrl}/api/sppg/resource?${queryString}`
+      : `${baseUrl}/api/sppg/resource`
+    
+    const response = await fetch(url, getFetchOptions(headers))
+    
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.error || 'Failed to fetch resources')
+    }
+    
+    return response.json()
+  },
+
+  /**
+   * Create new resource
+   * @param data - Resource creation data
+   * @param headers - Optional headers for SSR
+   */
+  async create(
+    data: CreateInput,
+    headers?: HeadersInit
+  ): Promise<ApiResponse<ResourceType>> {
+    const baseUrl = getBaseUrl()
+    const response = await fetch(`${baseUrl}/api/sppg/resource`, {
+      ...getFetchOptions(headers),
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...headers,
+      },
+      body: JSON.stringify(data),
+    })
+    
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.error || 'Failed to create resource')
+    }
+    
+    return response.json()
+  },
+
+  /**
+   * Update existing resource
+   */
+  async update(
+    id: string,
+    data: Partial<UpdateInput>,
+    headers?: HeadersInit
+  ): Promise<ApiResponse<ResourceType>> {
+    const baseUrl = getBaseUrl()
+    const response = await fetch(`${baseUrl}/api/sppg/resource/${id}`, {
+      ...getFetchOptions(headers),
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        ...headers,
+      },
+      body: JSON.stringify(data),
+    })
+    
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.error || 'Failed to update resource')
+    }
+    
+    return response.json()
+  },
+
+  /**
+   * Delete resource
+   */
+  async delete(
+    id: string,
+    headers?: HeadersInit
+  ): Promise<ApiResponse<void>> {
+    const baseUrl = getBaseUrl()
+    const response = await fetch(`${baseUrl}/api/sppg/resource/${id}`, {
+      ...getFetchOptions(headers),
+      method: 'DELETE',
+    })
+    
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.error || 'Failed to delete resource')
+    }
+    
+    return response.json()
+  },
+}
+```
+
+#### 📁 **API Client File Organization**
+
+```
+src/features/{layer}/{domain}/
+├── api/
+│   ├── {resource}Api.ts    # Main API client file
+│   ├── index.ts            # Export barrel: export * from './{resource}Api'
+│   └── README.md           # API documentation (optional)
+├── hooks/
+│   └── use{Resource}.ts    # Import API client, use in TanStack Query
+├── stores/
+│   └── {resource}Store.ts  # Import API client, use in Zustand actions
+└── types/
+    └── {resource}.types.ts # TypeScript interfaces
+```
+
+#### ✅ **Correct Usage in Hooks**
+
+```typescript
+// src/features/sppg/menu/hooks/useMenus.ts
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { menuApi } from '@/features/sppg/menu/api'  // ✅ Import centralized API
+import { toast } from 'sonner'
+
+// Query hook
+export function useMenus(filters?: MenuFilters) {
+  return useQuery({
+    queryKey: ['menus', filters],
+    queryFn: async () => {
+      const result = await menuApi.getAll(filters)  // ✅ Use API client
+      
+      if (!result.success || !result.data) {
+        throw new Error(result.error || 'Failed to fetch menus')
+      }
+      
+      return result.data
+    },
+    staleTime: 5 * 60 * 1000
+  })
+}
+
+// Mutation hook
+export function useCreateMenu() {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: async (data: MenuInput) => {
+      const result = await menuApi.create(data)  // ✅ Use API client
+      
+      if (!result.success || !result.data) {
+        throw new Error(result.error || 'Failed to create menu')
+      }
+      
+      return result.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['menus'] })
+      toast.success('Menu created successfully')
+    },
+    onError: (error: Error) => {
+      toast.error(error.message)
+    }
+  })
+}
+```
+
+#### ❌ **WRONG: Direct fetch() in Hooks**
+
+```typescript
+// ❌ NEVER DO THIS - Direct fetch in hooks
+export function useMenus() {
+  return useQuery({
+    queryKey: ['menus'],
+    queryFn: async () => {
+      const response = await fetch('/api/sppg/menu')  // ❌ Wrong!
+      return response.json()
+    }
+  })
+}
+
+// ❌ NEVER DO THIS - Internal API object in hooks
+const internalApi = {
+  async getMenus() {
+    const response = await fetch('/api/sppg/menu')  // ❌ Wrong!
+    return response.json()
+  }
+}
+```
+
+#### ✅ **Correct Usage in Zustand Stores**
+
+```typescript
+// src/features/sppg/dashboard/stores/dashboardStore.ts
+import { create } from 'zustand'
+import { dashboardApi } from '../api'  // ✅ Import centralized API
+
+export const useDashboardStore = create<DashboardState>((set, get) => ({
+  data: null,
+  
+  refreshData: async () => {
+    const { setLoading, setError } = get()
+    setLoading(true)
+    
+    try {
+      const result = await dashboardApi.getDashboard()  // ✅ Use API client
+      
+      if (!result.success || !result.data) {
+        throw new Error(result.error || 'Failed to fetch dashboard')
+      }
+      
+      set({ data: result.data })
+    } catch (error) {
+      setError(error.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+}))
+```
+
+#### 🎯 **API Client Standards Checklist**
+
+When creating or refactoring API clients:
+
+- [ ] **Location**: `src/features/{layer}/{domain}/api/{resource}Api.ts`
+- [ ] **Imports**: Use `getBaseUrl()` and `getFetchOptions()` from `@/lib/api-utils`
+- [ ] **SSR Support**: All methods accept optional `headers?: HeadersInit` parameter
+- [ ] **Return Type**: Always return `Promise<ApiResponse<T>>`
+- [ ] **Error Handling**: Check `response.ok` and throw with proper error message
+- [ ] **Documentation**: Include JSDoc with `@param`, `@returns`, `@example`
+- [ ] **Export**: Export via `api/index.ts` barrel file
+- [ ] **No Direct Fetch**: NEVER use `fetch()` directly in hooks/stores
+
+#### 📊 **Benefits of Centralized API Clients**
+
+1. **✅ Single Source of Truth** - All API calls in one place
+2. **✅ SSR Ready** - Optional headers support for server-side rendering
+3. **✅ Type Safe** - Full TypeScript coverage with proper types
+4. **✅ Testable** - Easy to mock API clients in tests
+5. **✅ Maintainable** - Changes in one place affect all consumers
+6. **✅ Reusable** - Same client used across hooks, stores, components
+7. **✅ Documented** - Comprehensive JSDoc with usage examples
+8. **✅ Consistent** - Same patterns across entire codebase
+
+#### 🚀 **Real-World Examples**
+
+**Dashboard API Client** (6 methods, 155 lines):
+- `src/features/sppg/dashboard/api/dashboardApi.ts`
+- Methods: `getStats()`, `getActivities()`, `getNotifications()`, `markNotificationRead()`, `clearNotifications()`, `getDashboard()`
+
+**Allergens API Client** (4 methods, 163 lines):
+- `src/features/sppg/menu/api/allergensApi.ts`
+- Methods: `getAll()`, `create()`, `update()`, `delete()`
+
+**Programs API Client** (existing):
+- `src/features/sppg/menu/api/programsApi.ts`
+- Methods: `getAll()`, `create()`, `update()`, etc.
+
+---
+
 ### 3. Multi-tenant Query Pattern (Server-side)
 
 ```typescript
@@ -2493,17 +2789,20 @@ When generating code for Bagizi-ID:
 
 1. **Identify Layer**: Marketing / SPPG / Admin
 2. **Use API Endpoints**: Create REST API routes in `/api/` directory (NOT server actions)
-3. **Use shadcn/ui Components**: Always use shadcn/ui primitives, never create custom UI
-4. **Check Role Requirements**: What roles can access this?
-5. **Implement Multi-tenancy**: Always include `sppgId` filtering in API endpoints
-6. **Follow Feature Architecture**: Use `src/features/{feature}/` modular structure
-7. **Follow Naming**: Use schema model names exactly
-8. **Add Type Safety**: Use Prisma types + Zod validation
-9. **Error Handling**: Return proper HTTP status codes with `{ success, data?, error? }`
-10. **Client-side API**: Use TanStack Query hooks with fetch calls to API endpoints
-11. **Form Integration**: Use React Hook Form + Zod + shadcn/ui form components
-12. **Dark Mode Support**: All components automatically support dark mode via CSS variables
-13. **Audit Logging**: Log sensitive operations
+3. **Use Centralized API Clients**: ALWAYS use API clients from `src/features/{layer}/{domain}/api/` (see Section 2a)
+4. **Use shadcn/ui Components**: Always use shadcn/ui primitives, never create custom UI
+5. **Check Role Requirements**: What roles can access this?
+6. **Implement Multi-tenancy**: Always include `sppgId` filtering in API endpoints
+7. **Follow Feature Architecture**: Use `src/features/{feature}/` modular structure
+8. **Follow Naming**: Use schema model names exactly
+9. **Add Type Safety**: Use Prisma types + Zod validation
+10. **Error Handling**: Return proper HTTP status codes with `{ success, data?, error? }`
+11. **Client-side API**: Use TanStack Query hooks with API clients (NEVER direct fetch)
+12. **Form Integration**: Use React Hook Form + Zod + shadcn/ui form components
+13. **Dark Mode Support**: All components automatically support dark mode via CSS variables
+14. **Audit Logging**: Log sensitive operations
+
+**CRITICAL**: For API calls in hooks/stores, see **Section 2a** for the complete enterprise API client pattern. NEVER use direct `fetch()` calls!
 
 ---
 
@@ -3774,4 +4073,11 @@ src/app/api/
 - ❌ Server actions in components - Use fetch calls to API endpoints
 - ❌ Direct database calls in components - Always go through API layer
 
-**Remember**: Always create API endpoints in `/api/` directory, then call them from client-side code using fetch with TanStack Query!
+### 🎯 API Client Pattern (CRITICAL):
+- ✅ **ALL API calls MUST use centralized API clients** (see Section 2a)
+- ✅ Create API client files in `src/features/{layer}/{domain}/api/{resource}Api.ts`
+- ✅ Use `getBaseUrl()` and `getFetchOptions()` from `@/lib/api-utils`
+- ✅ Import API clients in hooks/stores, NEVER use direct `fetch()`
+- ✅ See **Section 2a** above for complete enterprise API client pattern and examples
+
+**Remember**: Always create API endpoints in `/api/` directory, then call them from client-side code using **centralized API clients** (NOT direct fetch) with TanStack Query!

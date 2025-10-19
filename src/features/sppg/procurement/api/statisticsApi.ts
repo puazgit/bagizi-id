@@ -5,6 +5,7 @@
  * @see {@link /docs/copilot-instructions.md} Enterprise Development Guidelines
  */
 
+import { getBaseUrl, getFetchOptions } from '@/lib/api-utils'
 import type {
   ProcurementStatistics,
   ApiResponse
@@ -35,7 +36,8 @@ export const statisticsApi = {
    * @param dateFrom Optional start date for filtering
    * @param dateTo Optional end date for filtering
    */
-  async getStatistics(dateFrom?: Date, dateTo?: Date): Promise<ApiResponse<ProcurementStatistics>> {
+  async getStatistics(dateFrom?: Date, dateTo?: Date, headers?: HeadersInit): Promise<ApiResponse<ProcurementStatistics>> {
+    const baseUrl = getBaseUrl()
     const params = new URLSearchParams()
     
     if (dateFrom) {
@@ -46,28 +48,29 @@ export const statisticsApi = {
     }
     
     const queryString = params.toString() ? `?${params.toString()}` : ''
-    const response = await fetch(`${STATISTICS_BASE}${queryString}`)
+    const response = await fetch(`${baseUrl}${STATISTICS_BASE}${queryString}`, getFetchOptions(headers))
     return handleApiResponse<ProcurementStatistics>(response)
   },
 
   /**
    * Get procurement overview statistics
    */
-  async getOverview(): Promise<ApiResponse<{
+  async getOverview(headers?: HeadersInit): Promise<ApiResponse<{
     totalOrders: number
     totalAmount: number
     activeSuppliers: number
     pendingApprovals: number
     recentTrend: 'UP' | 'DOWN' | 'STABLE'
   }>> {
-    const response = await fetch(`${STATISTICS_BASE}/overview`)
+    const baseUrl = getBaseUrl()
+    const response = await fetch(`${baseUrl}${STATISTICS_BASE}/overview`, getFetchOptions(headers))
     return handleApiResponse(response)
   },
 
   /**
    * Get status breakdown statistics
    */
-  async getStatusBreakdown(): Promise<ApiResponse<{
+  async getStatusBreakdown(headers?: HeadersInit): Promise<ApiResponse<{
     byStatus: Array<{
       status: string
       count: number
@@ -75,14 +78,15 @@ export const statisticsApi = {
       totalAmount: number
     }>
   }>> {
-    const response = await fetch(`${STATISTICS_BASE}/status`)
+    const baseUrl = getBaseUrl()
+    const response = await fetch(`${baseUrl}${STATISTICS_BASE}/status`, getFetchOptions(headers))
     return handleApiResponse(response)
   },
 
   /**
    * Get top suppliers by performance
    */
-  async getTopSuppliers(limit: number = 10): Promise<ApiResponse<{
+  async getTopSuppliers(limit: number = 10, headers?: HeadersInit): Promise<ApiResponse<{
     suppliers: Array<{
       id: string
       name: string
@@ -92,15 +96,16 @@ export const statisticsApi = {
       qualityScore: number
     }>
   }>> {
+    const baseUrl = getBaseUrl()
     const params = new URLSearchParams({ limit: String(limit) })
-    const response = await fetch(`${STATISTICS_BASE}/top-suppliers?${params.toString()}`)
+    const response = await fetch(`${baseUrl}${STATISTICS_BASE}/top-suppliers?${params.toString()}`, getFetchOptions(headers))
     return handleApiResponse(response)
   },
 
   /**
    * Get procurement trends by month
    */
-  async getMonthlyTrends(months: number = 12): Promise<ApiResponse<{
+  async getMonthlyTrends(months: number = 12, headers?: HeadersInit): Promise<ApiResponse<{
     trends: Array<{
       month: string
       year: number
@@ -110,15 +115,16 @@ export const statisticsApi = {
       completionRate: number
     }>
   }>> {
+    const baseUrl = getBaseUrl()
     const params = new URLSearchParams({ months: String(months) })
-    const response = await fetch(`${STATISTICS_BASE}/trends?${params.toString()}`)
+    const response = await fetch(`${baseUrl}${STATISTICS_BASE}/trends?${params.toString()}`, getFetchOptions(headers))
     return handleApiResponse(response)
   },
 
   /**
    * Get category breakdown statistics
    */
-  async getCategoryBreakdown(): Promise<ApiResponse<{
+  async getCategoryBreakdown(headers?: HeadersInit): Promise<ApiResponse<{
     categories: Array<{
       category: string
       count: number
@@ -127,14 +133,15 @@ export const statisticsApi = {
       averagePrice: number
     }>
   }>> {
-    const response = await fetch(`${STATISTICS_BASE}/categories`)
+    const baseUrl = getBaseUrl()
+    const response = await fetch(`${baseUrl}${STATISTICS_BASE}/categories`, getFetchOptions(headers))
     return handleApiResponse(response)
   },
 
   /**
    * Get delivery performance metrics
    */
-  async getDeliveryMetrics(): Promise<ApiResponse<{
+  async getDeliveryMetrics(headers?: HeadersInit): Promise<ApiResponse<{
     onTimeDeliveries: number
     lateDeliveries: number
     averageDeliveryTime: number
@@ -145,14 +152,15 @@ export const statisticsApi = {
       percentage: number
     }>
   }>> {
-    const response = await fetch(`${STATISTICS_BASE}/delivery`)
+    const baseUrl = getBaseUrl()
+    const response = await fetch(`${baseUrl}${STATISTICS_BASE}/delivery`, getFetchOptions(headers))
     return handleApiResponse(response)
   },
 
   /**
    * Get payment status metrics
    */
-  async getPaymentMetrics(): Promise<ApiResponse<{
+  async getPaymentMetrics(headers?: HeadersInit): Promise<ApiResponse<{
     paid: number
     partial: number
     unpaid: number
@@ -160,14 +168,15 @@ export const statisticsApi = {
     totalOutstanding: number
     paymentRate: number
   }>> {
-    const response = await fetch(`${STATISTICS_BASE}/payment`)
+    const baseUrl = getBaseUrl()
+    const response = await fetch(`${baseUrl}${STATISTICS_BASE}/payment`, getFetchOptions(headers))
     return handleApiResponse(response)
   },
 
   /**
    * Get budget utilization for procurement plans
    */
-  async getBudgetUtilization(): Promise<ApiResponse<{
+  async getBudgetUtilization(headers?: HeadersInit): Promise<ApiResponse<{
     totalBudget: number
     allocatedBudget: number
     usedBudget: number
@@ -175,7 +184,8 @@ export const statisticsApi = {
     utilizationRate: number
     projectedOverrun: boolean
   }>> {
-    const response = await fetch(`${STATISTICS_BASE}/budget`)
+    const baseUrl = getBaseUrl()
+    const response = await fetch(`${baseUrl}${STATISTICS_BASE}/budget`, getFetchOptions(headers))
     return handleApiResponse(response)
   },
 }

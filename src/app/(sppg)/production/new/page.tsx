@@ -13,6 +13,9 @@
 
 import { Metadata } from 'next'
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
+import { headers } from 'next/headers'
+import { auth } from '@/auth'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -25,6 +28,8 @@ import {
 } from '@/components/ui/breadcrumb'
 import { ArrowLeft, Lightbulb } from 'lucide-react'
 import { ProductionForm } from '@/features/sppg/production/components'
+import { programsApi, usersApi } from '@/features/sppg/production/api'
+import type { NutritionProgram, NutritionMenu, User } from '@prisma/client'
 
 export const metadata: Metadata = {
   title: 'Buat Produksi Baru | Bagizi-ID',
@@ -33,8 +38,72 @@ export const metadata: Metadata = {
 
 /**
  * Create Production Page
+ * Fetches programs and users server-side for optimal performance
+ * Enterprise-grade API-first architecture with proper authentication
  */
 export default async function CreateProductionPage() {
+  // 1. Authentication check
+  const session = await auth()
+  if (!session?.user?.sppgId) {
+    redirect('/login')
+  }
+
+  // 2. Get request headers for API authentication forwarding
+  const headersList = await headers()
+  const cookieHeader = headersList.get('cookie')
+  const requestHeaders: HeadersInit = cookieHeader ? { Cookie: cookieHeader } : {}
+
+  // 3. Fetch required data in parallel via API (Enterprise pattern)
+  const [programsResponse, usersResponse] = await Promise.all([
+    programsApi.getAll(requestHeaders),
+    usersApi.getKitchenStaff(requestHeaders),
+  ])
+
+  const programs = programsResponse.data || []
+  const users = usersResponse.data || []
+
+  // 4. Validation: Check if SPPG has programs
+  if (programs.length === 0) {
+    return (
+      <div className="space-y-6">
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink asChild>
+                <Link href="/dashboard">Dashboard</Link>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbLink asChild>
+                <Link href="/production">Produksi</Link>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage>Buat Baru</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+
+        <Card className="border-destructive/20 bg-destructive/5">
+          <CardHeader>
+            <CardTitle className="text-destructive">Tidak Ada Program</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground mb-4">
+              Anda belum memiliki program gizi. Silakan buat program terlebih dahulu sebelum
+              menjadwalkan produksi.
+            </p>
+            <Button asChild>
+              <Link href="/menu-planning/create">Buat Program Baru</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       {/* Breadcrumb */}
@@ -97,8 +166,11 @@ export default async function CreateProductionPage() {
         </CardContent>
       </Card>
 
-      {/* Form */}
-      <ProductionForm />
+      {/* Form with users prop */}
+      <ProductionForm 
+        programs={programs as unknown as Array<NutritionProgram & { menus?: NutritionMenu[] }>}
+        users={users as unknown as User[]}
+      />
     </div>
   )
 }

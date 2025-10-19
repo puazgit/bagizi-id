@@ -39,7 +39,7 @@ import { cn } from '@/lib/utils'
 import { useCreateProduction, useUpdateProduction } from '../hooks/useProductions'
 import { productionCreateSchema, type ProductionCreateInput } from '../schemas'
 import { formatCurrency, generateBatchNumber } from '../lib'
-import type { FoodProduction, NutritionMenu, NutritionProgram } from '@prisma/client'
+import type { FoodProduction, NutritionMenu, NutritionProgram, User } from '@prisma/client'
 import { useMemo } from 'react'
 
 // ============================================================================
@@ -52,6 +52,7 @@ interface ProductionFormProps {
     program?: NutritionProgram
   }
   programs?: Array<NutritionProgram & { menus?: NutritionMenu[] }>
+  users?: User[] // Kitchen staff and supervisors for chef selection
   className?: string
   onSuccess?: () => void
 }
@@ -93,6 +94,7 @@ function getDefaultTimeRange() {
 export function ProductionForm({ 
   production, 
   programs = [],
+  users = [],
   className, 
   onSuccess 
 }: ProductionFormProps) {
@@ -506,12 +508,25 @@ export function ProductionForm({
               <Label htmlFor="headCook">
                 Kepala Koki <span className="text-destructive">*</span>
               </Label>
-              <Input
-                id="headCook"
-                placeholder="Nama kepala koki"
-                {...form.register('headCook')}
+              <Select
+                value={form.watch('headCook')}
+                onValueChange={(value) => form.setValue('headCook', value)}
                 disabled={!canEdit}
-              />
+              >
+                <SelectTrigger id="headCook">
+                  <SelectValue placeholder="Pilih kepala koki" />
+                </SelectTrigger>
+                <SelectContent>
+                  {users
+                    .filter(u => u.isActive && u.userRole === 'SPPG_STAFF_DAPUR')
+                    .map(user => (
+                      <SelectItem key={user.id} value={user.id}>
+                        {user.name}
+                        {user.jobTitle && ` (${user.jobTitle})`}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
               {form.formState.errors.headCook && (
                 <p className="text-sm text-destructive">
                   {form.formState.errors.headCook.message}
@@ -522,20 +537,95 @@ export function ProductionForm({
             {/* Supervisor */}
             <div className="space-y-2">
               <Label htmlFor="supervisorId">Supervisor (Opsional)</Label>
-              <Input
-                id="supervisorId"
-                placeholder="ID supervisor"
-                {...form.register('supervisorId')}
+              <Select
+                value={form.watch('supervisorId') || undefined}
+                onValueChange={(value) => form.setValue('supervisorId', value || undefined)}
                 disabled={!canEdit}
-              />
+              >
+                <SelectTrigger id="supervisorId">
+                  <SelectValue placeholder="Pilih supervisor (opsional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  {users
+                    .filter(u => u.isActive && u.userRole === 'SPPG_PRODUKSI_MANAGER')
+                    .map(user => (
+                      <SelectItem key={user.id} value={user.id}>
+                        {user.name}
+                        {user.jobTitle && ` (${user.jobTitle})`}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
-          {/* Assistant Cooks - TODO: Multi-select */}
+          {/* Assistant Cooks */}
           <div className="space-y-2">
             <Label>Asisten Koki (Maks 10)</Label>
+            <div className="flex flex-wrap gap-2 mb-2">
+              {form.watch('assistantCooks')?.map((cookId, index) => {
+                const cook = users.find(u => u.id === cookId)
+                return (
+                  <Badge key={index} variant="secondary" className="gap-1">
+                    {cook?.name || cookId}
+                    {canEdit && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const current = form.getValues('assistantCooks') || []
+                          form.setValue('assistantCooks', current.filter((_, i) => i !== index))
+                        }}
+                        className="ml-1 hover:text-destructive"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    )}
+                  </Badge>
+                )
+              })}
+              {(!form.watch('assistantCooks') || form.watch('assistantCooks')?.length === 0) && (
+                <span className="text-sm text-muted-foreground">Belum ada asisten koki dipilih</span>
+              )}
+            </div>
+            {canEdit && (form.watch('assistantCooks')?.length || 0) < 10 && (
+              <Select
+                value=""
+                onValueChange={(value) => {
+                  if (value) {
+                    const current = form.getValues('assistantCooks') || []
+                    if (!current.includes(value)) {
+                      form.setValue('assistantCooks', [...current, value])
+                    }
+                  }
+                }}
+                disabled={!canEdit}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Tambah asisten koki" />
+                </SelectTrigger>
+                <SelectContent>
+                  {users
+                    .filter(u => {
+                      const current = form.watch('assistantCooks') || []
+                      const headCook = form.watch('headCook')
+                      return (
+                        u.isActive &&
+                        u.userRole === 'SPPG_STAFF_DAPUR' &&
+                        !current.includes(u.id) &&
+                        u.id !== headCook
+                      )
+                    })
+                    .map(user => (
+                      <SelectItem key={user.id} value={user.id}>
+                        {user.name}
+                        {user.jobTitle && ` (${user.jobTitle})`}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            )}
             <p className="text-sm text-muted-foreground">
-              Fitur multi-select akan ditambahkan di versi berikutnya
+              Pilih hingga 10 asisten koki untuk membantu produksi
             </p>
           </div>
         </CardContent>

@@ -6,6 +6,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
+import { menuApi } from '@/features/sppg/menu/api'
 
 interface DuplicateMenuInput {
   newMenuName: string
@@ -17,43 +18,25 @@ interface DuplicateMenuInput {
   copyCostData?: boolean
 }
 
-interface DuplicateMenuResponse {
-  success: boolean
-  message?: string
-  data?: {
-    id: string
-    menuName: string
-    menuCode: string
-  }
-  error?: string
-}
-
 export function useDuplicateMenu(menuId: string) {
   const queryClient = useQueryClient()
   const router = useRouter()
 
   return useMutation({
-    mutationFn: async (input: DuplicateMenuInput): Promise<DuplicateMenuResponse> => {
-      const response = await fetch(`/api/sppg/menu/${menuId}/duplicate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(input),
-      })
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Gagal menduplikasi menu')
+    mutationFn: async (input: DuplicateMenuInput) => {
+      const result = await menuApi.duplicateMenu(menuId, input)
+      
+      if (!result.success || !result.data) {
+        throw new Error(result.error || 'Gagal menduplikasi menu')
       }
-
-      return response.json()
+      
+      return result
     },
     onSuccess: (data) => {
       // Invalidate menu list to show new duplicate
       queryClient.invalidateQueries({ queryKey: ['sppg', 'menus'] })
 
-      toast.success(data.message || 'Menu berhasil diduplikasi', {
+      toast.success('Menu berhasil diduplikasi', {
         description: `Menu baru: ${data.data?.menuName}`,
         action: data.data?.id ? {
           label: 'Lihat Menu',

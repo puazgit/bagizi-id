@@ -171,6 +171,110 @@ export async function seedUsers(prisma: PrismaClient, sppgs: SPPG[]): Promise<Us
           language: 'id',
         }
       }),
+
+      // Distribution Staff - Manager
+      prisma.user.upsert({
+        where: { email: 'distribusi@sppg-purwakarta.com' },
+        update: {},
+        create: {
+          email: 'distribusi@sppg-purwakarta.com',
+          name: 'Ahmad Fauzi',
+          password: await hash('password123', 10),
+          userRole: 'SPPG_DISTRIBUSI_MANAGER',
+          userType: 'SPPG_USER',
+          isActive: true,
+          emailVerified: new Date(),
+          sppgId: purwakartaSppg.id,
+          firstName: 'Ahmad',
+          lastName: 'Fauzi',
+          jobTitle: 'Manajer Distribusi',
+          department: 'Distribusi dan Logistik',
+          phone: '0264-200106',
+          workPhone: '0264-200106',
+          personalPhone: '08156789012',
+          address: 'Jl. Veteran No. 56, Purwakarta',
+          timezone: 'Asia/Jakarta',
+          language: 'id',
+        }
+      }),
+
+      // Distribution Staff - Driver 1
+      prisma.user.upsert({
+        where: { email: 'driver1@sppg-purwakarta.com' },
+        update: {},
+        create: {
+          email: 'driver1@sppg-purwakarta.com',
+          name: 'Joko Widodo',
+          password: await hash('password123', 10),
+          userRole: 'SPPG_STAFF_DISTRIBUSI',
+          userType: 'SPPG_USER',
+          isActive: true,
+          emailVerified: new Date(),
+          sppgId: purwakartaSppg.id,
+          firstName: 'Joko',
+          lastName: 'Widodo',
+          jobTitle: 'Pengemudi Distribusi',
+          department: 'Distribusi dan Logistik',
+          phone: '0264-200107',
+          workPhone: '0264-200107',
+          personalPhone: '08167890123',
+          address: 'Jl. Merdeka No. 78, Purwakarta',
+          timezone: 'Asia/Jakarta',
+          language: 'id',
+        }
+      }),
+
+      // Distribution Staff - Driver 2
+      prisma.user.upsert({
+        where: { email: 'driver2@sppg-purwakarta.com' },
+        update: {},
+        create: {
+          email: 'driver2@sppg-purwakarta.com',
+          name: 'Bambang Sutrisno',
+          password: await hash('password123', 10),
+          userRole: 'SPPG_STAFF_DISTRIBUSI',
+          userType: 'SPPG_USER',
+          isActive: true,
+          emailVerified: new Date(),
+          sppgId: purwakartaSppg.id,
+          firstName: 'Bambang',
+          lastName: 'Sutrisno',
+          jobTitle: 'Pengemudi Distribusi',
+          department: 'Distribusi dan Logistik',
+          phone: '0264-200108',
+          workPhone: '0264-200108',
+          personalPhone: '08178901234',
+          address: 'Jl. Kartini No. 90, Purwakarta',
+          timezone: 'Asia/Jakarta',
+          language: 'id',
+        }
+      }),
+
+      // Distribution Staff - Driver 3
+      prisma.user.upsert({
+        where: { email: 'driver3@sppg-purwakarta.com' },
+        update: {},
+        create: {
+          email: 'driver3@sppg-purwakarta.com',
+          name: 'Slamet Riyadi',
+          password: await hash('password123', 10),
+          userRole: 'SPPG_STAFF_DISTRIBUSI',
+          userType: 'SPPG_USER',
+          isActive: true,
+          emailVerified: new Date(),
+          sppgId: purwakartaSppg.id,
+          firstName: 'Slamet',
+          lastName: 'Riyadi',
+          jobTitle: 'Pengemudi Distribusi',
+          department: 'Distribusi dan Logistik',
+          phone: '0264-200109',
+          workPhone: '0264-200109',
+          personalPhone: '08189012345',
+          address: 'Jl. Raya Sadang No. 102, Purwakarta',
+          timezone: 'Asia/Jakarta',
+          language: 'id',
+        }
+      }),
     ] : []),
 
     // Demo SPPG Users
@@ -225,6 +329,18 @@ export async function seedUsers(prisma: PrismaClient, sppgs: SPPG[]): Promise<Us
   console.log('   Ahli Gizi:')
   console.log('     Email: gizi@sppg-purwakarta.com')
   console.log('     Password: password123')
+  console.log('     Redirect: /dashboard')
+  console.log('')
+  console.log('   Manajer Distribusi:')
+  console.log('     Email: distribusi@sppg-purwakarta.com')
+  console.log('     Password: password123')
+  console.log('     Redirect: /dashboard')
+  console.log('')
+  console.log('   Staff Distribusi (Drivers):')
+  console.log('     Email: driver1@sppg-purwakarta.com')
+  console.log('     Email: driver2@sppg-purwakarta.com')
+  console.log('     Email: driver3@sppg-purwakarta.com')
+  console.log('     Password: password123 (semua)')
   console.log('     Redirect: /dashboard')
   console.log('')
   console.log('🎭 Demo Account:')

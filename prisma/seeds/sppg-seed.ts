@@ -7,7 +7,7 @@
 import { PrismaClient, SPPG } from '@prisma/client'
 import { seedRegional } from './regional-seed'
 
-export async function seedSppg(prisma: PrismaClient): Promise<SPPG[]> {
+export async function seedSppg(prisma: PrismaClient): Promise<{ sppgs: SPPG[]; nagriTengahVillageId: string }> {
   console.log('  → Creating SPPG entities...')
 
   // Create regional data first
@@ -108,5 +108,5 @@ export async function seedSppg(prisma: PrismaClient): Promise<SPPG[]> {
   ])
 
   console.log(`  ✓ Created ${sppgs.length} SPPG entities`)
-  return sppgs
+  return { sppgs, nagriTengahVillageId: nagriTengah.id }
 }

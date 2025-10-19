@@ -1,53 +1,49 @@
 /**
- * @fileoverview Seed Food Production Data
- * @description Creates sample food production records for testing
+ * @fileoverview Seed Food Production Data for SPPG Purwakarta
+ * @description Creates sample food production records integrated with existing data
  */
 
 import { PrismaClient, ProductionStatus } from '@prisma/client'
 
-const prisma = new PrismaClient()
-
-async function main() {
-  console.log('🌱 Seeding production data...')
+export async function seedProduction(
+  prisma: PrismaClient,
+  sppgs: { id: string; name: string; code: string }[],
+  programs: { id: string; name: string; sppgId: string }[]
+) {
+  console.log('  → Creating production data for SPPG Purwakarta...')
 
   try {
-    // Get first SPPG
-    const sppg = await prisma.sPPG.findFirst({
-      where: { status: 'ACTIVE' }
-    })
-
+    // Get SPPG Purwakarta from passed data
+    const sppg = sppgs.find(s => s.code === 'SPPG-PWK-001')
     if (!sppg) {
-      console.error('❌ No active SPPG found!')
-      return
+      console.warn('  ⚠️  SPPG Purwakarta not found, skipping production seed')
+      return []
     }
 
-    console.log(`✅ Found SPPG: ${sppg.name}`)
+    console.log(`  ✅ Found SPPG: ${sppg.name}`)
 
-    // Get first program
-    const program = await prisma.nutritionProgram.findFirst({
-      where: { sppgId: sppg.id }
-    })
-
+    // Get programs for this SPPG from passed data
+    const program = programs.find(p => p.sppgId === sppg.id)
     if (!program) {
-      console.error('❌ No program found for this SPPG!')
-      return
+      console.warn('  ⚠️  No program found for this SPPG, skipping')
+      return []
     }
 
-    console.log(`✅ Found Program: ${program.name}`)
+    console.log(`  ✅ Found Program: ${program.name}`)
 
-    // Get first menu
+    // Get menus for this program
     const menu = await prisma.nutritionMenu.findFirst({
       where: { programId: program.id }
     })
 
     if (!menu) {
-      console.error('❌ No menu found for this program!')
-      return
+      console.warn('  ⚠️  No menu found for this program, skipping')
+      return []
     }
 
-    console.log(`✅ Found Menu: ${menu.menuName}`)
+    console.log(`  ✅ Found Menu: ${menu.menuName}`)
 
-    // Get a user to be head cook
+    // Get production manager or staff
     const headCook = await prisma.user.findFirst({
       where: {
         sppgId: sppg.id,
@@ -56,11 +52,11 @@ async function main() {
     })
 
     if (!headCook) {
-      console.error('❌ No suitable user found for head cook!')
-      return
+      console.warn('  ⚠️  No suitable user found for head cook, skipping')
+      return []
     }
 
-    console.log(`✅ Found Head Cook: ${headCook.name}`)
+    console.log(`  ✅ Found Head Cook: ${headCook.name}`)
 
     // Create production records
     const productions = []
@@ -88,7 +84,7 @@ async function main() {
       }
     })
     productions.push(prod1)
-    console.log(`✅ Created completed production: ${prod1.batchNumber}`)
+    console.log(`  ✅ Created completed production: ${prod1.batchNumber}`)
 
     // Production 2: In Progress (Cooking)
     const prod2 = await prisma.foodProduction.create({
@@ -110,7 +106,7 @@ async function main() {
       }
     })
     productions.push(prod2)
-    console.log(`✅ Created cooking production: ${prod2.batchNumber}`)
+    console.log(`  ✅ Created cooking production: ${prod2.batchNumber}`)
 
     // Production 3: Planned (Future)
     const tomorrow = new Date()
@@ -135,25 +131,15 @@ async function main() {
       }
     })
     productions.push(prod3)
-    console.log(`✅ Created planned production: ${prod3.batchNumber}`)
+    console.log(`  ✅ Created planned production: ${prod3.batchNumber}`)
 
-    console.log('')
-    console.log('✅ Production seed completed successfully!')
-    console.log(`📊 Created ${productions.length} production records`)
-    console.log(`📊 SPPG: ${sppg.name}`)
-    console.log(`📊 Program: ${program.name}`)
-    console.log(`📊 Menu: ${menu.menuName}`)
+    console.log(`  ✓ Created ${productions.length} production records`)
+    console.log('  ✓ Production scenarios: Completed, Cooking, Planned')
+
+    return productions
 
   } catch (error) {
-    console.error('❌ Error seeding production data:', error)
+    console.error('  ❌ Error seeding production data:', error)
     throw error
-  } finally {
-    await prisma.$disconnect()
   }
 }
-
-main()
-  .catch((e) => {
-    console.error(e)
-    process.exit(1)
-  })

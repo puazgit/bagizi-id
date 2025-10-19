@@ -370,6 +370,32 @@ export async function GET(request: NextRequest) {
               code: true
             }
           },
+          menus: {
+            where: {
+              isActive: true
+            },
+            select: {
+              id: true,
+              menuName: true,
+              menuCode: true,
+              mealType: true,
+              servingSize: true,
+              costPerServing: true,
+              description: true,
+              nutritionCalc: {
+                select: {
+                  totalCalories: true,
+                  totalProtein: true,
+                  totalCarbs: true,
+                  totalFat: true,
+                  totalFiber: true,
+                }
+              }
+            },
+            orderBy: {
+              menuName: 'asc'
+            }
+          },
           _count: {
             select: {
               menus: true,

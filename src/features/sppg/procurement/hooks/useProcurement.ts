@@ -162,12 +162,15 @@ export function useApproveProcurementPlan() {
 
 /**
  * Hook to fetch procurement orders with optional filters
+ * Returns array of ProcurementWithDetails directly
  */
 export function useProcurements(filters?: Partial<ProcurementFilters>) {
   return useQuery({
     queryKey: procurementKeys.list(filters),
-    queryFn: () => procurementApi.getProcurements(filters),
-    select: (data) => data.data,
+    queryFn: async () => {
+      const response = await procurementApi.getProcurements(filters)
+      return response.data?.data ?? []
+    },
     staleTime: 1000 * 60 * 2, // 2 minutes
   })
 }

@@ -4,22 +4,49 @@
  * @author Bagizi-ID Development Team
  */
 
+import { getBaseUrl, getFetchOptions } from '@/lib/api-utils'
 import { ApiResponse } from '../types'
 
 /**
- * Simple Program type for API responses
+ * Program type matching NutritionProgram model from API responses
+ * Aligned with Prisma schema and actual API endpoint
  */
 export interface Program {
   id: string
-  sppgId: string
-  programName: string
+  sppgId?: string
+  name: string
   description?: string | null
-  targetBeneficiaries: number
+  programCode: string
+  programType?: string
+  targetGroup?: string
+  
+  // Nutrition goals
+  calorieTarget?: number | null
+  proteinTarget?: number | null
+  carbTarget?: number | null
+  fatTarget?: number | null
+  fiberTarget?: number | null
+  
+  // Schedule
   startDate?: string | null
   endDate?: string | null
-  status: string
-  createdAt: string
-  updatedAt: string
+  feedingDays?: number[]
+  mealsPerDay?: number
+  
+  // Budget & Targets
+  totalBudget?: number | null
+  budgetPerMeal?: number | null
+  targetRecipients: number
+  currentRecipients?: number
+  
+  // Location
+  implementationArea?: string
+  partnerSchools?: string[]
+  
+  // Status & Timestamps
+  status?: string
+  createdAt?: string
+  updatedAt?: string
 }
 
 interface ProgramsFilters {
@@ -34,7 +61,7 @@ export const programsApi = {
   /**
    * Get all programs for current SPPG
    */
-  async getAll(filters?: ProgramsFilters): Promise<ApiResponse<Program[]>> {
+  async getAll(filters?: ProgramsFilters, headers?: HeadersInit): Promise<ApiResponse<Program[]>> {
     const params = new URLSearchParams()
     
     if (filters?.status) {
@@ -44,9 +71,10 @@ export const programsApi = {
       params.append('search', filters.search)
     }
     
-    const url = `/api/sppg/programs${params.toString() ? `?${params.toString()}` : ''}`
+    const baseUrl = getBaseUrl()
+    const url = `${baseUrl}/api/sppg/programs${params.toString() ? `?${params.toString()}` : ''}`
     
-    const response = await fetch(url)
+    const response = await fetch(url, getFetchOptions(headers))
     
     if (!response.ok) {
       throw new Error('Failed to fetch programs')
@@ -58,8 +86,9 @@ export const programsApi = {
   /**
    * Get program by ID
    */
-  async getById(id: string): Promise<ApiResponse<Program>> {
-    const response = await fetch(`/api/sppg/programs/${id}`)
+  async getById(id: string, headers?: HeadersInit): Promise<ApiResponse<Program>> {
+    const baseUrl = getBaseUrl()
+    const response = await fetch(`${baseUrl}/api/sppg/programs/${id}`, getFetchOptions(headers))
     
     if (!response.ok) {
       throw new Error('Failed to fetch program')
@@ -71,12 +100,11 @@ export const programsApi = {
   /**
    * Create new program
    */
-  async create(data: Omit<Program, 'id' | 'createdAt' | 'updatedAt'>): Promise<ApiResponse<Program>> {
-    const response = await fetch('/api/sppg/programs', {
+  async create(data: Omit<Program, 'id' | 'createdAt' | 'updatedAt'>, headers?: HeadersInit): Promise<ApiResponse<Program>> {
+    const baseUrl = getBaseUrl()
+    const response = await fetch(`${baseUrl}/api/sppg/programs`, {
+      ...getFetchOptions(headers),
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify(data),
     })
 
@@ -91,12 +119,11 @@ export const programsApi = {
   /**
    * Update program
    */
-  async update(id: string, data: Partial<Omit<Program, 'id' | 'createdAt' | 'updatedAt'>>): Promise<ApiResponse<Program>> {
-    const response = await fetch(`/api/sppg/programs/${id}`, {
+  async update(id: string, data: Partial<Omit<Program, 'id' | 'createdAt' | 'updatedAt'>>, headers?: HeadersInit): Promise<ApiResponse<Program>> {
+    const baseUrl = getBaseUrl()
+    const response = await fetch(`${baseUrl}/api/sppg/programs/${id}`, {
+      ...getFetchOptions(headers),
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify(data),
     })
 
@@ -111,8 +138,10 @@ export const programsApi = {
   /**
    * Delete program
    */
-  async delete(id: string): Promise<ApiResponse<void>> {
-    const response = await fetch(`/api/sppg/programs/${id}`, {
+  async delete(id: string, headers?: HeadersInit): Promise<ApiResponse<void>> {
+    const baseUrl = getBaseUrl()
+    const response = await fetch(`${baseUrl}/api/sppg/programs/${id}`, {
+      ...getFetchOptions(headers),
       method: 'DELETE',
     })
 

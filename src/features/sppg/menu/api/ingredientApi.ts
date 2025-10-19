@@ -3,6 +3,7 @@
  * @version Next.js 15.5.4 / Fetch API
  */
 
+import { getBaseUrl, getFetchOptions } from '@/lib/api-utils'
 import type { 
   CreateIngredientInput, 
   UpdateIngredientInput,
@@ -14,8 +15,9 @@ export const ingredientApi = {
   /**
    * Get all ingredients for a menu
    */
-  async getAll(menuId: string): Promise<IngredientsListResponse> {
-    const response = await fetch(`/api/sppg/menu/${menuId}/ingredients`)
+  async getAll(menuId: string, headers?: HeadersInit): Promise<IngredientsListResponse> {
+    const baseUrl = getBaseUrl()
+    const response = await fetch(`${baseUrl}/api/sppg/menu/${menuId}/ingredients`, getFetchOptions(headers))
     
     if (!response.ok) {
       const error = await response.json()
@@ -28,12 +30,11 @@ export const ingredientApi = {
   /**
    * Add new ingredient to menu
    */
-  async create(menuId: string, data: CreateIngredientInput): Promise<IngredientResponse> {
-    const response = await fetch(`/api/sppg/menu/${menuId}/ingredients`, {
+  async create(menuId: string, data: CreateIngredientInput, headers?: HeadersInit): Promise<IngredientResponse> {
+    const baseUrl = getBaseUrl()
+    const response = await fetch(`${baseUrl}/api/sppg/menu/${menuId}/ingredients`, {
+      ...getFetchOptions(headers),
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify(data),
     })
 
@@ -48,12 +49,11 @@ export const ingredientApi = {
   /**
    * Update existing ingredient
    */
-  async update(menuId: string, ingredientId: string, data: UpdateIngredientInput): Promise<IngredientResponse> {
-    const response = await fetch(`/api/sppg/menu/${menuId}/ingredients/${ingredientId}`, {
+  async update(menuId: string, ingredientId: string, data: UpdateIngredientInput, headers?: HeadersInit): Promise<IngredientResponse> {
+    const baseUrl = getBaseUrl()
+    const response = await fetch(`${baseUrl}/api/sppg/menu/${menuId}/ingredients/${ingredientId}`, {
+      ...getFetchOptions(headers),
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify(data),
     })
 
@@ -68,8 +68,10 @@ export const ingredientApi = {
   /**
    * Delete ingredient
    */
-  async delete(menuId: string, ingredientId: string): Promise<IngredientResponse> {
-    const response = await fetch(`/api/sppg/menu/${menuId}/ingredients/${ingredientId}`, {
+  async delete(menuId: string, ingredientId: string, headers?: HeadersInit): Promise<IngredientResponse> {
+    const baseUrl = getBaseUrl()
+    const response = await fetch(`${baseUrl}/api/sppg/menu/${menuId}/ingredients/${ingredientId}`, {
+      ...getFetchOptions(headers),
       method: 'DELETE',
     })
 

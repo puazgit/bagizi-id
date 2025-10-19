@@ -76,6 +76,18 @@ export async function seedMenuPlanning(
   const kepalaUser = users.find(u => u.email === 'kepala@sppg-purwakarta.com')
   const approverUser = kepalaUser || adminUser
 
+  // Clean up existing data to avoid duplicates
+  console.log('  → Cleaning up existing menu planning data...')
+  await prisma.menuAssignment.deleteMany({
+    where: { menuPlan: { sppgId: purwakartaSppg.id } }
+  })
+  await prisma.menuPlan.deleteMany({
+    where: { sppgId: purwakartaSppg.id }
+  })
+  await prisma.menuPlanTemplate.deleteMany({
+    where: { sppgId: purwakartaSppg.id }
+  })
+
   let totalPlans = 0
   let totalAssignments = 0
   let totalTemplates = 0
@@ -140,6 +152,19 @@ export async function seedMenuPlanning(
     const menu = suitableMenus[Math.floor(Math.random() * suitableMenus.length)]
     const menuCost = menu.costCalc?.costPerPortion || menu.costPerServing // Use calculated cost or fallback to base cost
 
+    // Check if assignment already exists for this date and meal type
+    const existingAssignment = await prisma.menuAssignment.findFirst({
+      where: {
+        menuPlanId: draftPlan.id,
+        assignedDate: assignDate,
+        mealType: mealType,
+      },
+    })
+
+    if (existingAssignment) {
+      continue // Skip if already exists
+    }
+
     const assignment = await prisma.menuAssignment.create({
       data: {
         menuPlanId: draftPlan.id,
@@ -163,12 +188,13 @@ export async function seedMenuPlanning(
   }
 
   // Update draft plan with totals
+  const totalCost = draftAssignments.reduce((sum, a) => sum + a.estimatedCost, 0)
   await prisma.menuPlan.update({
     where: { id: draftPlan.id },
     data: {
       totalMenus: draftAssignments.length,
-      totalEstimatedCost: draftAssignments.reduce((sum, a) => sum + a.estimatedCost, 0),
-      averageCostPerDay: draftAssignments.reduce((sum, a) => sum + a.estimatedCost, 0) / draftAssignments.length,
+      totalEstimatedCost: totalCost,
+      averageCostPerDay: draftAssignments.length > 0 ? totalCost / draftAssignments.length : 0,
     },
   })
 
@@ -254,12 +280,13 @@ export async function seedMenuPlanning(
     totalAssignments++
   }
 
+  const approvedTotalCost = approvedAssignments.reduce((sum, a) => sum + a.estimatedCost, 0)
   await prisma.menuPlan.update({
     where: { id: approvedPlan.id },
     data: {
       totalMenus: approvedAssignments.length,
-      totalEstimatedCost: approvedAssignments.reduce((sum, a) => sum + a.estimatedCost, 0),
-      averageCostPerDay: approvedAssignments.reduce((sum, a) => sum + a.estimatedCost, 0) / approvedAssignments.length,
+      totalEstimatedCost: approvedTotalCost,
+      averageCostPerDay: approvedAssignments.length > 0 ? approvedTotalCost / approvedAssignments.length : 0,
     },
   })
 
@@ -357,12 +384,13 @@ export async function seedMenuPlanning(
     totalAssignments++
   }
 
+  const activeTotalCost = activeAssignments.reduce((sum, a) => sum + a.estimatedCost, 0)
   await prisma.menuPlan.update({
     where: { id: activePlan.id },
     data: {
       totalMenus: activeAssignments.length,
-      totalEstimatedCost: activeAssignments.reduce((sum, a) => sum + a.estimatedCost, 0),
-      averageCostPerDay: activeAssignments.reduce((sum, a) => sum + a.estimatedCost, 0) / activeAssignments.length,
+      totalEstimatedCost: activeTotalCost,
+      averageCostPerDay: activeAssignments.length > 0 ? activeTotalCost / activeAssignments.length : 0,
     },
   })
 
@@ -451,12 +479,13 @@ export async function seedMenuPlanning(
     totalAssignments++
   }
 
+  const completedTotalCost = completedAssignments.reduce((sum, a) => sum + a.estimatedCost, 0)
   await prisma.menuPlan.update({
     where: { id: completedPlan.id },
     data: {
       totalMenus: completedAssignments.length,
-      totalEstimatedCost: completedAssignments.reduce((sum, a) => sum + a.estimatedCost, 0),
-      averageCostPerDay: completedAssignments.reduce((sum, a) => sum + a.estimatedCost, 0) / completedAssignments.length,
+      totalEstimatedCost: completedTotalCost,
+      averageCostPerDay: completedAssignments.length > 0 ? completedTotalCost / completedAssignments.length : 0,
     },
   })
 

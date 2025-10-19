@@ -116,11 +116,12 @@ export const ProcurementList: FC<ProcurementListProps> = ({
   )
 
   // Fetch procurements (API returns ProcurementWithDetails with supplier, items relations)
+  // Hook already extracts data.data via select, so procurementsResponse is the array
   const { data: procurementsResponse, isLoading, error } = useProcurements(filters)
   
-  // Extract array from paginated response
+  // Use response directly (already an array from hook's select function)
   const procurements = useMemo(
-    () => procurementsResponse?.data || [],
+    () => procurementsResponse || [],
     [procurementsResponse]
   )
 

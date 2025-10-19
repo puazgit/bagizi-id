@@ -5,6 +5,7 @@
  * @see {@link /docs/domain-menu-workflow.md} Menu Domain Documentation
  */
 
+import { getBaseUrl } from '@/lib/api-utils'
 import type {
   Menu,
   MenuWithDetails,
@@ -20,7 +21,11 @@ import type {
 
 // ================================ API BASE CONFIGURATION ================================
 
-const API_BASE = '/api/sppg/menu'
+/**
+ * Get API base URL for menu endpoints
+ * Uses getBaseUrl() for SSR compatibility
+ */
+const getMenuApiBase = () => `${getBaseUrl()}/api/sppg/menu`
 
 /**
  * Handle API responses with consistent error handling
@@ -60,7 +65,7 @@ export const menuApi = {
    */
   async getMenus(filters?: Partial<MenuFilters>): Promise<ApiResponse<MenuListResponse>> {
     const queryString = buildQueryString(filters)
-    const response = await fetch(`${API_BASE}${queryString}`)
+    const response = await fetch(`${getMenuApiBase()}${queryString}`)
     return handleApiResponse<MenuListResponse>(response)
   },
 
@@ -68,7 +73,7 @@ export const menuApi = {
    * Get detailed menu by ID
    */
   async getMenuById(id: string): Promise<ApiResponse<MenuWithDetails>> {
-    const response = await fetch(`${API_BASE}/${id}`)
+    const response = await fetch(`${getMenuApiBase()}/${id}`)
     return handleApiResponse<MenuWithDetails>(response)
   },
 
@@ -76,7 +81,7 @@ export const menuApi = {
    * Create new menu
    */
   async createMenu(data: MenuCreateInput): Promise<ApiResponse<MenuCreateResponse>> {
-    const response = await fetch(API_BASE, {
+    const response = await fetch(getMenuApiBase(), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -90,7 +95,7 @@ export const menuApi = {
    * Update existing menu
    */
   async updateMenu(id: string, data: Partial<MenuUpdateInput>): Promise<ApiResponse<Menu>> {
-    const response = await fetch(`${API_BASE}/${id}`, {
+    const response = await fetch(`${getMenuApiBase()}/${id}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -104,17 +109,50 @@ export const menuApi = {
    * Delete menu
    */
   async deleteMenu(id: string): Promise<ApiResponse<{ message: string }>> {
-    const response = await fetch(`${API_BASE}/${id}`, {
+    const response = await fetch(`${getMenuApiBase()}/${id}`, {
       method: 'DELETE',
     })
     return handleApiResponse<{ message: string }>(response)
   },
 
   /**
+   * Duplicate menu with optional data copying
+   */
+  async duplicateMenu(
+    menuId: string,
+    input: {
+      newMenuName: string
+      newMenuCode: string
+      programId?: string
+      copyIngredients?: boolean
+      copyRecipeSteps?: boolean
+      copyNutritionData?: boolean
+      copyCostData?: boolean
+    }
+  ): Promise<ApiResponse<{
+    id: string
+    menuName: string
+    menuCode: string
+  }>> {
+    const response = await fetch(`${getMenuApiBase()}/${menuId}/duplicate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(input),
+    })
+    return handleApiResponse<{
+      id: string
+      menuName: string
+      menuCode: string
+    }>(response)
+  },
+
+  /**
    * Batch operations on multiple menus
    */
   async batchOperation(operation: 'activate' | 'deactivate' | 'delete', menuIds: string[]): Promise<ApiResponse<{ message: string }>> {
-    const response = await fetch(`${API_BASE}/batch`, {
+    const response = await fetch(`${getMenuApiBase()}/batch`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -146,7 +184,7 @@ export const menuIngredientApi = {
       }>
     }
   }>> {
-    const response = await fetch(`${API_BASE}/${menuId}/ingredients`)
+    const response = await fetch(`${getMenuApiBase()}/${menuId}/ingredients`)
     return handleApiResponse(response)
   },
 
@@ -158,7 +196,7 @@ export const menuIngredientApi = {
     message: string
     calculationTriggered: boolean
   }>> {
-    const response = await fetch(`${API_BASE}/${menuId}/ingredients`, {
+    const response = await fetch(`${getMenuApiBase()}/${menuId}/ingredients`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -172,7 +210,7 @@ export const menuIngredientApi = {
    * Update ingredient
    */
   async updateIngredient(ingredientId: string, data: Partial<MenuIngredientInput>): Promise<ApiResponse<MenuIngredient>> {
-    const response = await fetch(`/api/sppg/menu/ingredients/${ingredientId}`, {
+    const response = await fetch(`${getBaseUrl()}/api/sppg/menu/ingredients/${ingredientId}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -186,7 +224,7 @@ export const menuIngredientApi = {
    * Remove ingredient from menu
    */
   async removeIngredient(ingredientId: string): Promise<ApiResponse<{ message: string }>> {
-    const response = await fetch(`/api/sppg/menu/ingredients/${ingredientId}`, {
+    const response = await fetch(`${getBaseUrl()}/api/sppg/menu/ingredients/${ingredientId}`, {
       method: 'DELETE',
     })
     return handleApiResponse<{ message: string }>(response)
@@ -203,7 +241,7 @@ export const menuCalculationApi = {
     nutritionCalculation: Record<string, unknown>
     message: string
   }>> {
-    const response = await fetch(`${API_BASE}/${menuId}/calculate-nutrition`, {
+    const response = await fetch(`${getMenuApiBase()}/${menuId}/calculate-nutrition`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -225,7 +263,7 @@ export const menuCalculationApi = {
     costCalculation: Record<string, unknown>
     message: string
   }>> {
-    const response = await fetch(`${API_BASE}/${menuId}/calculate-cost`, {
+    const response = await fetch(`${getMenuApiBase()}/${menuId}/calculate-cost`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -239,7 +277,7 @@ export const menuCalculationApi = {
    * Get nutrition calculation for menu
    */
   async getNutritionCalculation(menuId: string): Promise<ApiResponse<Record<string, unknown>>> {
-    const response = await fetch(`${API_BASE}/${menuId}/nutrition-calculation`)
+    const response = await fetch(`${getMenuApiBase()}/${menuId}/nutrition-calculation`)
     return handleApiResponse(response)
   },
 
@@ -247,7 +285,7 @@ export const menuCalculationApi = {
    * Get cost calculation for menu
    */
   async getCostCalculation(menuId: string): Promise<ApiResponse<Record<string, unknown>>> {
-    const response = await fetch(`${API_BASE}/${menuId}/cost-calculation`)
+    const response = await fetch(`${getMenuApiBase()}/${menuId}/cost-calculation`)
     return handleApiResponse(response)
   },
 
@@ -266,7 +304,7 @@ export const menuCalculationApi = {
       status: 'adequate' | 'deficient' | 'excess'
     }>
   }>> {
-    const response = await fetch(`${API_BASE}/${menuId}/compliance-report`)
+    const response = await fetch(`${getMenuApiBase()}/${menuId}/compliance-report`)
     return handleApiResponse(response)
   }
 }
@@ -278,7 +316,7 @@ export const recipeApi = {
    * Get recipe steps for menu
    */
   async getRecipeSteps(menuId: string): Promise<ApiResponse<Array<Record<string, unknown>>>> {
-    const response = await fetch(`${API_BASE}/${menuId}/recipe`)
+    const response = await fetch(`${getMenuApiBase()}/${menuId}/recipe`)
     return handleApiResponse(response)
   },
 
@@ -286,7 +324,7 @@ export const recipeApi = {
    * Update recipe steps for menu
    */
   async updateRecipeSteps(menuId: string, steps: Array<Record<string, unknown>>): Promise<ApiResponse<{ message: string }>> {
-    const response = await fetch(`${API_BASE}/${menuId}/recipe`, {
+    const response = await fetch(`${getMenuApiBase()}/${menuId}/recipe`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -316,7 +354,7 @@ export const inventoryIntegrationApi = {
     totalPages: number
   }>> {
     const queryString = buildQueryString(query)
-    const response = await fetch(`/api/sppg/inventory/items${queryString}`)
+    const response = await fetch(`${getBaseUrl()}/api/sppg/inventory/items${queryString}`)
     return handleApiResponse(response)
   },
 
@@ -324,12 +362,18 @@ export const inventoryIntegrationApi = {
    * Get inventory item details with nutrition data
    */
   async getInventoryItemDetails(itemId: string): Promise<ApiResponse<Record<string, unknown>>> {
-    const response = await fetch(`/api/sppg/inventory/items/${itemId}`)
+    const response = await fetch(`${getBaseUrl()}/api/sppg/inventory/items/${itemId}`)
     return handleApiResponse(response)
   }
 }
 
 // ================================ EXPORT ALL API FUNCTIONS ================================
+
+// Export allergens API
+export * from './allergensApi'
+
+// Export menu actions API
+export * from './menuActionsApi'
 
 // Export default for convenience
 const menuDomainApi = {

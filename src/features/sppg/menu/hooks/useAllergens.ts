@@ -9,11 +9,8 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import type {
-  AllergenResponse,
-  AllergenQueryResult,
-  AllergenFilter,
-} from '@/features/sppg/menu/types/allergen.types'
+import { allergensApi } from '@/features/sppg/menu/api'
+import type { AllergenFilter } from '@/features/sppg/menu/types/allergen.types'
 import type { AllergenCreateInput } from '@/features/sppg/menu/schemas/allergenSchema'
 
 // === QUERY KEYS ===
@@ -27,49 +24,7 @@ export const allergenKeys = {
 }
 
 // === API CLIENT FUNCTIONS ===
-
-/**
- * Fetch all allergens (platform + SPPG custom)
- */
-async function fetchAllergens(filters?: AllergenFilter): Promise<AllergenQueryResult> {
-  const params = new URLSearchParams()
-  
-  if (filters?.category) params.append('category', filters.category)
-  if (filters?.isCommon !== undefined) params.append('isCommon', String(filters.isCommon))
-  if (filters?.isActive !== undefined) params.append('isActive', String(filters.isActive))
-  if (filters?.search) params.append('search', filters.search)
-  
-  const response = await fetch(`/api/sppg/allergens?${params.toString()}`)
-  
-  if (!response.ok) {
-    const error = await response.json()
-    throw new Error(error.error || 'Failed to fetch allergens')
-  }
-  
-  const result = await response.json()
-  return result.data
-}
-
-/**
- * Create custom allergen for SPPG
- */
-async function createAllergen(data: AllergenCreateInput): Promise<AllergenResponse> {
-  const response = await fetch('/api/sppg/allergens', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(data),
-  })
-  
-  if (!response.ok) {
-    const error = await response.json()
-    throw new Error(error.error || 'Failed to create allergen')
-  }
-  
-  const result = await response.json()
-  return result.data
-}
+// Note: All API calls now use centralized allergensApi from @/features/sppg/menu/api
 
 // === QUERY HOOKS ===
 
@@ -84,7 +39,13 @@ async function createAllergen(data: AllergenCreateInput): Promise<AllergenRespon
 export function useAllergens(filters?: AllergenFilter) {
   return useQuery({
     queryKey: allergenKeys.list(filters || {}),
-    queryFn: () => fetchAllergens(filters),
+    queryFn: async () => {
+      const result = await allergensApi.getAll(filters)
+      if (!result.success || !result.data) {
+        throw new Error(result.error || 'Failed to fetch allergens')
+      }
+      return result.data
+    },
     staleTime: 5 * 60 * 1000, // 5 minutes
   })
 }
@@ -159,7 +120,13 @@ export function useCreateAllergen() {
   const queryClient = useQueryClient()
   
   return useMutation({
-    mutationFn: createAllergen,
+    mutationFn: async (data: AllergenCreateInput) => {
+      const result = await allergensApi.create(data)
+      if (!result.success || !result.data) {
+        throw new Error(result.error || 'Failed to create allergen')
+      }
+      return result.data
+    },
     onSuccess: (data) => {
       // Invalidate all allergen queries to refetch
       queryClient.invalidateQueries({ queryKey: allergenKeys.all })

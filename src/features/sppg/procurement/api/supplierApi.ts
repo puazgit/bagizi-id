@@ -5,6 +5,7 @@
  * @see {@link /docs/copilot-instructions.md} Enterprise Development Guidelines
  */
 
+import { getBaseUrl, getFetchOptions } from '@/lib/api-utils'
 import type {
   Supplier,
   SupplierWithDetails,
@@ -59,29 +60,30 @@ export const supplierApi = {
   /**
    * Fetch suppliers with optional filtering and pagination
    */
-  async getSuppliers(filters?: Partial<SupplierFilters>): Promise<ApiResponse<PaginatedResponse<Supplier>>> {
+  async getSuppliers(filters?: Partial<SupplierFilters>, headers?: HeadersInit): Promise<ApiResponse<PaginatedResponse<Supplier>>> {
+    const baseUrl = getBaseUrl()
     const queryString = buildQueryString(filters)
-    const response = await fetch(`${SUPPLIER_BASE}${queryString}`)
+    const response = await fetch(`${baseUrl}${SUPPLIER_BASE}${queryString}`, getFetchOptions(headers))
     return handleApiResponse<PaginatedResponse<Supplier>>(response)
   },
 
   /**
    * Get detailed supplier by ID
    */
-  async getSupplierById(id: string): Promise<ApiResponse<SupplierWithDetails>> {
-    const response = await fetch(`${SUPPLIER_BASE}/${id}`)
+  async getSupplierById(id: string, headers?: HeadersInit): Promise<ApiResponse<SupplierWithDetails>> {
+    const baseUrl = getBaseUrl()
+    const response = await fetch(`${baseUrl}${SUPPLIER_BASE}/${id}`, getFetchOptions(headers))
     return handleApiResponse<SupplierWithDetails>(response)
   },
 
   /**
    * Create new supplier
    */
-  async createSupplier(data: CreateSupplierInput): Promise<ApiResponse<Supplier>> {
-    const response = await fetch(SUPPLIER_BASE, {
+  async createSupplier(data: CreateSupplierInput, headers?: HeadersInit): Promise<ApiResponse<Supplier>> {
+    const baseUrl = getBaseUrl()
+    const response = await fetch(`${baseUrl}${SUPPLIER_BASE}`, {
+      ...getFetchOptions(headers),
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify(data),
     })
     return handleApiResponse<Supplier>(response)
@@ -90,12 +92,11 @@ export const supplierApi = {
   /**
    * Update existing supplier
    */
-  async updateSupplier(id: string, data: Partial<UpdateSupplierInput>): Promise<ApiResponse<Supplier>> {
-    const response = await fetch(`${SUPPLIER_BASE}/${id}`, {
+  async updateSupplier(id: string, data: Partial<UpdateSupplierInput>, headers?: HeadersInit): Promise<ApiResponse<Supplier>> {
+    const baseUrl = getBaseUrl()
+    const response = await fetch(`${baseUrl}${SUPPLIER_BASE}/${id}`, {
+      ...getFetchOptions(headers),
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify(data),
     })
     return handleApiResponse<Supplier>(response)
@@ -104,8 +105,10 @@ export const supplierApi = {
   /**
    * Delete supplier
    */
-  async deleteSupplier(id: string): Promise<ApiResponse<void>> {
-    const response = await fetch(`${SUPPLIER_BASE}/${id}`, {
+  async deleteSupplier(id: string, headers?: HeadersInit): Promise<ApiResponse<void>> {
+    const baseUrl = getBaseUrl()
+    const response = await fetch(`${baseUrl}${SUPPLIER_BASE}/${id}`, {
+      ...getFetchOptions(headers),
       method: 'DELETE',
     })
     return handleApiResponse<void>(response)
@@ -114,7 +117,7 @@ export const supplierApi = {
   /**
    * Get supplier performance analytics
    */
-  async getSupplierPerformance(id: string): Promise<ApiResponse<{
+  async getSupplierPerformance(id: string, headers?: HeadersInit): Promise<ApiResponse<{
     supplier: SupplierWithDetails
     performance: {
       totalOrders: number
@@ -147,15 +150,18 @@ export const supplierApi = {
       recommendations: string[]
     }
   }>> {
-    const response = await fetch(`${SUPPLIER_BASE}/${id}/performance`)
+    const baseUrl = getBaseUrl()
+    const response = await fetch(`${baseUrl}${SUPPLIER_BASE}/${id}/performance`, getFetchOptions(headers))
     return handleApiResponse(response)
   },
 
   /**
    * Activate supplier
    */
-  async activateSupplier(id: string): Promise<ApiResponse<Supplier>> {
-    const response = await fetch(`${SUPPLIER_BASE}/${id}/activate`, {
+  async activateSupplier(id: string, headers?: HeadersInit): Promise<ApiResponse<Supplier>> {
+    const baseUrl = getBaseUrl()
+    const response = await fetch(`${baseUrl}${SUPPLIER_BASE}/${id}/activate`, {
+      ...getFetchOptions(headers),
       method: 'PATCH',
     })
     return handleApiResponse<Supplier>(response)
@@ -164,12 +170,11 @@ export const supplierApi = {
   /**
    * Deactivate supplier
    */
-  async deactivateSupplier(id: string, reason?: string): Promise<ApiResponse<Supplier>> {
-    const response = await fetch(`${SUPPLIER_BASE}/${id}/deactivate`, {
+  async deactivateSupplier(id: string, reason?: string, headers?: HeadersInit): Promise<ApiResponse<Supplier>> {
+    const baseUrl = getBaseUrl()
+    const response = await fetch(`${baseUrl}${SUPPLIER_BASE}/${id}/deactivate`, {
+      ...getFetchOptions(headers),
       method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify({ reason }),
     })
     return handleApiResponse<Supplier>(response)
@@ -178,12 +183,11 @@ export const supplierApi = {
   /**
    * Blacklist supplier
    */
-  async blacklistSupplier(id: string, reason: string): Promise<ApiResponse<Supplier>> {
-    const response = await fetch(`${SUPPLIER_BASE}/${id}/blacklist`, {
+  async blacklistSupplier(id: string, reason: string, headers?: HeadersInit): Promise<ApiResponse<Supplier>> {
+    const baseUrl = getBaseUrl()
+    const response = await fetch(`${baseUrl}${SUPPLIER_BASE}/${id}/blacklist`, {
+      ...getFetchOptions(headers),
       method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify({ reason }),
     })
     return handleApiResponse<Supplier>(response)

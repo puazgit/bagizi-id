@@ -9,6 +9,7 @@ import { create } from 'zustand'
 import { devtools, subscribeWithSelector } from 'zustand/middleware'
 import { immer } from 'zustand/middleware/immer'
 import type { DashboardData, DashboardStats, ActivityItem, NotificationItem } from '../types'
+import { dashboardApi } from '../api'
 
 interface DashboardState {
   // State
@@ -115,15 +116,26 @@ export const useDashboardStore = create<DashboardState>()(
           setLoading(true)
           
           try {
-            // Mock API call - replace with actual API
-            const response = await fetch('/api/sppg/dashboard')
+            const result = await dashboardApi.getDashboard()
             
-            if (!response.ok) {
-              throw new Error(`Failed to fetch dashboard data: ${response.statusText}`)
+            if (!result.success || !result.data) {
+              throw new Error(result.error || 'Failed to fetch dashboard data')
             }
             
-            const data = await response.json()
-            setDashboardData(data.data)
+            // Transform API response to DashboardData format
+            const dashboardData: DashboardData = {
+              stats: result.data.stats,
+              quickActions: [
+                { id: '1', title: 'Buat Menu Baru', description: 'Tambah menu gizi baru', icon: 'Plus', href: '/menu/new' },
+                { id: '2', title: 'Review Menu', description: 'Lihat dan approve menu', icon: 'Check', href: '/menu?status=PENDING' },
+                { id: '3', title: 'Laporan', description: 'Unduh laporan bulanan', icon: 'Download', href: '/reports' },
+              ],
+              recentActivities: result.data.activities.slice(0, 10),
+              notifications: result.data.notifications.slice(0, 10),
+              lastUpdated: new Date().toISOString()
+            }
+            
+            setDashboardData(dashboardData)
           } catch (error) {
             console.error('Dashboard refresh error:', error)
             setError(error instanceof Error ? error.message : 'Failed to refresh dashboard')

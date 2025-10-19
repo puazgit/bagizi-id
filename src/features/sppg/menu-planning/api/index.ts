@@ -4,6 +4,7 @@
  * @see {@link /docs/copilot-instructions.md} API client patterns
  */
 
+import { getBaseUrl, getFetchOptions } from '@/lib/api-utils'
 import {
   CreateMenuPlanInput,
   UpdateMenuPlanInput,
@@ -32,7 +33,8 @@ export const menuPlanningApi = {
   /**
    * Get list of menu plans with filters
    */
-  async getPlans(filters?: MenuPlanFilters): Promise<ApiListResponse<MenuPlanWithRelations[]>> {
+  async getPlans(filters?: MenuPlanFilters, headers?: HeadersInit): Promise<ApiListResponse<MenuPlanWithRelations[]>> {
+    const baseUrl = getBaseUrl()
     const params = new URLSearchParams()
     
     if (filters?.status) params.append('status', filters.status)
@@ -43,7 +45,7 @@ export const menuPlanningApi = {
     if (filters?.page) params.append('page', filters.page.toString())
     if (filters?.limit) params.append('limit', filters.limit.toString())
 
-    const response = await fetch(`/api/sppg/menu-planning?${params.toString()}`)
+    const response = await fetch(`${baseUrl}/api/sppg/menu-planning?${params.toString()}`, getFetchOptions(headers))
     
     if (!response.ok) {
       const error = await response.json()
@@ -56,8 +58,9 @@ export const menuPlanningApi = {
   /**
    * Get single menu plan detail with assignments
    */
-  async getPlan(planId: string): Promise<ApiResponse<MenuPlanDetail>> {
-    const response = await fetch(`/api/sppg/menu-planning/${planId}`)
+  async getPlan(planId: string, headers?: HeadersInit): Promise<ApiResponse<MenuPlanDetail>> {
+    const baseUrl = getBaseUrl()
+    const response = await fetch(`${baseUrl}/api/sppg/menu-planning/${planId}`, getFetchOptions(headers))
     
     if (!response.ok) {
       const error = await response.json()
@@ -70,12 +73,11 @@ export const menuPlanningApi = {
   /**
    * Create new menu plan
    */
-  async createPlan(data: CreateMenuPlanInput): Promise<ApiResponse<MenuPlanWithRelations>> {
-    const response = await fetch('/api/sppg/menu-planning', {
+  async createPlan(data: CreateMenuPlanInput, headers?: HeadersInit): Promise<ApiResponse<MenuPlanWithRelations>> {
+    const baseUrl = getBaseUrl()
+    const response = await fetch(`${baseUrl}/api/sppg/menu-planning`, {
+      ...getFetchOptions(headers),
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify(data),
     })
 
@@ -90,12 +92,11 @@ export const menuPlanningApi = {
   /**
    * Update existing menu plan
    */
-  async updatePlan(planId: string, data: UpdateMenuPlanInput): Promise<ApiResponse<MenuPlanWithRelations>> {
-    const response = await fetch(`/api/sppg/menu-planning/${planId}`, {
+  async updatePlan(planId: string, data: UpdateMenuPlanInput, headers?: HeadersInit): Promise<ApiResponse<MenuPlanWithRelations>> {
+    const baseUrl = getBaseUrl()
+    const response = await fetch(`${baseUrl}/api/sppg/menu-planning/${planId}`, {
+      ...getFetchOptions(headers),
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify(data),
     })
 
@@ -110,8 +111,10 @@ export const menuPlanningApi = {
   /**
    * Delete (archive) menu plan
    */
-  async deletePlan(planId: string): Promise<ApiResponse<void>> {
-    const response = await fetch(`/api/sppg/menu-planning/${planId}`, {
+  async deletePlan(planId: string, headers?: HeadersInit): Promise<ApiResponse<void>> {
+    const baseUrl = getBaseUrl()
+    const response = await fetch(`${baseUrl}/api/sppg/menu-planning/${planId}`, {
+      ...getFetchOptions(headers),
       method: 'DELETE',
     })
 
@@ -126,12 +129,11 @@ export const menuPlanningApi = {
   /**
    * Submit menu plan for review (DRAFT → PENDING_REVIEW)
    */
-  async submitPlan(planId: string, data: SubmitForReviewInput): Promise<ApiResponse<MenuPlanWithRelations>> {
-    const response = await fetch(`/api/sppg/menu-planning/${planId}/submit`, {
+  async submitPlan(planId: string, data: SubmitForReviewInput, headers?: HeadersInit): Promise<ApiResponse<MenuPlanWithRelations>> {
+    const baseUrl = getBaseUrl()
+    const response = await fetch(`${baseUrl}/api/sppg/menu-planning/${planId}/submit`, {
+      ...getFetchOptions(headers),
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify(data),
     })
 
@@ -146,12 +148,11 @@ export const menuPlanningApi = {
   /**
    * Approve menu plan (PENDING_REVIEW → APPROVED)
    */
-  async approvePlan(planId: string, data: ApproveActionInput): Promise<ApiResponse<MenuPlanWithRelations>> {
-    const response = await fetch(`/api/sppg/menu-planning/${planId}/approve`, {
+  async approvePlan(planId: string, data: ApproveActionInput, headers?: HeadersInit): Promise<ApiResponse<MenuPlanWithRelations>> {
+    const baseUrl = getBaseUrl()
+    const response = await fetch(`${baseUrl}/api/sppg/menu-planning/${planId}/approve`, {
+      ...getFetchOptions(headers),
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify(data),
     })
 
@@ -186,12 +187,11 @@ export const menuPlanningApi = {
   /**
    * Reject menu plan (PENDING_REVIEW → DRAFT)
    */
-  async rejectPlan(planId: string, data: RejectActionInput): Promise<ApiResponse<MenuPlanWithRelations>> {
-    const response = await fetch(`/api/sppg/menu-planning/${planId}/reject`, {
+  async rejectPlan(planId: string, data: RejectActionInput, headers?: HeadersInit): Promise<ApiResponse<MenuPlanWithRelations>> {
+    const baseUrl = getBaseUrl()
+    const response = await fetch(`${baseUrl}/api/sppg/menu-planning/${planId}/reject`, {
+      ...getFetchOptions(headers),
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify(data),
     })
 
@@ -206,12 +206,11 @@ export const menuPlanningApi = {
   /**
    * Publish menu plan (APPROVED → ACTIVE)
    */
-  async publishPlan(planId: string, data: PublishActionInput): Promise<ApiResponse<MenuPlanWithRelations>> {
-    const response = await fetch(`/api/sppg/menu-planning/${planId}/publish`, {
+  async publishPlan(planId: string, data: PublishActionInput, headers?: HeadersInit): Promise<ApiResponse<MenuPlanWithRelations>> {
+    const baseUrl = getBaseUrl()
+    const response = await fetch(`${baseUrl}/api/sppg/menu-planning/${planId}/publish`, {
+      ...getFetchOptions(headers),
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify(data),
     })
 
@@ -226,8 +225,9 @@ export const menuPlanningApi = {
   /**
    * Get menu plan analytics
    */
-  async getAnalytics(planId: string): Promise<ApiResponse<MenuPlanAnalytics>> {
-    const response = await fetch(`/api/sppg/menu-planning/${planId}/analytics`)
+  async getAnalytics(planId: string, headers?: HeadersInit): Promise<ApiResponse<MenuPlanAnalytics>> {
+    const baseUrl = getBaseUrl()
+    const response = await fetch(`${baseUrl}/api/sppg/menu-planning/${planId}/analytics`, getFetchOptions(headers))
     
     if (!response.ok) {
       const error = await response.json()
@@ -243,9 +243,10 @@ export const menuPlanningApi = {
  */
 export const assignmentApi = {
   /**
-   * Get list of assignments with filters
+   * Get menu assignments with filters
    */
-  async getAssignments(filters?: AssignmentFilters): Promise<ApiResponse<MenuAssignmentWithPlan[]>> {
+  async getAssignments(filters?: AssignmentFilters, headers?: HeadersInit): Promise<ApiResponse<MenuAssignmentWithPlan[]>> {
+    const baseUrl = getBaseUrl()
     const params = new URLSearchParams()
     
     if (filters?.planId) params.append('planId', filters.planId)
@@ -253,7 +254,7 @@ export const assignmentApi = {
     if (filters?.endDate) params.append('endDate', filters.endDate)
     if (filters?.mealType) params.append('mealType', filters.mealType)
 
-    const response = await fetch(`/api/sppg/menu-planning/assignments?${params.toString()}`)
+    const response = await fetch(`${baseUrl}/api/sppg/menu-planning/assignments?${params.toString()}`, getFetchOptions(headers))
     
     if (!response.ok) {
       const error = await response.json()
@@ -266,8 +267,9 @@ export const assignmentApi = {
   /**
    * Get single assignment detail
    */
-  async getAssignment(assignmentId: string): Promise<ApiResponse<MenuAssignmentWithPlan>> {
-    const response = await fetch(`/api/sppg/menu-planning/assignments/${assignmentId}`)
+  async getAssignment(assignmentId: string, headers?: HeadersInit): Promise<ApiResponse<MenuAssignmentWithPlan>> {
+    const baseUrl = getBaseUrl()
+    const response = await fetch(`${baseUrl}/api/sppg/menu-planning/assignments/${assignmentId}`, getFetchOptions(headers))
     
     if (!response.ok) {
       const error = await response.json()
@@ -280,14 +282,13 @@ export const assignmentApi = {
   /**
    * Create new menu assignment
    */
-  async createAssignment(data: CreateAssignmentInput): Promise<ApiResponse<MenuAssignmentWithPlan>> {
+  async createAssignment(data: CreateAssignmentInput, headers?: HeadersInit): Promise<ApiResponse<MenuAssignmentWithPlan>> {
+    const baseUrl = getBaseUrl()
     const { planId, ...assignmentData } = data
     
-    const response = await fetch(`/api/sppg/menu-planning/${planId}/assignments`, {
+    const response = await fetch(`${baseUrl}/api/sppg/menu-planning/${planId}/assignments`, {
+      ...getFetchOptions(headers),
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify(assignmentData),
     })
 
@@ -302,14 +303,13 @@ export const assignmentApi = {
   /**
    * Update existing assignment
    */
-  async updateAssignment(params: { assignmentId: string; planId: string; data: UpdateAssignmentInput }): Promise<ApiResponse<MenuAssignmentWithPlan>> {
+  async updateAssignment(params: { assignmentId: string; planId: string; data: UpdateAssignmentInput }, headers?: HeadersInit): Promise<ApiResponse<MenuAssignmentWithPlan>> {
+    const baseUrl = getBaseUrl()
     const { assignmentId, planId, data } = params
     
-    const response = await fetch(`/api/sppg/menu-planning/${planId}/assignments/${assignmentId}`, {
+    const response = await fetch(`${baseUrl}/api/sppg/menu-planning/${planId}/assignments/${assignmentId}`, {
+      ...getFetchOptions(headers),
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify(data),
     })
 
@@ -324,8 +324,10 @@ export const assignmentApi = {
   /**
    * Delete assignment
    */
-  async deleteAssignment(assignmentId: string, planId: string): Promise<ApiResponse<void>> {
-    const response = await fetch(`/api/sppg/menu-planning/${planId}/assignments/${assignmentId}`, {
+  async deleteAssignment(assignmentId: string, planId: string, headers?: HeadersInit): Promise<ApiResponse<void>> {
+    const baseUrl = getBaseUrl()
+    const response = await fetch(`${baseUrl}/api/sppg/menu-planning/${planId}/assignments/${assignmentId}`, {
+      ...getFetchOptions(headers),
       method: 'DELETE',
     })
 

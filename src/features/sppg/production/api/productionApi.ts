@@ -7,6 +7,7 @@
  * @see {@link /docs/copilot-instructions.md} Development Guidelines
  */
 
+import { getBaseUrl, getFetchOptions } from '@/lib/api-utils'
 import { FoodProduction, QualityControl, ProductionStatus } from '@prisma/client'
 
 // ============================================
@@ -138,7 +139,7 @@ export const productionApi = {
    * @param filters - Optional filters for querying productions
    * @returns Promise with list of productions
    */
-  async getAll(filters?: ProductionFilters): Promise<ProductionListResponse> {
+  async getAll(filters?: ProductionFilters, headers?: HeadersInit): Promise<ProductionListResponse> {
     try {
       const params = new URLSearchParams()
       
@@ -150,13 +151,12 @@ export const productionApi = {
         })
       }
 
-      const url = `/api/sppg/production${params.toString() ? `?${params.toString()}` : ''}`
+      const baseUrl = getBaseUrl()
+      const url = `${baseUrl}/api/sppg/production${params.toString() ? `?${params.toString()}` : ''}`
       console.log('[productionApi.getAll] Fetching URL:', url)
       
       const response = await fetch(url, {
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        ...getFetchOptions(headers),
         credentials: 'include', // Include cookies for session
       })
       
@@ -193,8 +193,9 @@ export const productionApi = {
    * @param id - Production ID
    * @returns Promise with production details including menu, recipe, and quality checks
    */
-  async getById(id: string): Promise<ProductionResponse> {
-    const response = await fetch(`/api/sppg/production/${id}`)
+  async getById(id: string, headers?: HeadersInit): Promise<ProductionResponse> {
+    const baseUrl = getBaseUrl()
+    const response = await fetch(`${baseUrl}/api/sppg/production/${id}`, getFetchOptions(headers))
     
     if (!response.ok) {
       const error = await response.json()
@@ -209,12 +210,11 @@ export const productionApi = {
    * @param data - Production data
    * @returns Promise with created production
    */
-  async create(data: ProductionInput): Promise<ProductionResponse> {
-    const response = await fetch('/api/sppg/production', {
+  async create(data: ProductionInput, headers?: HeadersInit): Promise<ProductionResponse> {
+    const baseUrl = getBaseUrl()
+    const response = await fetch(`${baseUrl}/api/sppg/production`, {
+      ...getFetchOptions(headers),
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify(data),
     })
 
@@ -232,12 +232,11 @@ export const productionApi = {
    * @param data - Updated production data
    * @returns Promise with updated production
    */
-  async update(id: string, data: Partial<ProductionInput>): Promise<ProductionResponse> {
-    const response = await fetch(`/api/sppg/production/${id}`, {
+  async update(id: string, data: Partial<ProductionInput>, headers?: HeadersInit): Promise<ProductionResponse> {
+    const baseUrl = getBaseUrl()
+    const response = await fetch(`${baseUrl}/api/sppg/production/${id}`, {
+      ...getFetchOptions(headers),
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify(data),
     })
 
@@ -254,8 +253,10 @@ export const productionApi = {
    * @param id - Production ID
    * @returns Promise with success status
    */
-  async delete(id: string): Promise<{ success: boolean; error?: string }> {
-    const response = await fetch(`/api/sppg/production/${id}`, {
+  async delete(id: string, headers?: HeadersInit): Promise<{ success: boolean; error?: string }> {
+    const baseUrl = getBaseUrl()
+    const response = await fetch(`${baseUrl}/api/sppg/production/${id}`, {
+      ...getFetchOptions(headers),
       method: 'DELETE',
     })
 
@@ -272,12 +273,11 @@ export const productionApi = {
    * @param id - Production ID
    * @returns Promise with updated production
    */
-  async startProduction(id: string): Promise<ProductionResponse> {
-    const response = await fetch(`/api/sppg/production/${id}/start`, {
+  async startProduction(id: string, headers?: HeadersInit): Promise<ProductionResponse> {
+    const baseUrl = getBaseUrl()
+    const response = await fetch(`${baseUrl}/api/sppg/production/${id}/start`, {
+      ...getFetchOptions(headers),
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
     })
 
     if (!response.ok) {
@@ -293,12 +293,11 @@ export const productionApi = {
    * @param id - Production ID
    * @returns Promise with updated production
    */
-  async startCooking(id: string): Promise<ProductionResponse> {
-    const response = await fetch(`/api/sppg/production/${id}/cook`, {
+  async startCooking(id: string, headers?: HeadersInit): Promise<ProductionResponse> {
+    const baseUrl = getBaseUrl()
+    const response = await fetch(`${baseUrl}/api/sppg/production/${id}/cook`, {
+      ...getFetchOptions(headers),
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
     })
 
     if (!response.ok) {
@@ -315,12 +314,11 @@ export const productionApi = {
    * @param data - Actual production data (portions, cost, temperature, waste)
    * @returns Promise with updated production
    */
-  async completeProduction(id: string, data: StatusUpdateInput): Promise<ProductionResponse> {
-    const response = await fetch(`/api/sppg/production/${id}/complete`, {
+  async completeProduction(id: string, data: StatusUpdateInput, headers?: HeadersInit): Promise<ProductionResponse> {
+    const baseUrl = getBaseUrl()
+    const response = await fetch(`${baseUrl}/api/sppg/production/${id}/complete`, {
+      ...getFetchOptions(headers),
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify(data),
     })
 
@@ -338,12 +336,11 @@ export const productionApi = {
    * @param qualityPassed - Whether production passed quality check
    * @returns Promise with updated production
    */
-  async finalizeProduction(id: string, qualityPassed: boolean): Promise<ProductionResponse> {
-    const response = await fetch(`/api/sppg/production/${id}/finalize`, {
+  async finalizeProduction(id: string, qualityPassed: boolean, headers?: HeadersInit): Promise<ProductionResponse> {
+    const baseUrl = getBaseUrl()
+    const response = await fetch(`${baseUrl}/api/sppg/production/${id}/finalize`, {
+      ...getFetchOptions(headers),
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify({ qualityPassed }),
     })
 
@@ -361,12 +358,11 @@ export const productionApi = {
    * @param reason - Cancellation reason
    * @returns Promise with updated production
    */
-  async cancelProduction(id: string, reason: string): Promise<ProductionResponse> {
-    const response = await fetch(`/api/sppg/production/${id}/cancel`, {
+  async cancelProduction(id: string, reason: string, headers?: HeadersInit): Promise<ProductionResponse> {
+    const baseUrl = getBaseUrl()
+    const response = await fetch(`${baseUrl}/api/sppg/production/${id}/cancel`, {
+      ...getFetchOptions(headers),
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify({ reason }),
     })
 
@@ -384,12 +380,11 @@ export const productionApi = {
    * @param data - Quality check data
    * @returns Promise with created quality check
    */
-  async addQualityCheck(id: string, data: QualityCheckInput): Promise<QualityCheckResponse> {
-    const response = await fetch(`/api/sppg/production/${id}/quality`, {
+  async addQualityCheck(id: string, data: QualityCheckInput, headers?: HeadersInit): Promise<QualityCheckResponse> {
+    const baseUrl = getBaseUrl()
+    const response = await fetch(`${baseUrl}/api/sppg/production/${id}/quality`, {
+      ...getFetchOptions(headers),
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify(data),
     })
 
@@ -406,8 +401,9 @@ export const productionApi = {
    * @param id - Production ID
    * @returns Promise with list of quality checks
    */
-  async getQualityChecks(id: string): Promise<{ success: boolean; data?: QualityControl[]; error?: string }> {
-    const response = await fetch(`/api/sppg/production/${id}/quality`)
+  async getQualityChecks(id: string, headers?: HeadersInit): Promise<{ success: boolean; data?: QualityControl[]; error?: string }> {
+    const baseUrl = getBaseUrl()
+    const response = await fetch(`${baseUrl}/api/sppg/production/${id}/quality`, getFetchOptions(headers))
     
     if (!response.ok) {
       const error = await response.json()

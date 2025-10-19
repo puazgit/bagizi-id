@@ -59,7 +59,7 @@ const rolePermissions: Record<UserRole, PermissionType[]> = {
     'WRITE',
     'MENU_MANAGE',
     'PROCUREMENT_MANAGE',
-    'PRODUCTION_MANAGE',  // ✅ Added for production access
+    'PRODUCTION_MANAGE',
     'USER_MANAGE',
   ],
 

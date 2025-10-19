@@ -3,6 +3,7 @@
  * @version Next.js 15.5.4 / Fetch-based API
  */
 
+import { getBaseUrl, getFetchOptions } from '@/lib/api-utils'
 import type { 
   CalculateCostInput,
   CostCalculationResponse 
@@ -12,8 +13,9 @@ export const costApi = {
   /**
    * Get cost report for a menu
    */
-  async getReport(menuId: string): Promise<CostCalculationResponse> {
-    const response = await fetch(`/api/sppg/menu/${menuId}/cost-report`)
+  async getReport(menuId: string, headers?: HeadersInit): Promise<CostCalculationResponse> {
+    const baseUrl = getBaseUrl()
+    const response = await fetch(`${baseUrl}/api/sppg/menu/${menuId}/cost-report`, getFetchOptions(headers))
     
     if (!response.ok) {
       const error = await response.json().catch(() => ({ error: 'Failed to fetch cost report' }))
@@ -26,12 +28,11 @@ export const costApi = {
   /**
    * Calculate/recalculate cost for a menu
    */
-  async calculate(menuId: string, data: CalculateCostInput = {}): Promise<CostCalculationResponse> {
-    const response = await fetch(`/api/sppg/menu/${menuId}/calculate-cost`, {
+  async calculate(menuId: string, data: CalculateCostInput = {}, headers?: HeadersInit): Promise<CostCalculationResponse> {
+    const baseUrl = getBaseUrl()
+    const response = await fetch(`${baseUrl}/api/sppg/menu/${menuId}/calculate-cost`, {
+      ...getFetchOptions(headers),
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify(data),
     })
 

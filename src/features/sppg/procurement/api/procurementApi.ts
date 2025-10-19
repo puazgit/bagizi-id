@@ -5,6 +5,7 @@
  * @see {@link /docs/copilot-instructions.md} Enterprise Development Guidelines
  */
 
+import { getBaseUrl, getFetchOptions } from '@/lib/api-utils'
 import type {
   Procurement,
   ProcurementWithDetails,
@@ -64,29 +65,30 @@ export const procurementPlanApi = {
   /**
    * Fetch procurement plans with optional filtering and pagination
    */
-  async getPlans(filters?: Partial<ProcurementFilters>): Promise<ApiResponse<PaginatedResponse<ProcurementPlan>>> {
+  async getPlans(filters?: Partial<ProcurementFilters>, headers?: HeadersInit): Promise<ApiResponse<PaginatedResponse<ProcurementPlan>>> {
+    const baseUrl = getBaseUrl()
     const queryString = buildQueryString(filters)
-    const response = await fetch(`${PLANS_BASE}${queryString}`)
+    const response = await fetch(`${baseUrl}${PLANS_BASE}${queryString}`, getFetchOptions(headers))
     return handleApiResponse<PaginatedResponse<ProcurementPlan>>(response)
   },
 
   /**
    * Get detailed procurement plan by ID
    */
-  async getPlanById(id: string): Promise<ApiResponse<ProcurementPlanWithDetails>> {
-    const response = await fetch(`${PLANS_BASE}/${id}`)
+  async getPlanById(id: string, headers?: HeadersInit): Promise<ApiResponse<ProcurementPlanWithDetails>> {
+    const baseUrl = getBaseUrl()
+    const response = await fetch(`${baseUrl}${PLANS_BASE}/${id}`, getFetchOptions(headers))
     return handleApiResponse<ProcurementPlanWithDetails>(response)
   },
 
   /**
    * Create new procurement plan
    */
-  async createPlan(data: CreateProcurementPlanInput): Promise<ApiResponse<ProcurementPlan>> {
-    const response = await fetch(PLANS_BASE, {
+  async createPlan(data: CreateProcurementPlanInput, headers?: HeadersInit): Promise<ApiResponse<ProcurementPlan>> {
+    const baseUrl = getBaseUrl()
+    const response = await fetch(`${baseUrl}${PLANS_BASE}`, {
+      ...getFetchOptions(headers),
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify(data),
     })
     return handleApiResponse<ProcurementPlan>(response)
@@ -95,12 +97,11 @@ export const procurementPlanApi = {
   /**
    * Update existing procurement plan
    */
-  async updatePlan(id: string, data: Partial<UpdateProcurementPlanInput>): Promise<ApiResponse<ProcurementPlan>> {
-    const response = await fetch(`${PLANS_BASE}/${id}`, {
+  async updatePlan(id: string, data: Partial<UpdateProcurementPlanInput>, headers?: HeadersInit): Promise<ApiResponse<ProcurementPlan>> {
+    const baseUrl = getBaseUrl()
+    const response = await fetch(`${baseUrl}${PLANS_BASE}/${id}`, {
+      ...getFetchOptions(headers),
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify(data),
     })
     return handleApiResponse<ProcurementPlan>(response)
@@ -109,8 +110,10 @@ export const procurementPlanApi = {
   /**
    * Delete procurement plan
    */
-  async deletePlan(id: string): Promise<ApiResponse<void>> {
-    const response = await fetch(`${PLANS_BASE}/${id}`, {
+  async deletePlan(id: string, headers?: HeadersInit): Promise<ApiResponse<void>> {
+    const baseUrl = getBaseUrl()
+    const response = await fetch(`${baseUrl}${PLANS_BASE}/${id}`, {
+      ...getFetchOptions(headers),
       method: 'DELETE',
     })
     return handleApiResponse<void>(response)
@@ -119,12 +122,11 @@ export const procurementPlanApi = {
   /**
    * Approve or reject procurement plan
    */
-  async approvePlan(id: string, action: 'APPROVE' | 'REJECT', rejectionReason?: string): Promise<ApiResponse<ProcurementPlan>> {
-    const response = await fetch(`${PLANS_BASE}/${id}`, {
+  async approvePlan(id: string, action: 'APPROVE' | 'REJECT', rejectionReason?: string, headers?: HeadersInit): Promise<ApiResponse<ProcurementPlan>> {
+    const baseUrl = getBaseUrl()
+    const response = await fetch(`${baseUrl}${PLANS_BASE}/${id}`, {
+      ...getFetchOptions(headers),
       method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify({ action, rejectionReason }),
     })
     return handleApiResponse<ProcurementPlan>(response)
@@ -141,29 +143,30 @@ export const procurementApi = {
    * Get all procurement orders with optional filters
    * Returns procurement data WITH relations (supplier, items, plan, sppg)
    */
-  async getProcurements(filters?: Partial<ProcurementFilters>): Promise<ApiResponse<PaginatedResponse<ProcurementWithDetails>>> {
+  async getProcurements(filters?: Partial<ProcurementFilters>, headers?: HeadersInit): Promise<ApiResponse<PaginatedResponse<ProcurementWithDetails>>> {
+    const baseUrl = getBaseUrl()
     const queryString = buildQueryString(filters)
-    const response = await fetch(`${PROCUREMENT_BASE}${queryString}`)
+    const response = await fetch(`${baseUrl}${PROCUREMENT_BASE}${queryString}`, getFetchOptions(headers))
     return handleApiResponse<PaginatedResponse<ProcurementWithDetails>>(response)
   },
 
   /**
    * Get detailed procurement order by ID
    */
-  async getProcurementById(id: string): Promise<ApiResponse<ProcurementWithDetails>> {
-    const response = await fetch(`${PROCUREMENT_BASE}/${id}`)
+  async getProcurementById(id: string, headers?: HeadersInit): Promise<ApiResponse<ProcurementWithDetails>> {
+    const baseUrl = getBaseUrl()
+    const response = await fetch(`${baseUrl}${PROCUREMENT_BASE}/${id}`, getFetchOptions(headers))
     return handleApiResponse<ProcurementWithDetails>(response)
   },
 
   /**
    * Create new procurement order
    */
-  async createProcurement(data: CreateProcurementInput): Promise<ApiResponse<Procurement>> {
-    const response = await fetch(PROCUREMENT_BASE, {
+  async createProcurement(data: CreateProcurementInput, headers?: HeadersInit): Promise<ApiResponse<Procurement>> {
+    const baseUrl = getBaseUrl()
+    const response = await fetch(`${baseUrl}${PROCUREMENT_BASE}`, {
+      ...getFetchOptions(headers),
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify(data),
     })
     return handleApiResponse<Procurement>(response)
@@ -172,12 +175,11 @@ export const procurementApi = {
   /**
    * Update existing procurement order
    */
-  async updateProcurement(id: string, data: Partial<UpdateProcurementInput>): Promise<ApiResponse<Procurement>> {
-    const response = await fetch(`${PROCUREMENT_BASE}/${id}`, {
+  async updateProcurement(id: string, data: Partial<UpdateProcurementInput>, headers?: HeadersInit): Promise<ApiResponse<Procurement>> {
+    const baseUrl = getBaseUrl()
+    const response = await fetch(`${baseUrl}${PROCUREMENT_BASE}/${id}`, {
+      ...getFetchOptions(headers),
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify(data),
     })
     return handleApiResponse<Procurement>(response)
@@ -186,8 +188,10 @@ export const procurementApi = {
   /**
    * Delete procurement order
    */
-  async deleteProcurement(id: string): Promise<ApiResponse<void>> {
-    const response = await fetch(`${PROCUREMENT_BASE}/${id}`, {
+  async deleteProcurement(id: string, headers?: HeadersInit): Promise<ApiResponse<void>> {
+    const baseUrl = getBaseUrl()
+    const response = await fetch(`${baseUrl}${PROCUREMENT_BASE}/${id}`, {
+      ...getFetchOptions(headers),
       method: 'DELETE',
     })
     return handleApiResponse<void>(response)
@@ -212,13 +216,13 @@ export const procurementApi = {
       receiptNumber?: string
       receiptPhoto?: string
       deliveryPhoto?: string
-    }
+    },
+    headers?: HeadersInit
   ): Promise<ApiResponse<Procurement>> {
-    const response = await fetch(`${PROCUREMENT_BASE}/${id}/receive`, {
+    const baseUrl = getBaseUrl()
+    const response = await fetch(`${baseUrl}${PROCUREMENT_BASE}/${id}/receive`, {
+      ...getFetchOptions(headers),
       method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify(data),
     })
     return handleApiResponse<Procurement>(response)
