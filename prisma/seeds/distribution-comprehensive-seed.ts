@@ -84,12 +84,73 @@ export async function seedDistributionComprehensive(
       take: 3
     })
 
-    console.log(`  ✅ Found: ${menus.length} menus, ${schools.length} schools, ${vehicles.length} vehicles`)
+    // Get productions (required for schedules!)
+    const productions = await prisma.foodProduction.findMany({
+      where: {
+        sppgId: sppg.id,
+        status: 'COMPLETED'
+      },
+      include: {
+        menu: true
+      },
+      take: 5
+    })
+
+    console.log(`  ✅ Found: ${menus.length} menus, ${schools.length} schools, ${vehicles.length} vehicles, ${productions.length} productions`)
 
     if (!distributor || drivers.length === 0) {
       console.log('  ⚠️  Insufficient staff data')
       return
     }
+
+    if (productions.length === 0) {
+      console.log('  ⚠️  No completed productions found - cannot create schedules')
+      return
+    }
+
+    // ========================================================================
+    // CLEANUP: Delete existing distribution data for this SPPG
+    // ========================================================================
+    console.log('  → Cleaning up existing distribution data...')
+    
+    // Delete in correct order (child tables first)
+    await prisma.beneficiaryReceipt.deleteMany({
+      where: { delivery: { schedule: { sppgId: sppg.id } } }
+    })
+    
+    await prisma.deliveryTracking.deleteMany({
+      where: { delivery: { schedule: { sppgId: sppg.id } } }
+    })
+    
+    await prisma.deliveryIssue.deleteMany({
+      where: { delivery: { schedule: { sppgId: sppg.id } } }
+    })
+    
+    await prisma.deliveryPhoto.deleteMany({
+      where: { delivery: { schedule: { sppgId: sppg.id } } }
+    })
+    
+    await prisma.distributionDelivery.deleteMany({
+      where: { schedule: { sppgId: sppg.id } }
+    })
+    
+    await prisma.distributionIssue.deleteMany({
+      where: { distribution: { schedule: { sppgId: sppg.id } } }
+    })
+    
+    await prisma.vehicleAssignment.deleteMany({
+      where: { sppgId: sppg.id }
+    })
+    
+    await prisma.foodDistribution.deleteMany({
+      where: { schedule: { sppgId: sppg.id } }
+    })
+    
+    await prisma.distributionSchedule.deleteMany({
+      where: { sppgId: sppg.id }
+    })
+
+    console.log('  ✓ Cleaned up existing distribution data')
 
     // ========================================================================
     // STEP 2: Create Distribution Schedules (PHASE 1)
@@ -103,14 +164,13 @@ export async function seedDistributionComprehensive(
     schedules.push(await prisma.distributionSchedule.create({
       data: {
         sppgId: sppg.id,
+        productionId: productions[0].id, // ✅ REQUIRED: Link to completed production
         distributionDate: subDays(new Date(), 7),
         wave: 'MORNING',
         targetCategories: ['EARLY_CHILDHOOD', 'ELEMENTARY_GRADE_1_3'],
         estimatedBeneficiaries: 450,
-        menuName: menus[0]?.menuName || 'Nasi Gudeg Ayam + Sayur',
-        menuDescription: 'Menu bergizi tinggi dengan protein hewani',
-        portionSize: 250,
-        totalPortions: 450,
+        // ✅ Removed: menuName, menuDescription, portionSize, totalPortions
+        // These come from production.menu now!
         packagingType: 'LUNCH_BOX',
         packagingCost: 2000,
         deliveryMethod: 'DELIVERY',
@@ -128,14 +188,12 @@ export async function seedDistributionComprehensive(
     schedules.push(await prisma.distributionSchedule.create({
       data: {
         sppgId: sppg.id,
+        productionId: productions[0].id, // ✅ Use same production
         distributionDate: new Date(),
         wave: 'MIDDAY',
         targetCategories: ['ELEMENTARY_GRADE_1_3'],
         estimatedBeneficiaries: 300,
-        menuName: menus[1]?.menuName || 'Nasi Ayam Geprek + Sayur',
-        menuDescription: 'Menu favorit anak-anak',
-        portionSize: 250,
-        totalPortions: 300,
+        // ✅ Removed: menuName, menuDescription, portionSize, totalPortions
         packagingType: 'STYROFOAM',
         packagingCost: 1500,
         deliveryMethod: 'DELIVERY',
@@ -152,14 +210,12 @@ export async function seedDistributionComprehensive(
     schedules.push(await prisma.distributionSchedule.create({
       data: {
         sppgId: sppg.id,
+        productionId: productions[Math.min(1, productions.length - 1)].id, // ✅ Use second production if exists
         distributionDate: addDays(new Date(), 1),
         wave: 'MORNING',
         targetCategories: ['TODDLER', 'EARLY_CHILDHOOD'],
         estimatedBeneficiaries: 200,
-        menuName: menus[2]?.menuName || 'Bubur Kacang Hijau',
-        menuDescription: 'Menu khusus balita dan anak usia dini',
-        portionSize: 150,
-        totalPortions: 200,
+        // ✅ Removed: menuName, menuDescription, portionSize, totalPortions
         packagingType: 'PLASTIC_CUP',
         packagingCost: 1000,
         deliveryMethod: 'DELIVERY',
@@ -175,14 +231,12 @@ export async function seedDistributionComprehensive(
     schedules.push(await prisma.distributionSchedule.create({
       data: {
         sppgId: sppg.id,
+        productionId: productions[0].id, // ✅ Use first production
         distributionDate: addDays(new Date(), 7),
         wave: 'MORNING',
         targetCategories: ['ELEMENTARY_GRADE_1_3', 'JUNIOR_HIGH'],
         estimatedBeneficiaries: 500,
-        menuName: menus[3]?.menuName || 'Nasi Rendang + Sayur Asem',
-        menuDescription: 'Menu spesial akhir pekan',
-        portionSize: 300,
-        totalPortions: 500,
+        // ✅ Removed: menuName, menuDescription, portionSize, totalPortions
         packagingType: 'LUNCH_BOX',
         packagingCost: 2500,
         deliveryMethod: 'DELIVERY',

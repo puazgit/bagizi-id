@@ -58,6 +58,11 @@ export async function seedProduction(
 
     console.log(`  ✅ Found Head Cook: ${headCook.name}`)
 
+    // Clear existing productions for this SPPG
+    await prisma.foodProduction.deleteMany({
+      where: { sppgId: sppg.id }
+    })
+
     // Create production records
     const productions = []
 

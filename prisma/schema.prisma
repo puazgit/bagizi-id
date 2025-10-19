@@ -1294,7 +1294,7 @@ model NutritionRequirement {
 }
 
 model SchoolBeneficiary {
-  id                   String                @id @default(cuid())
+  id                   String                 @id @default(cuid())
   programId            String
   schoolName           String
   schoolCode           String?
@@ -1309,36 +1309,36 @@ model SchoolBeneficiary {
   coordinates          String?
   totalStudents        Int
   targetStudents       Int
-  activeStudents       Int                   @default(0)
-  students4to6Years    Int                   @default(0)
-  students7to12Years   Int                   @default(0)
-  students13to15Years  Int                   @default(0)
-  students16to18Years  Int                   @default(0)
+  activeStudents       Int                    @default(0)
+  students4to6Years    Int                    @default(0)
+  students7to12Years   Int                    @default(0)
+  students13to15Years  Int                    @default(0)
+  students16to18Years  Int                    @default(0)
   feedingDays          Int[]
-  mealsPerDay          Int                   @default(1)
+  mealsPerDay          Int                    @default(1)
   feedingTime          String?
   deliveryAddress      String
   deliveryContact      String
   deliveryInstructions String?
   storageCapacity      String?
-  servingMethod        String                @default("CAFETERIA")
-  hasKitchen           Boolean               @default(false)
-  hasStorage           Boolean               @default(false)
-  hasCleanWater        Boolean               @default(true)
-  hasElectricity       Boolean               @default(true)
-  enrollmentDate       DateTime              @default(now())
-  isActive             Boolean               @default(true)
+  servingMethod        String                 @default("CAFETERIA")
+  hasKitchen           Boolean                @default(false)
+  hasStorage           Boolean                @default(false)
+  hasCleanWater        Boolean                @default(true)
+  hasElectricity       Boolean                @default(true)
+  enrollmentDate       DateTime               @default(now())
+  isActive             Boolean                @default(true)
   suspendedAt          DateTime?
   suspensionReason     String?
-  beneficiaryType      BeneficiaryType       @default(CHILD)
+  beneficiaryType      BeneficiaryType        @default(CHILD)
   specialDietary       String[]
   allergyAlerts        String[]
   culturalReqs         String[]
-  createdAt            DateTime              @default(now())
-  updatedAt            DateTime              @updatedAt
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
   foodDistributions    FoodDistribution[]
-  program              NutritionProgram      @relation(fields: [programId], references: [id], onDelete: Cascade)
-  village              Village               @relation("SchoolVillage", fields: [villageId], references: [id])
+  program              NutritionProgram       @relation(fields: [programId], references: [id], onDelete: Cascade)
+  village              Village                @relation("SchoolVillage", fields: [villageId], references: [id])
   distributions        SchoolDistribution[]
   reports              SchoolFeedingReport[]
   deliveries           DistributionDelivery[] // ✅ PHASE 3: Individual delivery tracking
@@ -1351,12 +1351,12 @@ model SchoolBeneficiary {
 }
 
 model FoodProduction {
-  id                String             @id @default(cuid())
+  id                String                 @id @default(cuid())
   sppgId            String
   programId         String
   menuId            String
   productionDate    DateTime
-  batchNumber       String             @unique
+  batchNumber       String                 @unique
   plannedPortions   Int
   actualPortions    Int?
   headCook          String
@@ -1375,20 +1375,20 @@ model FoodProduction {
   tasteRating       Int?
   appearanceRating  Int?
   textureRating     Int?
-  status            ProductionStatus   @default(PLANNED)
+  status            ProductionStatus       @default(PLANNED)
   qualityPassed     Boolean?
   rejectionReason   String?
   wasteAmount       Float?
   wasteNotes        String?
   notes             String?
   photos            String[]
-  createdAt         DateTime              @default(now())
-  updatedAt         DateTime              @updatedAt
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
   distributions     FoodDistribution[]
   schedules         DistributionSchedule[] @relation("ProductionSchedules") // ✅ Schedules from this production
-  menu              NutritionMenu         @relation(fields: [menuId], references: [id], onDelete: Cascade)
-  program           NutritionProgram      @relation(fields: [programId], references: [id], onDelete: Cascade)
-  sppg              SPPG                  @relation(fields: [sppgId], references: [id], onDelete: Cascade)
+  menu              NutritionMenu          @relation(fields: [menuId], references: [id], onDelete: Cascade)
+  program           NutritionProgram       @relation(fields: [programId], references: [id], onDelete: Cascade)
+  sppg              SPPG                   @relation(fields: [sppgId], references: [id], onDelete: Cascade)
   menuAssignments   MenuAssignment[]
   qualityChecks     QualityControl[]
 
@@ -1427,12 +1427,12 @@ model QualityControl {
 }
 
 model FoodDistribution {
-  id                        String                @id @default(cuid())
+  id                        String                 @id @default(cuid())
   sppgId                    String
   programId                 String
   productionId              String?
   distributionDate          DateTime
-  distributionCode          String                @unique
+  distributionCode          String                 @unique
   mealType                  MealType
   distributionPoint         String
   address                   String
@@ -1456,7 +1456,7 @@ model FoodDistribution {
   departureTemp             Float?
   arrivalTemp               Float?
   servingTemp               Float?
-  status                    DistributionStatus    @default(SCHEDULED)
+  status                    DistributionStatus     @default(SCHEDULED)
   actualStartTime           DateTime?
   actualEndTime             DateTime?
   departureTime             DateTime?
@@ -1471,24 +1471,24 @@ model FoodDistribution {
   notes                     String?
   photos                    String[]
   signature                 String?
-  createdAt                 DateTime              @default(now())
-  updatedAt                 DateTime              @updatedAt
+  createdAt                 DateTime               @default(now())
+  updatedAt                 DateTime               @updatedAt
   schoolId                  String?
   vehicleId                 String?
   completionNotes           String?
   issuesEncountered         String?
   resolutionNotes           String?
   scheduleId                String?
-  totalBeneficiariesReached Int?                  @default(0)
-  totalPortionsDelivered    Int?                  @default(0)
+  totalBeneficiariesReached Int?                   @default(0)
+  totalPortionsDelivered    Int?                   @default(0)
   issues                    DistributionIssue[]
   feedback                  Feedback[]
-  production                FoodProduction?       @relation(fields: [productionId], references: [id])
-  program                   NutritionProgram      @relation(fields: [programId], references: [id], onDelete: Cascade)
-  schedule                  DistributionSchedule? @relation(fields: [scheduleId], references: [id])
-  school                    SchoolBeneficiary?    @relation(fields: [schoolId], references: [id])
-  sppg                      SPPG                  @relation(fields: [sppgId], references: [id], onDelete: Cascade)
-  vehicle                   Vehicle?              @relation("DistributionVehicle", fields: [vehicleId], references: [id])
+  production                FoodProduction?        @relation(fields: [productionId], references: [id])
+  program                   NutritionProgram       @relation(fields: [programId], references: [id], onDelete: Cascade)
+  schedule                  DistributionSchedule?  @relation(fields: [scheduleId], references: [id])
+  school                    SchoolBeneficiary?     @relation(fields: [schoolId], references: [id])
+  sppg                      SPPG                   @relation(fields: [sppgId], references: [id], onDelete: Cascade)
+  vehicle                   Vehicle?               @relation("DistributionVehicle", fields: [vehicleId], references: [id])
   vehicleAssignments        VehicleAssignment[]
   deliveries                DistributionDelivery[] // ✅ PHASE 3: Individual delivery tracking
 
@@ -2905,30 +2905,30 @@ model SppgTeamMember {
 }
 
 model DistributionSchedule {
-  id                      String                 @id @default(cuid())
-  sppgId                  String
-  productionId            String // ✅ REQUIRED: Link to completed production
-  distributionDate        DateTime
-  wave                    DistributionWave
-  targetCategories        BeneficiaryCategory[]
-  estimatedBeneficiaries  Int
-  
+  id                     String                @id @default(cuid())
+  sppgId                 String
+  productionId           String // ✅ REQUIRED: Link to completed production
+  distributionDate       DateTime
+  wave                   DistributionWave
+  targetCategories       BeneficiaryCategory[]
+  estimatedBeneficiaries Int
+
   // Packaging & Logistics (distribution-specific)
-  packagingType           String
-  packagingCost           Float?
-  deliveryMethod          String
-  distributionTeam        String[]
-  vehicleCount            Int?
-  estimatedTravelTime     Int?
-  fuelCost                Float?
-  
+  packagingType       String
+  packagingCost       Float?
+  deliveryMethod      String
+  distributionTeam    String[]
+  vehicleCount        Int?
+  estimatedTravelTime Int?
+  fuelCost            Float?
+
   // Status
-  status                  DistributionScheduleStatus @default(PLANNED)
-  startedAt               DateTime?
-  completedAt             DateTime?
-  createdAt               DateTime               @default(now())
-  updatedAt               DateTime               @updatedAt
-  
+  status      DistributionScheduleStatus @default(PLANNED)
+  startedAt   DateTime?
+  completedAt DateTime?
+  createdAt   DateTime                   @default(now())
+  updatedAt   DateTime                   @updatedAt
+
   // Relations
   distribution_deliveries DistributionDelivery[]
   sppg                    SPPG                   @relation(fields: [sppgId], references: [id], onDelete: Cascade)
@@ -2955,28 +2955,28 @@ model DistributionDelivery {
   targetContact String?
 
   // Timing
-  estimatedArrival     DateTime
-  actualArrival        DateTime?
-  plannedTime          DateTime? // ✅ PHASE 3
-  actualTime           DateTime? // ✅ PHASE 3
-  departureTime        DateTime? // ✅ PHASE 3
-  arrivalTime          DateTime? // ✅ PHASE 3
-  deliveryCompletedAt  DateTime? // ✅ PHASE 3
+  estimatedArrival    DateTime
+  actualArrival       DateTime?
+  plannedTime         DateTime? // ✅ PHASE 3
+  actualTime          DateTime? // ✅ PHASE 3
+  departureTime       DateTime? // ✅ PHASE 3
+  arrivalTime         DateTime? // ✅ PHASE 3
+  deliveryCompletedAt DateTime? // ✅ PHASE 3
 
   // Route Management
-  plannedRoute         String? // ✅ PHASE 3
-  actualRoute          String? // ✅ PHASE 3
-  estimatedTime        Int? // ✅ PHASE 3: minutes
+  plannedRoute  String? // ✅ PHASE 3
+  actualRoute   String? // ✅ PHASE 3
+  estimatedTime Int? // ✅ PHASE 3: minutes
 
   // GPS Tracking (✅ PHASE 3)
-  departureLocation    String? // GPS: "lat,lng"
-  arrivalLocation      String? // GPS: "lat,lng"
-  currentLocation      String? // GPS: "lat,lng" (real-time)
-  routeTrackingPoints  String[] // GPS trail: ["lat,lng", ...]
+  departureLocation   String? // GPS: "lat,lng"
+  arrivalLocation     String? // GPS: "lat,lng"
+  currentLocation     String? // GPS: "lat,lng" (real-time)
+  routeTrackingPoints String[] // GPS trail: ["lat,lng", ...]
 
   // Portions
-  portionsDelivered    Int
-  portionsPlanned      Int      @default(0) // ✅ PHASE 3
+  portionsDelivered Int
+  portionsPlanned   Int @default(0) // ✅ PHASE 3
 
   // Team
   driverName  String
@@ -3002,13 +3002,13 @@ model DistributionDelivery {
   foodTemperature    Decimal? @db.Decimal(5, 2) // Celsius
 
   // Relations
-  schedule           DistributionSchedule  @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
-  distribution       FoodDistribution?     @relation(fields: [distributionId], references: [id]) // ✅ PHASE 3
-  schoolBeneficiary  SchoolBeneficiary?    @relation(fields: [schoolBeneficiaryId], references: [id]) // ✅ PHASE 3
-  receipts           BeneficiaryReceipt[]
-  photos             DeliveryPhoto[] // ✅ PHASE 3
-  issues             DeliveryIssue[] // ✅ PHASE 3
-  trackingPoints     DeliveryTracking[] // ✅ PHASE 3
+  schedule          DistributionSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  distribution      FoodDistribution?    @relation(fields: [distributionId], references: [id]) // ✅ PHASE 3
+  schoolBeneficiary SchoolBeneficiary?   @relation(fields: [schoolBeneficiaryId], references: [id]) // ✅ PHASE 3
+  receipts          BeneficiaryReceipt[]
+  photos            DeliveryPhoto[] // ✅ PHASE 3
+  issues            DeliveryIssue[] // ✅ PHASE 3
+  trackingPoints    DeliveryTracking[] // ✅ PHASE 3
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -3021,27 +3021,27 @@ model DistributionDelivery {
 
 // === Delivery Photo Management (✅ PHASE 3) ===
 model DeliveryPhoto {
-  id         String    @id @default(cuid())
+  id         String @id @default(cuid())
   deliveryId String
-  
+
   // Photo Details
   photoUrl  String
   photoType PhotoType
   caption   String?
-  
+
   // GPS Location of Photo
   locationTaken String? // GPS: "lat,lng"
-  
+
   // Metadata
-  fileSize Int?    // bytes
+  fileSize Int? // bytes
   mimeType String?
-  
+
   // Timestamp
   takenAt DateTime @default(now())
-  
+
   // Relations
   delivery DistributionDelivery @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
-  
+
   @@index([deliveryId, photoType])
   @@index([takenAt])
   @@map("delivery_photos")
@@ -3049,24 +3049,24 @@ model DeliveryPhoto {
 
 // === Delivery Issue Management (✅ PHASE 3) ===
 model DeliveryIssue {
-  id         String        @id @default(cuid())
+  id         String @id @default(cuid())
   deliveryId String
-  
+
   // Issue Details
   issueType   IssueType
   severity    IssueSeverity
   description String
-  
+
   // Resolution
   resolvedAt      DateTime?
   resolutionNotes String?
-  
+
   // Timestamp
   reportedAt DateTime @default(now())
-  
+
   // Relations
   delivery DistributionDelivery @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
-  
+
   @@index([deliveryId, resolvedAt])
   @@index([issueType, severity])
   @@map("delivery_issues")
@@ -3076,22 +3076,22 @@ model DeliveryIssue {
 model DeliveryTracking {
   id         String @id @default(cuid())
   deliveryId String
-  
+
   // GPS Coordinates
-  latitude  Decimal @db.Decimal(10, 8)
-  longitude Decimal @db.Decimal(11, 8)
+  latitude  Decimal  @db.Decimal(10, 8)
+  longitude Decimal  @db.Decimal(11, 8)
   accuracy  Decimal? @db.Decimal(8, 2) // meters
-  
+
   // Status at this tracking point
   status String // "PENDING", "IN_TRANSIT", "ARRIVED", "DELIVERED", "FAILED"
   notes  String?
-  
+
   // Timestamp
   recordedAt DateTime @default(now())
-  
+
   // Relations
   delivery DistributionDelivery @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
-  
+
   @@index([deliveryId, recordedAt])
   @@index([recordedAt])
   @@map("delivery_tracking")
@@ -5916,11 +5916,11 @@ enum DistributionStatus {
 }
 
 enum DeliveryStatus {
-  ASSIGNED     // Driver assigned, ready to depart
-  DEPARTED     // Left distribution center
-  DELIVERED    // Successfully delivered
-  FAILED       // Delivery failed
-  CANCELLED    // Delivery cancelled
+  ASSIGNED // Driver assigned, ready to depart
+  DEPARTED // Left distribution center
+  DELIVERED // Successfully delivered
+  FAILED // Delivery failed
+  CANCELLED // Delivery cancelled
 }
 
 enum IssueType {

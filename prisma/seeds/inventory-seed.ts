@@ -1286,6 +1286,11 @@ export async function seedInventory() {
     },
   ]
 
+  // Clear existing inventory items for this SPPG first
+  await prisma.inventoryItem.deleteMany({
+    where: { sppgId: sppg.id }
+  })
+
   // Use createMany for bulk insert
   const result = await prisma.inventoryItem.createMany({
     data: inventoryItems,

@@ -24,6 +24,11 @@ export async function seedVehicles(
       return
     }
 
+    // Clear existing vehicles for this SPPG first
+    await prisma.vehicle.deleteMany({
+      where: { sppgId: sppg.id }
+    })
+
     const vehicles = []
 
     // Vehicle 1: Isuzu Elf - Main Distribution Truck
