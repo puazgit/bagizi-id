@@ -103,11 +103,11 @@ export function ExecutionDetail({
 
   // Calculate metrics
   const delivered = execution.totalPortionsDelivered || 0
-  const planned = execution.schedule.totalPortions
+  const planned = execution.schedule?.totalPortions || 0
   const progressPercentage = planned > 0 ? Math.round((delivered / planned) * 100) : 0
 
   const beneficiariesReached = execution.totalBeneficiariesReached || 0
-  const plannedBeneficiaries = execution.schedule.estimatedBeneficiaries
+  const plannedBeneficiaries = execution.schedule?.estimatedBeneficiaries || 0
   const beneficiaryProgress = plannedBeneficiaries > 0 
     ? Math.round((beneficiariesReached / plannedBeneficiaries) * 100) 
     : 0
