@@ -84,35 +84,13 @@ export const createScheduleSchema = z
       .min(1, 'Minimal 1 penerima')
       .max(100000, 'Maksimal 100,000 penerima'),
 
-    // Menu & Portion
-    menuName: z
+    // Production Source (REQUIRED)
+    productionId: z
       .string({
-        message: 'Nama menu harus diisi',
+        message: 'ID produksi harus diisi',
       })
-      .min(3, 'Nama menu minimal 3 karakter')
-      .max(200, 'Nama menu maksimal 200 karakter')
+      .cuid('ID produksi tidak valid')
       .trim(),
-
-    menuDescription: z
-      .string()
-      .max(1000, 'Deskripsi menu maksimal 1000 karakter')
-      .trim()
-      .optional(),
-
-    portionSize: z
-      .number({
-        message: 'Ukuran porsi harus berupa angka',
-      })
-      .positive('Ukuran porsi harus lebih dari 0')
-      .max(5000, 'Ukuran porsi maksimal 5000 gram'),
-
-    totalPortions: z
-      .number({
-        message: 'Total porsi harus berupa angka',
-      })
-      .int('Total porsi harus bilangan bulat')
-      .min(1, 'Minimal 1 porsi')
-      .max(100000, 'Maksimal 100,000 porsi'),
 
     // Packaging
     packagingType: z
@@ -168,17 +146,6 @@ export const createScheduleSchema = z
       .max(100000000, 'Biaya bahan bakar terlalu besar')
       .optional(),
   })
-  .refine(
-    (data) => {
-      // Validate total portions vs estimated beneficiaries
-      return data.totalPortions >= data.estimatedBeneficiaries
-    },
-    {
-      message:
-        'Total porsi harus sama atau lebih besar dari estimasi penerima',
-      path: ['totalPortions'],
-    }
-  )
   .refine(
     (data) => {
       // Validate distribution date is not too far in future (max 1 year)

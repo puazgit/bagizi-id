@@ -58,6 +58,20 @@ export async function GET(
             code: true,
           },
         },
+        production: {
+          select: {
+            id: true,
+            batchNumber: true,
+            actualPortions: true,
+            menu: {
+              select: {
+                id: true,
+                menuName: true,
+                servingSize: true,
+              }
+            }
+          }
+        },
         distribution_deliveries: {
           include: {
             receipts: true,
@@ -92,7 +106,7 @@ export async function GET(
       completedDeliveries: schedule.distribution_deliveries.filter(
         (d: { status: string }) => d.status === 'DELIVERED'
       ).length,
-      totalPortions: schedule.totalPortions,
+      totalPortions: schedule.production.actualPortions || 0,
       deliveredPortions: schedule.distribution_deliveries.reduce(
         (sum: number, d: { portionsDelivered: number }) => sum + d.portionsDelivered,
         0
@@ -204,6 +218,18 @@ export async function PUT(
             code: true,
           },
         },
+        production: {
+          select: {
+            id: true,
+            batchNumber: true,
+            menu: {
+              select: {
+                id: true,
+                menuName: true,
+              }
+            }
+          }
+        },
         distribution_deliveries: true,
         vehicleAssignments: {
           include: {
@@ -228,7 +254,7 @@ export async function PUT(
         action: 'UPDATE',
         entityType: 'DistributionSchedule',
         entityId: id,
-        description: `Updated distribution schedule ${updatedSchedule.menuName}`,
+        description: `Updated distribution schedule ${updatedSchedule.production.menu.menuName} - ${updatedSchedule.production.batchNumber}`,
         oldValues: existingSchedule,
         newValues: updatedSchedule,
       },
@@ -287,6 +313,18 @@ export async function DELETE(
         sppgId: session.user.sppgId,
       },
       include: {
+        production: {
+          select: {
+            id: true,
+            batchNumber: true,
+            menu: {
+              select: {
+                id: true,
+                menuName: true,
+              }
+            }
+          }
+        },
         distribution_deliveries: true,
         vehicleAssignments: true,
       },
@@ -334,7 +372,7 @@ export async function DELETE(
         action: 'DELETE',
         entityType: 'DistributionSchedule',
         entityId: id,
-        description: `Deleted distribution schedule ${schedule.menuName}`,
+        description: `Deleted distribution schedule ${schedule.production.menu.menuName} - ${schedule.production.batchNumber}`,
         oldValues: schedule,
       },
     })

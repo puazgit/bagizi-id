@@ -125,7 +125,18 @@ export async function GET(request: NextRequest) {
               id: true,
               distributionDate: true,
               wave: true,
-              menuName: true,
+              production: {
+                select: {
+                  id: true,
+                  batchNumber: true,
+                  menu: {
+                    select: {
+                      id: true,
+                      menuName: true,
+                    }
+                  }
+                }
+              }
             },
           },
           distribution: {

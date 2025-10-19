@@ -214,7 +214,7 @@ export function DeliveryDetail({ deliveryId }: DeliveryDetailProps) {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <p className="text-sm text-muted-foreground">Menu</p>
-                  <p className="font-medium">{delivery.schedule.menuName}</p>
+                  <p className="font-medium">{delivery.schedule.production.menu.menuName}</p>
                 </div>
                 {delivery.plannedTime && (
                   <div className="space-y-1">

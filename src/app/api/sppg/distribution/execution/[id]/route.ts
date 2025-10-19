@@ -57,6 +57,19 @@ export async function GET(
         },
         schedule: {
           include: {
+            production: {
+              select: {
+                id: true,
+                batchNumber: true,
+                menu: {
+                  select: {
+                    id: true,
+                    menuName: true,
+                    servingSize: true,
+                  }
+                }
+              }
+            },
             vehicleAssignments: {
               include: {
                 vehicle: true,

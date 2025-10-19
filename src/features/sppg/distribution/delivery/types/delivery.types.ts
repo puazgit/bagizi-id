@@ -55,7 +55,17 @@ export type ParsedLocation = GPSCoordinate | null
  * Full delivery with all relations loaded
  */
 export type DeliveryWithRelations = DistributionDelivery & {
-  schedule: DistributionSchedule
+  schedule: DistributionSchedule & {
+    production: {
+      id: string
+      batchNumber: string
+      menu: {
+        id: string
+        menuName: string
+        servingSize: number
+      }
+    }
+  }
   distribution: FoodDistribution | null
   schoolBeneficiary: SchoolBeneficiary | null
   photos: DeliveryPhoto[]
@@ -88,7 +98,13 @@ export type DeliveryListItem = Pick<
   | 'foodQualityChecked'
   | 'createdAt'
 > & {
-  schedule: Pick<DistributionSchedule, 'id' | 'menuName' | 'sppgId'>
+  schedule: Pick<DistributionSchedule, 'id' | 'sppgId'> & {
+    production: {
+      menu: {
+        menuName: string
+      }
+    }
+  }
   distribution?: Pick<FoodDistribution, 'id' | 'distributionCode'> | null
   schoolBeneficiary?: Pick<SchoolBeneficiary, 'id' | 'schoolName' | 'schoolAddress'> | null
   _count?: {
@@ -396,8 +412,16 @@ export const deliveryListInclude = {
   schedule: {
     select: {
       id: true,
-      menuName: true,
       sppgId: true,
+      production: {
+        select: {
+          menu: {
+            select: {
+              menuName: true,
+            }
+          }
+        }
+      }
     }
   },
   distribution: {
@@ -426,7 +450,23 @@ export const deliveryListInclude = {
  * Full include for delivery detail queries
  */
 export const deliveryDetailInclude = {
-  schedule: true,
+  schedule: {
+    include: {
+      production: {
+        select: {
+          id: true,
+          batchNumber: true,
+          menu: {
+            select: {
+              id: true,
+              menuName: true,
+              servingSize: true,
+            }
+          }
+        }
+      }
+    }
+  },
   distribution: true,
   schoolBeneficiary: true,
   photos: {

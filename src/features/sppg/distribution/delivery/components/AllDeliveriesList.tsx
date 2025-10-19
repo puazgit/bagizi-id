@@ -203,7 +203,7 @@ export function AllDeliveriesList() {
             {row.original.targetAddress}
           </div>
           <div className="text-xs text-muted-foreground mt-1">
-            {row.original.schedule.menuName}
+            {row.original.schedule.production.menu.menuName}
           </div>
         </div>
       ),

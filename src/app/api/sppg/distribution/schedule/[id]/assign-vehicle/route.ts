@@ -51,6 +51,18 @@ export async function POST(
         sppgId: session.user.sppgId,
       },
       include: {
+        production: {
+          select: {
+            id: true,
+            batchNumber: true,
+            menu: {
+              select: {
+                id: true,
+                menuName: true,
+              }
+            }
+          }
+        },
         vehicleAssignments: {
           include: {
             vehicle: true,
@@ -125,7 +137,19 @@ export async function POST(
         },
       },
       include: {
-        schedule: true,
+        schedule: {
+          include: {
+            production: {
+              select: {
+                menu: {
+                  select: {
+                    menuName: true,
+                  }
+                }
+              }
+            }
+          }
+        },
       },
     })
 
@@ -136,7 +160,7 @@ export async function POST(
           details: `Kendaraan ${vehicle.licensePlate} sudah ditugaskan pada jadwal lain di tanggal dan waktu yang sama`,
           conflictingSchedule: {
             id: conflictingAssignment.schedule.id,
-            menuName: conflictingAssignment.schedule.menuName,
+            menuName: conflictingAssignment.schedule.production.menu.menuName,
             wave: conflictingAssignment.schedule.wave,
           },
         },
@@ -228,7 +252,7 @@ export async function POST(
         action: 'CREATE',
         entityType: 'VehicleAssignment',
         entityId: assignment.id,
-        description: `Assigned vehicle ${vehicle.licensePlate} to schedule ${schedule.menuName}`,
+        description: `Assigned vehicle ${vehicle.licensePlate} to schedule ${schedule.production.menu.menuName} - ${schedule.production.batchNumber}`,
         metadata: {
           scheduleId,
           vehicleId,

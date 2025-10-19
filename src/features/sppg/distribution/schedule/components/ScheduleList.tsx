@@ -24,6 +24,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { DataTable } from '@/components/ui/data-table'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -91,6 +101,7 @@ export function ScheduleList({ onEdit, onDelete, onView }: ScheduleListProps) {
   const [statusFilter, setStatusFilter] = useState<ScheduleStatus | 'ALL'>('ALL')
   const [waveFilter, setWaveFilter] = useState<DistributionWave | 'ALL'>('ALL')
   const [searchQuery, setSearchQuery] = useState('')
+  const [scheduleToDelete, setScheduleToDelete] = useState<ScheduleListItem | null>(null)
 
   // Fetch schedules with filters
   const {
@@ -109,24 +120,27 @@ export function ScheduleList({ onEdit, onDelete, onView }: ScheduleListProps) {
   const { mutate: deleteSchedule, isPending: isDeleting } = useDeleteSchedule()
 
   /**
-   * Handle delete action
+   * Handle delete action - opens confirmation dialog
    */
   const handleDelete = (schedule: ScheduleListItem) => {
-    if (
-      window.confirm(
-        `Hapus jadwal distribusi "${schedule.menuName}" pada ${format(
-          new Date(schedule.distributionDate),
-          'dd MMMM yyyy',
-          { locale: localeId }
-        )}?`
-      )
-    ) {
-      deleteSchedule(schedule.id, {
-        onSuccess: () => {
-          onDelete?.(schedule.id)
-        },
-      })
-    }
+    setScheduleToDelete(schedule)
+  }
+
+  /**
+   * Confirm delete action
+   */
+  const confirmDelete = () => {
+    if (!scheduleToDelete) return
+
+    deleteSchedule(scheduleToDelete.id, {
+      onSuccess: () => {
+        onDelete?.(scheduleToDelete.id)
+        setScheduleToDelete(null)
+      },
+      onError: () => {
+        setScheduleToDelete(null)
+      },
+    })
   }
 
   /**
@@ -176,13 +190,13 @@ export function ScheduleList({ onEdit, onDelete, onView }: ScheduleListProps) {
       },
     },
     {
-      accessorKey: 'menuName',
+      id: 'menu',
       header: 'Menu',
       cell: ({ row }) => (
         <div className="max-w-[200px]">
-          <div className="font-medium truncate">{row.getValue('menuName')}</div>
+          <div className="font-medium truncate">{row.original.production.menu.menuName}</div>
           <div className="text-sm text-muted-foreground">
-            {row.original.totalPortions} porsi
+            {row.original.production.actualPortions || 0} porsi
           </div>
         </div>
       ),
@@ -312,11 +326,12 @@ export function ScheduleList({ onEdit, onDelete, onView }: ScheduleListProps) {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Jadwal Distribusi</CardTitle>
-      </CardHeader>
-      <CardContent>
+    <>
+      <Card>
+        <CardHeader>
+          <CardTitle>Jadwal Distribusi</CardTitle>
+        </CardHeader>
+        <CardContent>
         {/* Filters */}
         <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Status Filter */}
@@ -380,5 +395,48 @@ export function ScheduleList({ onEdit, onDelete, onView }: ScheduleListProps) {
         />
       </CardContent>
     </Card>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!scheduleToDelete} onOpenChange={(open) => !open && setScheduleToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Konfirmasi Hapus Jadwal</AlertDialogTitle>
+            <AlertDialogDescription>
+              {scheduleToDelete && (
+                <>
+                  Apakah Anda yakin ingin menghapus jadwal distribusi untuk menu{' '}
+                  <strong>&quot;{scheduleToDelete.production.menu.menuName}&quot;</strong> pada{' '}
+                  <strong>
+                    {format(
+                      new Date(scheduleToDelete.distributionDate),
+                      'dd MMMM yyyy',
+                      { locale: localeId }
+                    )}
+                  </strong>
+                  ?
+                  <br />
+                  <br />
+                  <span className="text-destructive font-semibold">
+                    Tindakan ini tidak dapat dibatalkan.
+                  </span>
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>
+              Batal
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? 'Menghapus...' : 'Ya, Hapus Jadwal'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   )
 }

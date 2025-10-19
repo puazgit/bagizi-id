@@ -100,6 +100,11 @@ export async function GET(request: NextRequest) {
     const schedules = await db.distributionSchedule.findMany({
       where: whereClause,
       include: {
+        production: {
+          select: {
+            actualPortions: true,
+          }
+        },
         distribution_deliveries: true,
         vehicleAssignments: true,
       },
@@ -113,7 +118,7 @@ export async function GET(request: NextRequest) {
     let totalActualCost = 0
 
     schedules.forEach((schedule) => {
-      totalPlannedPortions += schedule.totalPortions // ✅ FIXED: Use correct field
+      totalPlannedPortions += schedule.production.actualPortions || 0
       totalDeliveries += schedule.distribution_deliveries.length
       totalVehiclesAssigned += schedule.vehicleAssignments.length
       // Note: estimatedTotalCost and actualTotalCost don't exist in schema yet
@@ -137,6 +142,11 @@ export async function GET(request: NextRequest) {
         },
       },
       include: {
+        production: {
+          select: {
+            actualPortions: true,
+          }
+        },
         distribution_deliveries: true,
       },
     })
@@ -146,7 +156,7 @@ export async function GET(request: NextRequest) {
       inProgress: todaySchedules.filter((s) => s.status === 'IN_PROGRESS').length,
       completed: todaySchedules.filter((s) => s.status === 'COMPLETED').length,
       totalPortions: todaySchedules.reduce(
-        (sum, s) => sum + s.totalPortions, // ✅ FIXED: Use correct field
+        (sum, s) => sum + (s.production.actualPortions || 0),
         0
       ),
       totalDeliveries: todaySchedules.reduce(
@@ -171,6 +181,11 @@ export async function GET(request: NextRequest) {
         },
       },
       include: {
+        production: {
+          select: {
+            actualPortions: true,
+          }
+        },
         distribution_deliveries: true,
       },
     })
@@ -181,7 +196,7 @@ export async function GET(request: NextRequest) {
       prepared: upcomingSchedules.filter((s) => s.status === 'PREPARED').length,
       inProgress: upcomingSchedules.filter((s) => s.status === 'IN_PROGRESS').length,
       totalPortions: upcomingSchedules.reduce(
-        (sum, s) => sum + s.totalPortions, // ✅ FIXED: Use correct field
+        (sum, s) => sum + (s.production.actualPortions || 0),
         0
       ),
       totalDeliveries: upcomingSchedules.reduce(

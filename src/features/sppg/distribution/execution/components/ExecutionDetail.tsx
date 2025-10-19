@@ -162,7 +162,7 @@ export function ExecutionDetail({
                     href={`/distribution/schedule/${execution.schedule.id}`}
                     className="text-primary hover:underline font-medium"
                   >
-                    {execution.schedule.menuName}
+                    {execution.schedule.production.menu.menuName}
                   </Link>
                 </span>
               </div>

@@ -49,6 +49,20 @@ export async function DELETE(
         id: scheduleId,
         sppgId: session.user.sppgId,
       },
+      include: {
+        production: {
+          select: {
+            id: true,
+            batchNumber: true,
+            menu: {
+              select: {
+                id: true,
+                menuName: true,
+              }
+            }
+          }
+        }
+      }
     })
 
     if (!schedule) {
@@ -160,7 +174,7 @@ export async function DELETE(
         action: 'DELETE',
         entityType: 'VehicleAssignment',
         entityId: assignmentId,
-        description: `Removed vehicle ${vehiclePlate} from schedule ${schedule.menuName}`,
+        description: `Removed vehicle ${vehiclePlate} from schedule ${schedule.production.menu.menuName} - ${schedule.production.batchNumber}`,
         oldValues: oldData,
         metadata: {
           scheduleId,

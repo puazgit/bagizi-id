@@ -135,9 +135,13 @@ export async function GET(request: NextRequest) {
     if (filters.search) {
       where.OR = [
         {
-          menuName: {
-            contains: filters.search,
-            mode: 'insensitive' as const
+          production: {
+            menu: {
+              menuName: {
+                contains: filters.search,
+                mode: 'insensitive' as const
+              }
+            }
           }
         },
         {
@@ -160,6 +164,20 @@ export async function GET(request: NextRequest) {
               name: true,
               code: true,
             },
+          },
+          production: {
+            select: {
+              id: true,
+              batchNumber: true,
+              actualPortions: true,
+              menu: {
+                select: {
+                  id: true,
+                  menuName: true,
+                  servingSize: true,
+                }
+              }
+            }
           },
           distribution_deliveries: {
             select: {
@@ -192,8 +210,8 @@ export async function GET(request: NextRequest) {
       id: schedule.id,
       distributionDate: schedule.distributionDate,
       wave: schedule.wave,
-      menuName: schedule.menuName,
-      totalPortions: schedule.totalPortions, // ✅ FIXED: Use correct field name
+      menuName: schedule.production.menu.menuName,
+      totalPortions: schedule.production.actualPortions,
       estimatedBeneficiaries: schedule.estimatedBeneficiaries,
       status: schedule.status,
       deliveryMethod: schedule.deliveryMethod,
@@ -269,7 +287,66 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 4. Business Logic Validation
+    // 4. Validate Production Exists and is COMPLETED
+    const production = await db.foodProduction.findUnique({
+      where: {
+        id: validated.data.productionId,
+      },
+      include: {
+        menu: {
+          select: {
+            id: true,
+            menuName: true,
+            servingSize: true,
+          }
+        }
+      }
+    })
+
+    if (!production) {
+      return Response.json(
+        {
+          error: 'Production not found',
+          details: 'Batch produksi tidak ditemukan',
+        },
+        { status: 404 }
+      )
+    }
+
+    // Check production belongs to same SPPG
+    if (production.sppgId !== session.user.sppgId) {
+      return Response.json(
+        {
+          error: 'Access denied',
+          details: 'Batch produksi bukan milik SPPG Anda',
+        },
+        { status: 403 }
+      )
+    }
+
+    // Check production status is COMPLETED
+    if (production.status !== 'COMPLETED') {
+      return Response.json(
+        {
+          error: 'Invalid production status',
+          details: 'Hanya batch produksi dengan status COMPLETED yang dapat dijadwalkan untuk distribusi',
+        },
+        { status: 400 }
+      )
+    }
+
+    // Check if production has available portions
+    if (!production.actualPortions || production.actualPortions <= 0) {
+      return Response.json(
+        {
+          error: 'No available portions',
+          details: 'Batch produksi tidak memiliki porsi yang tersedia',
+        },
+        { status: 400 }
+      )
+    }
+
+    // 5. Business Logic Validation
     // Check if there's already a schedule for this date and wave
     const existingSchedule = await db.distributionSchedule.findFirst({
       where: {
@@ -289,18 +366,15 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 5. Create Schedule
+    // 6. Create Schedule
     const schedule = await db.distributionSchedule.create({
       data: {
         sppgId: session.user.sppgId, // Multi-tenant safety
+        productionId: validated.data.productionId, // Link to production
         distributionDate: validated.data.distributionDate,
         wave: validated.data.wave,
         targetCategories: validated.data.targetCategories,
         estimatedBeneficiaries: validated.data.estimatedBeneficiaries,
-        menuName: validated.data.menuName,
-        menuDescription: validated.data.menuDescription,
-        portionSize: validated.data.portionSize,
-        totalPortions: validated.data.totalPortions,
         packagingType: validated.data.packagingType,
         packagingCost: validated.data.packagingCost,
         deliveryMethod: validated.data.deliveryMethod,
@@ -316,6 +390,20 @@ export async function POST(request: NextRequest) {
             name: true,
             code: true,
           },
+        },
+        production: {
+          select: {
+            id: true,
+            batchNumber: true,
+            actualPortions: true,
+            menu: {
+              select: {
+                id: true,
+                menuName: true,
+                servingSize: true,
+              }
+            }
+          }
         },
         distribution_deliveries: true,
         vehicleAssignments: {
@@ -341,10 +429,12 @@ export async function POST(request: NextRequest) {
         action: 'CREATE',
         entityType: 'DistributionSchedule',
         entityId: schedule.id,
-        description: `Created distribution schedule for ${schedule.menuName} on ${schedule.distributionDate.toISOString()}`,
+        description: `Created distribution schedule for ${schedule.production.menu.menuName} on ${schedule.distributionDate.toISOString()}`,
         metadata: {
           wave: schedule.wave,
-          totalPortions: schedule.totalPortions,
+          productionId: schedule.productionId,
+          batchNumber: schedule.production.batchNumber,
+          estimatedBeneficiaries: schedule.estimatedBeneficiaries,
         },
       },
     })

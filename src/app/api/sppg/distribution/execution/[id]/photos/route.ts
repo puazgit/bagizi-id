@@ -93,7 +93,15 @@ export async function GET(
             targetName: true, // Use targetName as delivery identifier
             schedule: {
               select: {
-                menuName: true,
+                production: {
+                  select: {
+                    menu: {
+                      select: {
+                        menuName: true,
+                      }
+                    }
+                  }
+                }
               },
             },
           },

@@ -35,6 +35,15 @@ export interface ExecutionWithRelations extends FoodDistribution {
     plannedPortions: number
   } | null
   schedule: DistributionSchedule & {
+    production: {
+      id: string
+      batchNumber: string
+      menu: {
+        id: string
+        menuName: string
+        servingSize: number
+      }
+    }
     vehicleAssignments: VehicleAssignment[]
     packagingCost?: number | null
     fuelCost?: number | null

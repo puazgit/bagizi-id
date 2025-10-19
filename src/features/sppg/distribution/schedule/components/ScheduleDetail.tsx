@@ -215,9 +215,9 @@ export function ScheduleDetail({ scheduleId }: ScheduleDetailProps) {
             <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{schedule.totalPortions.toLocaleString()}</div>
+            <div className="text-2xl font-bold">{schedule.production.actualPortions?.toLocaleString() || 0}</div>
             <p className="text-xs text-muted-foreground">
-              @ {schedule.portionSize}g per porsi
+              @ {schedule.production.menu.servingSize}g per porsi
             </p>
           </CardContent>
         </Card>
@@ -314,15 +314,13 @@ export function ScheduleDetail({ scheduleId }: ScheduleDetailProps) {
         <CardContent className="space-y-4">
           <div>
             <p className="text-sm font-medium text-muted-foreground">Nama Menu</p>
-            <p className="text-lg font-semibold">{schedule.menuName}</p>
+            <p className="text-lg font-semibold">{schedule.production.menu.menuName}</p>
           </div>
 
-          {schedule.menuDescription && (
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Deskripsi</p>
-              <p className="text-base">{schedule.menuDescription}</p>
-            </div>
-          )}
+          <div>
+            <p className="text-sm font-medium text-muted-foreground">Batch Produksi</p>
+            <p className="text-base">{schedule.production.batchNumber}</p>
+          </div>
 
           <Separator />
 

@@ -25,7 +25,6 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
 import {
   Select,
   SelectContent,
@@ -74,14 +73,13 @@ export function ScheduleForm({ scheduleId, onSuccess, onCancel }: ScheduleFormPr
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     resolver: zodResolver(createScheduleSchema) as any,
     defaultValues: {
+      productionId: '', // ✅ REQUIRED: Link to completed production
       distributionDate: new Date(),
       wave: 'MORNING',
       targetCategories: [],
       estimatedBeneficiaries: 0,
-      menuName: '',
-      menuDescription: '',
-      portionSize: 200,
-      totalPortions: 0,
+      // ✅ Removed: menuName, menuDescription, portionSize, totalPortions
+      // These come from selected production.menu!
       packagingType: 'BOX',
       packagingCost: 0,
       deliveryMethod: 'SCHOOL_DELIVERY',
@@ -95,14 +93,13 @@ export function ScheduleForm({ scheduleId, onSuccess, onCancel }: ScheduleFormPr
   useEffect(() => {
     if (existingSchedule && isEditMode) {
       form.reset({
+        productionId: existingSchedule.productionId, // ✅ Production link
         distributionDate: new Date(existingSchedule.distributionDate),
         wave: existingSchedule.wave,
         targetCategories: existingSchedule.targetCategories,
         estimatedBeneficiaries: existingSchedule.estimatedBeneficiaries,
-        menuName: existingSchedule.menuName,
-        menuDescription: existingSchedule.menuDescription || '',
-        portionSize: existingSchedule.portionSize,
-        totalPortions: existingSchedule.totalPortions,
+        // ✅ Removed: menuName, menuDescription, portionSize, totalPortions
+        // These come from production.menu now!
         packagingType: existingSchedule.packagingType,
         packagingCost: existingSchedule.packagingCost || 0,
         deliveryMethod: existingSchedule.deliveryMethod,
@@ -316,7 +313,7 @@ export function ScheduleForm({ scheduleId, onSuccess, onCancel }: ScheduleFormPr
                     <path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7" />
                   </svg>
                 </div>
-                Informasi Menu
+                Sumber Produksi
               </CardTitle>
               <Badge variant="destructive" className="text-xs">
                 Wajib Diisi
@@ -324,82 +321,43 @@ export function ScheduleForm({ scheduleId, onSuccess, onCancel }: ScheduleFormPr
             </div>
           </CardHeader>
           <CardContent className="pt-6 space-y-6">
-            {/* Menu Name */}
+            {/* Production Selection */}
             <FormField
               control={form.control}
-              name="menuName"
+              name="productionId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Nama Menu</FormLabel>
+                  <FormLabel>Pilih Produksi</FormLabel>
                   <FormControl>
-                    <Input placeholder="Nasi Gudeg Ayam + Sayur" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Menu Description */}
-            <FormField
-              control={form.control}
-              name="menuDescription"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Deskripsi Menu (Opsional)</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Detail komposisi dan informasi tambahan..."
-                      className="resize-none"
+                    <select
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                       {...field}
-                    />
+                    >
+                      <option value="">-- Pilih Batch Produksi --</option>
+                      {/* TODO: Fetch completed productions with menu data */}
+                      {/* Example: productions.map(prod => (
+                        <option key={prod.id} value={prod.id}>
+                          {prod.menu.menuName} - {prod.actualPortions} porsi (Batch: {prod.batchNumber})
+                        </option>
+                      )) */}
+                    </select>
                   </FormControl>
+                  <FormDescription>
+                    Pilih batch produksi yang sudah selesai (COMPLETED)
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
             />
 
-            {/* Portion Size & Total Portions */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="portionSize"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Ukuran Porsi (gram)</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        placeholder="200"
-                        {...field}
-                        onChange={(e) => field.onChange(Number(e.target.value))}
-                      />
-                    </FormControl>
-                    <FormDescription>Berat per porsi dalam gram</FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="totalPortions"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Total Porsi</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        placeholder="100"
-                        {...field}
-                        onChange={(e) => field.onChange(Number(e.target.value))}
-                      />
-                    </FormControl>
-                    <FormDescription>Jumlah porsi yang didistribusikan</FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+            {/* TODO: Display selected production details */}
+            {/* When production is selected, show:
+            - Menu name
+            - Portion size
+            - Available portions (production.actualPortions)
+            - Estimated cost (production.actualCost)
+            - Nutrition data (from production.menu)
+            */}
 
             {/* Estimated Beneficiaries */}
             <FormField

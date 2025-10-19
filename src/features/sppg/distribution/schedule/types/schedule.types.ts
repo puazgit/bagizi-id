@@ -38,6 +38,16 @@ export interface ScheduleWithRelations extends DistributionSchedule {
     sppgName: string
     sppgCode: string
   }
+  production: {
+    id: string
+    batchNumber: string
+    actualPortions: number | null
+    menu: {
+      id: string
+      menuName: string
+      servingSize: number
+    }
+  }
   deliveries: DistributionDelivery[]
   vehicleAssignments: (VehicleAssignment & {
     vehicle: {
@@ -56,8 +66,14 @@ export interface ScheduleListItem {
   id: string
   distributionDate: Date
   wave: DistributionWave
-  menuName: string
-  totalPortions: number
+  productionId: string
+  production: {
+    batchNumber: string
+    actualPortions: number | null
+    menu: {
+      menuName: string
+    }
+  }
   estimatedBeneficiaries: number
   status: DistributionScheduleStatus
   deliveryMethod: string
@@ -143,11 +159,8 @@ export interface CreateScheduleInput {
   targetCategories: BeneficiaryCategory[]
   estimatedBeneficiaries: number
 
-  // Menu & Portion
-  menuName: string
-  menuDescription?: string
-  portionSize: number
-  totalPortions: number
+  // Production Source (REQUIRED)
+  productionId: string
 
   // Packaging
   packagingType: string

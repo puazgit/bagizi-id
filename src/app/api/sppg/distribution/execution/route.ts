@@ -209,6 +209,20 @@ export async function POST(request: NextRequest) {
         sppgId: session.user.sppgId, // Multi-tenant safety
       },
       include: {
+        production: {
+          select: {
+            id: true,
+            batchNumber: true,
+            actualPortions: true,
+            menu: {
+              select: {
+                id: true,
+                menuName: true,
+                servingSize: true,
+              }
+            }
+          }
+        },
         vehicleAssignments: {
           include: {
             vehicle: true,
@@ -274,8 +288,8 @@ export async function POST(request: NextRequest) {
         plannedEndTime: new Date(schedule.distributionDate.getTime() + 3 * 60 * 60 * 1000), // +3 hours
         distributorId: session.user.id,
         menuItems: {}, // TODO: Get from schedule
-        totalPortions: schedule.totalPortions,
-        portionSize: schedule.portionSize,
+        totalPortions: schedule.production.actualPortions || 0,
+        portionSize: schedule.production.menu.servingSize,
         status: 'PREPARING',
         actualStartTime: new Date(),
         notes: validated.data.notes,
