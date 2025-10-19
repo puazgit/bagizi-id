@@ -217,10 +217,10 @@ export function CostAnalysisCard({
             </span>
           </div>
           
-          {costs.schedule && (
+          {costs.schedule && (costs.schedule.totalPortions || costs.schedule.estimatedBeneficiaries) && (
             <div className="text-xs text-muted-foreground">
-              {costs.schedule.totalPortions.toLocaleString('id-ID')} porsi untuk{' '}
-              {costs.schedule.estimatedBeneficiaries.toLocaleString('id-ID')} penerima
+              {(costs.schedule.totalPortions || 0).toLocaleString('id-ID')} porsi untuk{' '}
+              {(costs.schedule.estimatedBeneficiaries || 0).toLocaleString('id-ID')} penerima
             </div>
           )}
         </div>
