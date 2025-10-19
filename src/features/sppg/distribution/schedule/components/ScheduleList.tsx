@@ -192,14 +192,19 @@ export function ScheduleList({ onEdit, onDelete, onView }: ScheduleListProps) {
     {
       id: 'menu',
       header: 'Menu',
-      cell: ({ row }) => (
-        <div className="max-w-[200px]">
-          <div className="font-medium truncate">{row.original.production.menu.menuName}</div>
-          <div className="text-sm text-muted-foreground">
-            {row.original.production.actualPortions || 0} porsi
+      cell: ({ row }) => {
+        const production = row.original.production
+        return (
+          <div className="max-w-[200px]">
+            <div className="font-medium truncate">
+              {production?.menu?.menuName || 'N/A'}
+            </div>
+            <div className="text-sm text-muted-foreground">
+              {production?.actualPortions || 0} porsi
+            </div>
           </div>
-        </div>
-      ),
+        )
+      },
     },
     {
       accessorKey: 'estimatedBeneficiaries',
@@ -390,8 +395,8 @@ export function ScheduleList({ onEdit, onDelete, onView }: ScheduleListProps) {
         <DataTable
           columns={columns}
           data={schedules || []}
-          searchKey="menuName"
-          searchPlaceholder="Cari menu..."
+          searchKey="distributionDate"
+          searchPlaceholder="Cari jadwal..."
         />
       </CardContent>
     </Card>
@@ -405,7 +410,7 @@ export function ScheduleList({ onEdit, onDelete, onView }: ScheduleListProps) {
               {scheduleToDelete && (
                 <>
                   Apakah Anda yakin ingin menghapus jadwal distribusi untuk menu{' '}
-                  <strong>&quot;{scheduleToDelete.production.menu.menuName}&quot;</strong> pada{' '}
+                  <strong>&quot;{scheduleToDelete.production?.menu?.menuName || 'N/A'}&quot;</strong> pada{' '}
                   <strong>
                     {format(
                       new Date(scheduleToDelete.distributionDate),
