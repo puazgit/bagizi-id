@@ -72,7 +72,7 @@ export const programsApi = {
     }
     
     const baseUrl = getBaseUrl()
-    const url = `${baseUrl}/api/sppg/programs${params.toString() ? `?${params.toString()}` : ''}`
+    const url = `${baseUrl}/api/sppg/program${params.toString() ? `?${params.toString()}` : ''}`
     
     const response = await fetch(url, getFetchOptions(headers))
     
@@ -88,7 +88,7 @@ export const programsApi = {
    */
   async getById(id: string, headers?: HeadersInit): Promise<ApiResponse<Program>> {
     const baseUrl = getBaseUrl()
-    const response = await fetch(`${baseUrl}/api/sppg/programs/${id}`, getFetchOptions(headers))
+    const response = await fetch(`${baseUrl}/api/sppg/program/${id}`, getFetchOptions(headers))
     
     if (!response.ok) {
       throw new Error('Failed to fetch program')
@@ -102,7 +102,7 @@ export const programsApi = {
    */
   async create(data: Omit<Program, 'id' | 'createdAt' | 'updatedAt'>, headers?: HeadersInit): Promise<ApiResponse<Program>> {
     const baseUrl = getBaseUrl()
-    const response = await fetch(`${baseUrl}/api/sppg/programs`, {
+    const response = await fetch(`${baseUrl}/api/sppg/program`, {
       ...getFetchOptions(headers),
       method: 'POST',
       body: JSON.stringify(data),
@@ -121,7 +121,7 @@ export const programsApi = {
    */
   async update(id: string, data: Partial<Omit<Program, 'id' | 'createdAt' | 'updatedAt'>>, headers?: HeadersInit): Promise<ApiResponse<Program>> {
     const baseUrl = getBaseUrl()
-    const response = await fetch(`${baseUrl}/api/sppg/programs/${id}`, {
+    const response = await fetch(`${baseUrl}/api/sppg/program/${id}`, {
       ...getFetchOptions(headers),
       method: 'PUT',
       body: JSON.stringify(data),
@@ -140,7 +140,7 @@ export const programsApi = {
    */
   async delete(id: string, headers?: HeadersInit): Promise<ApiResponse<void>> {
     const baseUrl = getBaseUrl()
-    const response = await fetch(`${baseUrl}/api/sppg/programs/${id}`, {
+    const response = await fetch(`${baseUrl}/api/sppg/program/${id}`, {
       ...getFetchOptions(headers),
       method: 'DELETE',
     })

@@ -64,7 +64,7 @@ export const programsApi = {
    */
   async getAll(headers?: HeadersInit): Promise<ApiResponse<ProgramWithMenus[]>> {
     const baseUrl = getBaseUrl()
-    const response = await fetch(`${baseUrl}/api/sppg/programs`, getFetchOptions(headers))
+    const response = await fetch(`${baseUrl}/api/sppg/program`, getFetchOptions(headers))
 
     if (!response.ok) {
       // Check if response is JSON
@@ -88,7 +88,7 @@ export const programsApi = {
    */
   async getById(id: string, headers?: HeadersInit): Promise<ApiResponse<ProgramWithMenus>> {
     const baseUrl = getBaseUrl()
-    const response = await fetch(`${baseUrl}/api/sppg/programs/${id}`, getFetchOptions(headers))
+    const response = await fetch(`${baseUrl}/api/sppg/program/${id}`, getFetchOptions(headers))
 
     if (!response.ok) {
       const contentType = response.headers.get('content-type')
@@ -125,7 +125,7 @@ export const programsApi = {
     if (filters?.search) params.append('search', filters.search)
 
     const baseUrl = getBaseUrl()
-    const url = `${baseUrl}/api/sppg/programs${params.toString() ? `?${params.toString()}` : ''}`
+    const url = `${baseUrl}/api/sppg/program${params.toString() ? `?${params.toString()}` : ''}`
     const response = await fetch(url, getFetchOptions(headers))
 
     if (!response.ok) {

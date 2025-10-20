@@ -25,6 +25,7 @@ import {
   ChevronUp,
   LogOut,
   UserCog,
+  Briefcase,
 } from 'lucide-react'
 import {
   Sidebar,
@@ -80,6 +81,18 @@ const sppgNavigation: NavigationGroup[] = [
         href: '/dashboard',
         icon: LayoutDashboard,
         badge: null
+      }
+    ]
+  },
+  {
+    title: 'Program Management',
+    items: [
+      {
+        title: 'Program',
+        href: '/program',
+        icon: Briefcase,
+        badge: null,
+        resource: 'program'
       }
     ]
   },
