@@ -23,6 +23,7 @@ export type PermissionType =
   | 'DELETE'
   | 'APPROVE'
   | 'MENU_MANAGE'
+  | 'SCHOOL_MANAGE'
   | 'PROCUREMENT_MANAGE'
   | 'PRODUCTION_MANAGE'
   | 'DISTRIBUTION_MANAGE'
@@ -48,6 +49,7 @@ const rolePermissions: Record<UserRole, PermissionType[]> = {
     'DELETE',
     'APPROVE',
     'MENU_MANAGE',
+    'SCHOOL_MANAGE',
     'PROCUREMENT_MANAGE',
     'PRODUCTION_MANAGE',
     'DISTRIBUTION_MANAGE',
@@ -58,13 +60,14 @@ const rolePermissions: Record<UserRole, PermissionType[]> = {
     'READ',
     'WRITE',
     'MENU_MANAGE',
+    'SCHOOL_MANAGE',
     'PROCUREMENT_MANAGE',
     'PRODUCTION_MANAGE',
     'USER_MANAGE',
   ],
 
   // SPPG Operational
-  SPPG_AHLI_GIZI: ['READ', 'WRITE', 'MENU_MANAGE', 'QUALITY_MANAGE', 'PRODUCTION_MANAGE'],  // ✅ Added for production access
+  SPPG_AHLI_GIZI: ['READ', 'WRITE', 'MENU_MANAGE', 'SCHOOL_MANAGE', 'QUALITY_MANAGE', 'PRODUCTION_MANAGE'],  // ✅ Added for production access
   SPPG_AKUNTAN: ['READ', 'WRITE', 'FINANCIAL_MANAGE', 'PROCUREMENT_MANAGE'],
   SPPG_PRODUKSI_MANAGER: [
     'READ',
@@ -107,6 +110,13 @@ export function hasPermission(
  */
 export function canManageMenu(role: UserRole): boolean {
   return hasPermission(role, 'MENU_MANAGE')
+}
+
+/**
+ * Check if user can manage schools
+ */
+export function canManageSchool(role: UserRole): boolean {
+  return hasPermission(role, 'SCHOOL_MANAGE')
 }
 
 /**

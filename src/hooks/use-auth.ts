@@ -218,6 +218,9 @@ export function useAuth(): UseAuthReturn {
       case 'program':
         hasAccess = hasRole(['SPPG_KEPALA', 'SPPG_ADMIN', 'SPPG_AHLI_GIZI'])
         break
+      case 'school':
+        hasAccess = hasRole(['SPPG_KEPALA', 'SPPG_ADMIN', 'SPPG_AHLI_GIZI'])
+        break
       case 'menu':
         hasAccess = hasRole(['SPPG_KEPALA', 'SPPG_ADMIN', 'SPPG_AHLI_GIZI'])
         break
@@ -239,8 +242,17 @@ export function useAuth(): UseAuthReturn {
       case 'distribution':
         hasAccess = hasRole(['SPPG_KEPALA', 'SPPG_ADMIN', 'SPPG_DISTRIBUSI_MANAGER', 'SPPG_STAFF_DISTRIBUSI'])
         break
+      case 'inventory':
+        hasAccess = hasRole(['SPPG_KEPALA', 'SPPG_ADMIN', 'SPPG_AKUNTAN', 'SPPG_PRODUKSI_MANAGER'])
+        break
+      case 'hrd':
+        hasAccess = hasRole(['SPPG_KEPALA', 'SPPG_ADMIN', 'SPPG_HRD_MANAGER'])
+        break
       case 'reports':
         hasAccess = isSppgUser() && !hasRole('SPPG_STAFF_DAPUR')
+        break
+      case 'settings':
+        hasAccess = hasRole(['SPPG_KEPALA', 'SPPG_ADMIN'])
         break
       default:
         hasAccess = false

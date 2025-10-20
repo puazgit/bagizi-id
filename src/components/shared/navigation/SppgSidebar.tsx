@@ -26,6 +26,7 @@ import {
   LogOut,
   UserCog,
   Briefcase,
+  School,
 } from 'lucide-react'
 import {
   Sidebar,
@@ -93,6 +94,13 @@ const sppgNavigation: NavigationGroup[] = [
         icon: Briefcase,
         badge: null,
         resource: 'program'
+      },
+      {
+        title: 'School',
+        href: '/school',
+        icon: School,
+        badge: null,
+        resource: 'school'
       }
     ]
   },
@@ -143,7 +151,8 @@ const sppgNavigation: NavigationGroup[] = [
         title: 'Inventory',
         href: '/inventory',
         icon: Package,
-        badge: null
+        badge: null,
+        resource: 'inventory'
       },
       {
         title: 'HRD',

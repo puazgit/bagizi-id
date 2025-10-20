@@ -6,25 +6,22 @@
 
 'use client'
 
-import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
-import { ProgramList, ProgramDialog } from '@/features/sppg/program/components'
-import { usePrograms, useCreateProgram, useDeleteProgram } from '@/features/sppg/program/hooks'
+import { ProgramList } from '@/features/sppg/program/components'
+import { usePrograms, useDeleteProgram } from '@/features/sppg/program/hooks'
 import { toast } from 'sonner'
-import type { CreateProgramInput } from '@/features/sppg/program/schemas'
 import { formatNumber, formatCurrency } from '@/features/sppg/program/lib'
 
 export default function ProgramPage() {
   const router = useRouter()
-  const [dialogOpen, setDialogOpen] = useState(false)
   
   // React Query hooks
   const { data: programs = [], isLoading } = usePrograms()
-  const { mutateAsync: createProgram, isPending: isCreating } = useCreateProgram()
   const { mutate: deleteProgram } = useDeleteProgram()
 
   // Calculate statistics
@@ -36,29 +33,6 @@ export default function ProgramPage() {
   }
 
   // Handlers
-  const handleCreate = async (data: CreateProgramInput) => {
-    try {
-      // Transform data to handle nullable fields - convert null to undefined
-      const programData = {
-        ...data,
-        description: data.description ?? undefined,
-        calorieTarget: data.calorieTarget ?? undefined,
-        proteinTarget: data.proteinTarget ?? undefined,
-        carbTarget: data.carbTarget ?? undefined,
-        fatTarget: data.fatTarget ?? undefined,
-        fiberTarget: data.fiberTarget ?? undefined,
-        endDate: data.endDate ?? undefined,
-        totalBudget: data.totalBudget ?? undefined,
-        budgetPerMeal: data.budgetPerMeal ?? undefined,
-      }
-      await createProgram(programData)
-      toast.success('Program berhasil dibuat')
-      setDialogOpen(false)
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Gagal membuat program')
-    }
-  }
-
   const handleView = (id: string) => {
     router.push(`/program/${id}`)
   }
@@ -92,9 +66,11 @@ export default function ProgramPage() {
             </p>
           </div>
           <div className="flex gap-2">
-            <Button onClick={() => setDialogOpen(true)} size="default" className="md:size-lg">
-              <Plus className="mr-2 h-4 w-4" />
-              Buat Program
+            <Button asChild size="default" className="md:size-lg">
+              <Link href="/program/new">
+                <Plus className="mr-2 h-4 w-4" />
+                Buat Program
+              </Link>
             </Button>
           </div>
         </div>
@@ -181,15 +157,6 @@ export default function ProgramPage() {
           </div>
         </CardContent>
       </Card>
-
-      {/* Create Dialog */}
-      <ProgramDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        mode="create"
-        onSubmit={handleCreate}
-        isSubmitting={isCreating}
-      />
     </div>
   )
 }

@@ -45,10 +45,13 @@ import {
   Users,
   Target,
   DollarSign,
-  MapPin
+  MapPin,
+  School,
 } from 'lucide-react'
 import { createProgramSchema, type CreateProgramInput } from '../schemas'
 import type { Program } from '../types'
+import { useSchools } from '../hooks/useSchools'
+import { MultiSelectCombobox } from '@/components/ui/multi-select-combobox'
 
 interface ProgramFormProps {
   initialData?: Program
@@ -70,6 +73,9 @@ export const ProgramForm: FC<ProgramFormProps> = ({
   isSubmitting = false,
   mode = 'create',
 }) => {
+  // Fetch schools for autocomplete
+  const { data: schools, isLoading: isLoadingSchools } = useSchools()
+  
   const form = useForm<ProgramFormData>({
     defaultValues: initialData ? {
       name: initialData.name,
@@ -296,6 +302,46 @@ export const ProgramForm: FC<ProgramFormProps> = ({
                       {...field} 
                     />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="partnerSchools"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center gap-2">
+                    <School className="h-4 w-4" />
+                    Sekolah Mitra
+                  </FormLabel>
+                  <FormControl>
+                    <MultiSelectCombobox
+                      options={
+                        schools?.map((school) => ({
+                          label: school.schoolCode 
+                            ? `${school.schoolName} (${school.schoolCode})`
+                            : school.schoolName,
+                          value: school.schoolName,
+                        })) || []
+                      }
+                      selected={field.value || []}
+                      onChange={field.onChange}
+                      placeholder="Pilih sekolah mitra..."
+                      searchPlaceholder="Cari nama sekolah..."
+                      emptyMessage={
+                        isLoadingSchools 
+                          ? "Memuat data sekolah..." 
+                          : "Tidak ada sekolah ditemukan"
+                      }
+                      disabled={isLoadingSchools || isSubmitting}
+                      allowCustom={true}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    Pilih sekolah yang sudah terdaftar atau tambahkan manual sekolah baru
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
