@@ -48,7 +48,7 @@ export default async function SppgLayout({ children }: SppgLayoutProps) {
               </BreadcrumbList>
             </Breadcrumb>
           </header>
-          <main className="flex-1 overflow-auto p-3 md:p-4 lg:p-6">
+          <main className="flex-1 overflow-y-auto overflow-x-hidden p-3 md:p-4 lg:p-6">
             {children}
           </main>
         </div>

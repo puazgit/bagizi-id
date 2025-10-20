@@ -69,26 +69,27 @@ export function DataTable<TData, TValue>({
   })
 
   return (
-    <div className="space-y-4">
+    <div className="w-full space-y-4">
       {/* Search Input */}
       {searchKey && (
-        <div className="flex items-center">
+        <div className="flex items-center px-3 sm:px-0">
           <Input
             placeholder={searchPlaceholder}
             value={(table.getColumn(searchKey)?.getFilterValue() as string) ?? ''}
             onChange={(event) =>
               table.getColumn(searchKey)?.setFilterValue(event.target.value)
             }
-            className="max-w-sm"
+            className="max-w-full sm:max-w-sm"
           />
         </div>
       )}
 
-      {/* Table */}
+      {/* Table - Mobile: Scroll horizontal, Desktop: Full width */}
       <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => {
                   return (
@@ -128,10 +129,11 @@ export function DataTable<TData, TValue>({
             )}
           </TableBody>
         </Table>
+        </div>
       </div>
 
       {/* Pagination */}
-      <div className="flex items-center justify-end space-x-2">
+      <div className="flex items-center justify-end space-x-2 px-3 sm:px-0">
         <Button
           variant="outline"
           size="sm"

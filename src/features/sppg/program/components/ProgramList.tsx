@@ -108,7 +108,7 @@ export const ProgramList: FC<ProgramListProps> = ({
           const type = row.getValue('programType') as string
           return (
             <div className="flex items-center gap-2">
-              <Target className="h-4 w-4 text-muted-foreground" />
+              <Target className="h-4 w-4 text-muted-foreground shrink-0" />
               <span className="text-sm">
                 {getProgramTypeLabel(type)}
               </span>
@@ -126,7 +126,7 @@ export const ProgramList: FC<ProgramListProps> = ({
           const group = row.getValue('targetGroup') as string
           return (
             <div className="flex items-center gap-2">
-              <Users className="h-4 w-4 text-muted-foreground" />
+              <Users className="h-4 w-4 text-muted-foreground shrink-0" />
               <span className="text-sm">
                 {getTargetGroupLabel(group)}
               </span>
@@ -161,7 +161,7 @@ export const ProgramList: FC<ProgramListProps> = ({
                 {formatNumber(program.currentRecipients)} / {formatNumber(program.targetRecipients)}
               </div>
               <div className="flex items-center gap-2">
-                <div className="h-1.5 w-16 bg-muted rounded-full overflow-hidden">
+                <div className="h-1.5 w-16 bg-muted rounded-full overflow-hidden shrink-0">
                   <div
                     className={`h-full transition-all ${
                       progress >= 100
@@ -175,7 +175,7 @@ export const ProgramList: FC<ProgramListProps> = ({
                     style={{ width: `${Math.min(progress, 100)}%` }}
                   />
                 </div>
-                <span className="text-xs text-muted-foreground">
+                <span className="text-xs text-muted-foreground whitespace-nowrap">
                   {progress}%
                 </span>
               </div>
@@ -200,7 +200,7 @@ export const ProgramList: FC<ProgramListProps> = ({
         cell: ({ row }) => {
           const budget = row.getValue('totalBudget') as number | null
           return (
-            <div className="font-medium">
+            <div className="font-medium whitespace-nowrap">
               {formatCurrency(budget)}
             </div>
           )
@@ -224,7 +224,7 @@ export const ProgramList: FC<ProgramListProps> = ({
         cell: ({ row }) => {
           const program = row.original
           return (
-            <div className="text-sm">
+            <div className="text-sm whitespace-nowrap">
               {formatDateRange(program.startDate, program.endDate)}
             </div>
           )

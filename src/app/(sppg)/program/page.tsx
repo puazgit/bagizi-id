@@ -8,7 +8,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, FileBarChart, Users, Target } from 'lucide-react'
+import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
@@ -81,94 +81,104 @@ export default function ProgramPage() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Program Gizi</h1>
-          <p className="text-muted-foreground mt-1">
-            Kelola program pemenuhan gizi untuk berbagai kelompok sasaran
-          </p>
+    <div className="flex-1 space-y-4 md:space-y-6">
+      {/* Page Header */}
+      <div className="space-y-3 md:space-y-4">
+        <div className="flex flex-col gap-3 md:gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Program Gizi</h1>
+            <p className="text-sm text-muted-foreground mt-1 md:mt-2">
+              Kelola program pemenuhan gizi untuk berbagai kelompok sasaran
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button onClick={() => setDialogOpen(true)} size="default" className="md:size-lg">
+              <Plus className="mr-2 h-4 w-4" />
+              Buat Program
+            </Button>
+          </div>
         </div>
-        <Button onClick={() => setDialogOpen(true)} size="lg">
-          <Plus className="mr-2 h-5 w-5" />
-          Buat Program
-        </Button>
+
+        {/* Statistics Cards - EXACT COPY FROM MENU PAGE */}
+        <div className="grid gap-3 md:gap-4 grid-cols-2 md:grid-cols-4">
+          <Card>
+            <CardHeader className="pb-2 md:pb-3">
+              <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">
+                Total Program
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="text-xl md:text-2xl font-bold">{formatNumber(stats.totalPrograms)}</div>
+              <p className="text-xs text-muted-foreground mt-1">
+                {stats.activePrograms} program aktif
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2 md:pb-3">
+              <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">
+                Program Aktif
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="text-xl md:text-2xl font-bold">{formatNumber(stats.activePrograms)}</div>
+              <p className="text-xs text-muted-foreground mt-1">
+                {((stats.activePrograms / stats.totalPrograms) * 100 || 0).toFixed(0)}% dari total
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2 md:pb-3">
+              <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">
+                Total Penerima
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="text-xl md:text-2xl font-bold">{formatNumber(stats.totalRecipients)}</div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Penerima manfaat aktif
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2 md:pb-3">
+              <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">
+                Total Anggaran
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="text-xl md:text-2xl font-bold">{formatCurrency(stats.totalBudget)}</div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Anggaran keseluruhan
+              </p>
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       <Separator />
 
-      {/* Statistics Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Program</CardTitle>
-            <FileBarChart className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatNumber(stats.totalPrograms)}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {stats.activePrograms} program aktif
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Program Aktif</CardTitle>
-            <Target className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatNumber(stats.activePrograms)}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {((stats.activePrograms / stats.totalPrograms) * 100 || 0).toFixed(0)}% dari total
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Penerima</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatNumber(stats.totalRecipients)}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Penerima manfaat aktif
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Anggaran</CardTitle>
-            <FileBarChart className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(stats.totalBudget)}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Anggaran keseluruhan
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Program List */}
+      {/* Program List - EXACT COPY FROM MENU PAGE STRUCTURE */}
       <Card>
-        <CardHeader>
-          <CardTitle>Daftar Program</CardTitle>
-          <CardDescription>
+        <CardHeader className="pb-3 md:pb-4">
+          <CardTitle className="text-base md:text-lg">Daftar Program</CardTitle>
+          <CardDescription className="text-xs md:text-sm">
             Kelola dan pantau semua program gizi yang sedang berjalan
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <ProgramList
-            data={programs}
-            onView={handleView}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-            isLoading={isLoading}
-          />
+        <CardContent className="p-0">
+          <div className="p-6">
+            <ProgramList
+              data={programs}
+              onView={handleView}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+              isLoading={isLoading}
+            />
+          </div>
         </CardContent>
       </Card>
 
