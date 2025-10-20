@@ -6,3 +6,6 @@ export * from './ProgramCard'
 export * from './ProgramForm'
 export * from './ProgramList'
 export * from './ProgramDialog'
+
+// Detail page components
+export * from './detail'
