@@ -442,7 +442,14 @@ export const procurementFiltersSchema = z.object({
   sortOrder: z.enum(['asc', 'desc']).default('desc')
 })
 
-// ================================ SUPPLIER SCHEMAS ================================
+// ================================ SUPPLIER SCHEMAS (DEPRECATED) ================================
+/**
+ * @deprecated Supplier schemas moved to independent domain
+ * @see {@link @/features/sppg/suppliers/schemas} for active supplier schemas
+ * 
+ * NOTE: These schemas are kept for backward compatibility only.
+ * DO NOT use these schemas in new code. Import from @/features/sppg/suppliers/schemas instead.
+ */
 
 /**
  * Supplier creation schema with comprehensive validation
@@ -622,6 +629,10 @@ export type ProcurementUpdateInput = z.infer<typeof procurementUpdateSchema>
 export type ProcurementItemUpdateInput = z.infer<typeof procurementItemUpdateSchema>
 export type ProcurementFilters = z.infer<typeof procurementFiltersSchema>
 
+/**
+ * @deprecated Supplier types moved to independent domain
+ * @see {@link @/features/sppg/suppliers/schemas} for active supplier types
+ */
 export type SupplierCreateInput = z.infer<typeof supplierCreateSchema>
 export type SupplierUpdateInput = z.infer<typeof supplierUpdateSchema>
 export type SupplierFilters = z.infer<typeof supplierFiltersSchema>

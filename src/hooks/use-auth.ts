@@ -230,6 +230,9 @@ export function useAuth(): UseAuthReturn {
       case 'procurement':
         hasAccess = hasRole(['SPPG_KEPALA', 'SPPG_ADMIN', 'SPPG_AKUNTAN'])
         break
+      case 'suppliers':
+        hasAccess = hasRole(['SPPG_KEPALA', 'SPPG_ADMIN', 'SPPG_AKUNTAN'])
+        break
       case 'production':
         hasAccess = hasRole(['SPPG_KEPALA', 'SPPG_ADMIN', 'SPPG_PRODUKSI_MANAGER', 'SPPG_STAFF_DAPUR', 'SPPG_STAFF_QC', 'SPPG_AHLI_GIZI'])
         console.log('[canAccess] Production check:', {

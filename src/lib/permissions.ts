@@ -25,6 +25,7 @@ export type PermissionType =
   | 'MENU_MANAGE'
   | 'SCHOOL_MANAGE'
   | 'PROCUREMENT_MANAGE'
+  | 'SUPPLIER_MANAGE'
   | 'PRODUCTION_MANAGE'
   | 'DISTRIBUTION_MANAGE'
   | 'FINANCIAL_MANAGE'
@@ -33,6 +34,9 @@ export type PermissionType =
   | 'USER_MANAGE'
   | 'ANALYTICS_VIEW'
   | 'REPORTS_VIEW'
+  | 'INVENTORY_VIEW'
+  | 'INVENTORY_MANAGE'
+  | 'INVENTORY_APPROVE'
 
 // ================================ ROLE PERMISSIONS MAPPING ================================
 
@@ -51,10 +55,14 @@ const rolePermissions: Record<UserRole, PermissionType[]> = {
     'MENU_MANAGE',
     'SCHOOL_MANAGE',
     'PROCUREMENT_MANAGE',
+    'SUPPLIER_MANAGE',
     'PRODUCTION_MANAGE',
     'DISTRIBUTION_MANAGE',
     'FINANCIAL_MANAGE',
     'HR_MANAGE',
+    'INVENTORY_VIEW',
+    'INVENTORY_MANAGE',
+    'INVENTORY_APPROVE',
   ],
   SPPG_ADMIN: [
     'READ',
@@ -62,20 +70,25 @@ const rolePermissions: Record<UserRole, PermissionType[]> = {
     'MENU_MANAGE',
     'SCHOOL_MANAGE',
     'PROCUREMENT_MANAGE',
+    'SUPPLIER_MANAGE',
     'PRODUCTION_MANAGE',
     'USER_MANAGE',
+    'INVENTORY_VIEW',
+    'INVENTORY_MANAGE',
   ],
 
   // SPPG Operational
-  SPPG_AHLI_GIZI: ['READ', 'WRITE', 'MENU_MANAGE', 'SCHOOL_MANAGE', 'QUALITY_MANAGE', 'PRODUCTION_MANAGE'],  // ✅ Added for production access
-  SPPG_AKUNTAN: ['READ', 'WRITE', 'FINANCIAL_MANAGE', 'PROCUREMENT_MANAGE'],
+  SPPG_AHLI_GIZI: ['READ', 'WRITE', 'MENU_MANAGE', 'SCHOOL_MANAGE', 'QUALITY_MANAGE', 'PRODUCTION_MANAGE', 'INVENTORY_VIEW'],  // ✅ Added for production access
+  SPPG_AKUNTAN: ['READ', 'WRITE', 'FINANCIAL_MANAGE', 'PROCUREMENT_MANAGE', 'SUPPLIER_MANAGE', 'INVENTORY_VIEW', 'INVENTORY_MANAGE'],
   SPPG_PRODUKSI_MANAGER: [
     'READ',
     'WRITE',
     'PRODUCTION_MANAGE',
     'QUALITY_MANAGE',
+    'INVENTORY_VIEW',
+    'INVENTORY_MANAGE',
   ],
-  SPPG_DISTRIBUSI_MANAGER: ['READ', 'WRITE', 'DISTRIBUTION_MANAGE'],
+  SPPG_DISTRIBUSI_MANAGER: ['READ', 'WRITE', 'DISTRIBUTION_MANAGE', 'INVENTORY_VIEW'],
   SPPG_HRD_MANAGER: ['READ', 'WRITE', 'HR_MANAGE'],
 
   // SPPG Staff
@@ -124,6 +137,13 @@ export function canManageSchool(role: UserRole): boolean {
  */
 export function canManageProcurement(role: UserRole): boolean {
   return hasPermission(role, 'PROCUREMENT_MANAGE')
+}
+
+/**
+ * Check if user can manage suppliers
+ */
+export function canManageSupplier(role: UserRole): boolean {
+  return hasPermission(role, 'SUPPLIER_MANAGE')
 }
 
 /**

@@ -19,11 +19,8 @@ interface SchoolDetailPageProps {
   }>
 }
 
-export async function generateMetadata(
-  { params }: SchoolDetailPageProps
-): Promise<Metadata> {
-  const { id } = await params
-  
+export async function generateMetadata(): Promise<Metadata> {
+  // Generic metadata for all school detail pages
   return {
     title: `Detail Sekolah | Bagizi-ID`,
     description: 'Detail informasi sekolah mitra penerima manfaat',
