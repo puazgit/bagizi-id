@@ -14,7 +14,7 @@ export async function seedProduction(
 
   try {
     // Get SPPG Purwakarta from passed data
-    const sppg = sppgs.find(s => s.code === 'SPPG-PWK-001')
+    const sppg = sppgs.find(s => s.code === 'DEMO-SPPG-001')
     if (!sppg) {
       console.warn('  ⚠️  SPPG Purwakarta not found, skipping production seed')
       return []
@@ -82,8 +82,6 @@ export async function seedProduction(
         actualStartTime: new Date(Date.now() - 4 * 60 * 60 * 1000),
         actualEndTime: new Date(Date.now() - 2 * 60 * 60 * 1000),
         headCook: headCook.id,
-        estimatedCost: 950000,
-        actualCost: 920000,
         targetTemperature: 75,
         notes: 'Produksi selesai dengan baik'
       }
@@ -105,7 +103,6 @@ export async function seedProduction(
         plannedEndTime: new Date(Date.now() + 1 * 60 * 60 * 1000), // 1 hour from now
         actualStartTime: new Date(Date.now() - 1 * 60 * 60 * 1000),
         headCook: headCook.id,
-        estimatedCost: 1425000,
         targetTemperature: 75,
         notes: 'Sedang dalam proses memasak'
       }
@@ -130,7 +127,6 @@ export async function seedProduction(
         plannedStartTime: tomorrow,
         plannedEndTime: new Date(tomorrow.getTime() + 3 * 60 * 60 * 1000),
         headCook: headCook.id,
-        estimatedCost: 1900000,
         targetTemperature: 75,
         notes: 'Produksi untuk besok'
       }

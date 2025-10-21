@@ -2237,19 +2237,15 @@ model NutritionMenu {
 }
 
 model MenuIngredient {
-  id               String         @id @default(cuid())
+  id               String        @id @default(cuid())
   menuId           String
-  inventoryItemId  String?
-  ingredientName   String
-  quantity         Float
-  unit             String
-  costPerUnit      Float
-  totalCost        Float
+  inventoryItemId  String        // ✅ REQUIRED - Must link to inventory
+  quantity         Float         // Quantity per 100g serving
   preparationNotes String?
-  isOptional       Boolean        @default(false)
+  isOptional       Boolean       @default(false)
   substitutes      String[]
-  inventoryItem    InventoryItem? @relation(fields: [inventoryItemId], references: [id])
-  menu             NutritionMenu  @relation(fields: [menuId], references: [id], onDelete: Cascade)
+  inventoryItem    InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Restrict)
+  menu             NutritionMenu @relation(fields: [menuId], references: [id], onDelete: Cascade)
 
   @@index([menuId])
   @@index([inventoryItemId])

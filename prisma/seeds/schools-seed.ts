@@ -14,20 +14,22 @@ export async function seedSchools(
 ): Promise<SchoolBeneficiary[]> {
   console.log('  → Creating school beneficiaries...')
 
-  // Get SPPG Purwakarta
-  const purwakartaSppg = sppg.find(s => s.name.includes('Purwakarta'))
-  if (!purwakartaSppg) {
-    throw new Error('SPPG Purwakarta not found')
+  // Get Demo SPPG (consolidated seed strategy - Fix #1)
+  const demoSppg = sppg.find(s => s.name.includes('Demo'))
+  if (!demoSppg) {
+    console.log('  ⚠️  Demo SPPG not found, skipping schools seed')
+    return []
   }
 
-  // Get programs for Purwakarta SPPG
-  const purwakartaPrograms = programs.filter(p => p.sppgId === purwakartaSppg.id)
-  if (purwakartaPrograms.length === 0) {
-    throw new Error('No programs found for SPPG Purwakarta')
+  // Get programs for Demo SPPG
+  const demoPrograms = programs.filter(p => p.sppgId === demoSppg.id)
+  if (demoPrograms.length === 0) {
+    console.log('  ⚠️  No programs found for Demo SPPG, skipping schools seed')
+    return []
   }
 
   // Use first program for schools
-  const mainProgram = purwakartaPrograms[0]
+  const mainProgram = demoPrograms[0]
 
   const schools = await Promise.all([
     // SD Negeri di Purwakarta

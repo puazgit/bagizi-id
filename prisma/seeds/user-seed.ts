@@ -10,7 +10,7 @@ import { hash } from 'bcryptjs'
 export async function seedUsers(prisma: PrismaClient, sppgs: SPPG[]): Promise<User[]> {
   console.log('  → Creating users...')
 
-  const purwakartaSppg = sppgs.find(s => s.code === 'SPPG-PWK-001')
+  const purwakartaSppg = sppgs.find(s => s.code === 'DEMO-SPPG-001')
   const demoPurwakartaSppg = sppgs.find(s => s.code === 'DEMO-PWK-001')
 
   const users = await Promise.all([

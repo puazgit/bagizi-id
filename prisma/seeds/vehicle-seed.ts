@@ -18,7 +18,7 @@ export async function seedVehicles(
   console.log('  → Creating vehicles for SPPG operations...')
 
   try {
-    const sppg = sppgs.find(s => s.code === 'SPPG-PWK-001')
+    const sppg = sppgs.find(s => s.code === 'DEMO-SPPG-001')
     if (!sppg) {
       console.log('  ⚠️  SPPG Purwakarta not found, skipping vehicle seed')
       return

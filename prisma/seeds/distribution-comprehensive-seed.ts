@@ -29,7 +29,7 @@ export async function seedDistributionComprehensive(
     // STEP 1: Get SPPG Purwakarta & Related Data
     // ========================================================================
     
-    const sppg = sppgs.find(s => s.code === 'SPPG-PWK-001')
+    const sppg = sppgs.find(s => s.code === 'DEMO-SPPG-001')
     if (!sppg) {
       console.log('  ⚠️  SPPG Purwakarta not found, skipping')
       return
