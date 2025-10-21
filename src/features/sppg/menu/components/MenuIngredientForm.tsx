@@ -84,9 +84,9 @@ export function MenuIngredientForm({
     defaultValues: {
       inventoryItemId: ingredient?.inventoryItemId || '',
       quantity: ingredient?.quantity || 0,
-      preparationNotes: ingredient?.preparationNotes || null,
-      isOptional: ingredient?.isOptional ?? false,
-      substitutes: ingredient?.substitutes || []
+      preparationNotes: ingredient?.preparationNotes || undefined,
+      isOptional: ingredient?.isOptional,
+      substitutes: ingredient?.substitutes
     }
   })
 
@@ -96,9 +96,9 @@ export function MenuIngredientForm({
       form.reset({
         inventoryItemId: ingredient.inventoryItemId,
         quantity: ingredient.quantity,
-        preparationNotes: ingredient.preparationNotes || null,
-        isOptional: ingredient.isOptional ?? false,
-        substitutes: ingredient.substitutes || []
+        preparationNotes: ingredient.preparationNotes || undefined,
+        isOptional: ingredient.isOptional,
+        substitutes: ingredient.substitutes
       })
       
       // Set selected inventory item for edit mode
@@ -212,13 +212,13 @@ export function MenuIngredientForm({
    * Submit form data (extracted for reuse)
    */
   const submitForm = (data: IngredientFormData) => {
-    // Transform for API
+    // Transform for API - provide defaults for optional fields
     const apiData = {
       inventoryItemId: data.inventoryItemId,
       quantity: data.quantity,
-      preparationNotes: data.preparationNotes || undefined,
+      preparationNotes: data.preparationNotes ?? undefined,
       isOptional: data.isOptional ?? false,
-      substitutes: data.substitutes || []
+      substitutes: data.substitutes ?? []
     }
 
     if (isEditing && ingredient) {
