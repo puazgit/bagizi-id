@@ -72,11 +72,15 @@ export function CostBreakdownCard({ menuId }: CostBreakdownCardProps) {
         <CardContent className="py-10">
           <div className="text-center space-y-4">
             <AlertCircle className="h-12 w-12 mx-auto text-destructive" />
-            <p className="text-sm text-muted-foreground">
-              {error instanceof Error ? error.message : 'Gagal memuat data biaya'}
-            </p>
-            <Button onClick={handleCalculate} variant="outline">
-              Coba Lagi
+            <div className="space-y-2">
+              <p className="font-semibold text-destructive">Terjadi Kesalahan</p>
+              <p className="text-sm text-muted-foreground">
+                {error instanceof Error ? error.message : 'Gagal memuat data biaya'}
+              </p>
+            </div>
+            <Button onClick={handleCalculate} variant="outline" size="lg">
+              <Calculator className="h-4 w-4 mr-2" />
+              Hitung Ulang
             </Button>
           </div>
         </CardContent>
@@ -87,25 +91,28 @@ export function CostBreakdownCard({ menuId }: CostBreakdownCardProps) {
   if (!report) {
     return (
       <Card>
-        <CardContent className="py-10">
-          <div className="text-center space-y-4">
-            <Calculator className="h-12 w-12 mx-auto text-muted-foreground opacity-50" />
+        <CardContent className="py-12">
+          <div className="text-center space-y-6">
+            <div className="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+              <Calculator className="h-8 w-8 text-primary" />
+            </div>
             <div className="space-y-2">
-              <p className="font-semibold">Belum Ada Data Biaya</p>
-              <p className="text-sm text-muted-foreground">
-                Hitung biaya produksi menu berdasarkan bahan dan operasional
+              <h3 className="text-lg font-semibold">Belum Ada Data Biaya</h3>
+              <p className="text-sm text-muted-foreground max-w-md mx-auto">
+                Hitung biaya produksi menu berdasarkan bahan yang sudah ditambahkan, 
+                tenaga kerja, dan biaya operasional
               </p>
             </div>
-            <Button onClick={handleCalculate} disabled={isCalculating}>
+            <Button onClick={handleCalculate} disabled={isCalculating} size="lg">
               {isCalculating ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
-                  Menghitung...
+                  Menghitung Biaya...
                 </>
               ) : (
                 <>
                   <Calculator className="h-4 w-4 mr-2" />
-                  Hitung Biaya
+                  Hitung Biaya Sekarang
                 </>
               )}
             </Button>

@@ -76,7 +76,7 @@ export async function GET(
     if (!menu.costCalc) {
       return Response.json({
         success: false,
-        error: 'Cost not yet calculated. Please calculate cost first.'
+        error: 'Biaya belum dihitung. Silakan hitung biaya terlebih dahulu.'
       }, { status: 404 })
     }
 

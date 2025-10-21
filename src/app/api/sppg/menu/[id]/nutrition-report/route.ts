@@ -103,7 +103,7 @@ export async function GET(
     if (!menu.nutritionCalc) {
       return Response.json({ 
         success: false, 
-        error: 'Nutrition calculation not available. Please calculate first.' 
+        error: 'Nutrisi belum dihitung. Silakan hitung nutrisi terlebih dahulu.' 
       }, { status: 404 })
     }
 

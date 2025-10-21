@@ -51,11 +51,15 @@ export function NutritionPreview({ menuId }: NutritionPreviewProps) {
         <CardContent className="py-10">
           <div className="text-center space-y-4">
             <AlertCircle className="h-12 w-12 mx-auto text-destructive" />
-            <p className="text-sm text-muted-foreground">
-              {error instanceof Error ? error.message : 'Gagal memuat data nutrisi'}
-            </p>
-            <Button onClick={handleCalculate} variant="outline">
-              Coba Lagi
+            <div className="space-y-2">
+              <p className="font-semibold text-destructive">Terjadi Kesalahan</p>
+              <p className="text-sm text-muted-foreground">
+                {error instanceof Error ? error.message : 'Gagal memuat data nutrisi'}
+              </p>
+            </div>
+            <Button onClick={handleCalculate} variant="outline" size="lg">
+              <Calculator className="h-4 w-4 mr-2" />
+              Hitung Ulang
             </Button>
           </div>
         </CardContent>
@@ -66,25 +70,27 @@ export function NutritionPreview({ menuId }: NutritionPreviewProps) {
   if (!report) {
     return (
       <Card>
-        <CardContent className="py-10">
-          <div className="text-center space-y-4">
-            <Calculator className="h-12 w-12 mx-auto text-muted-foreground opacity-50" />
+        <CardContent className="py-12">
+          <div className="text-center space-y-6">
+            <div className="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+              <Calculator className="h-8 w-8 text-primary" />
+            </div>
             <div className="space-y-2">
-              <p className="font-semibold">Belum Ada Data Nutrisi</p>
-              <p className="text-sm text-muted-foreground">
-                Hitung nilai gizi menu berdasarkan bahan yang sudah ditambahkan
+              <h3 className="text-lg font-semibold">Belum Ada Data Nutrisi</h3>
+              <p className="text-sm text-muted-foreground max-w-md mx-auto">
+                Hitung nilai gizi menu berdasarkan komposisi bahan yang sudah ditambahkan
               </p>
             </div>
-            <Button onClick={handleCalculate} disabled={isCalculating}>
+            <Button onClick={handleCalculate} disabled={isCalculating} size="lg">
               {isCalculating ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
-                  Menghitung...
+                  Menghitung Nutrisi...
                 </>
               ) : (
                 <>
                   <Calculator className="h-4 w-4 mr-2" />
-                  Hitung Nutrisi
+                  Hitung Nutrisi Sekarang
                 </>
               )}
             </Button>
