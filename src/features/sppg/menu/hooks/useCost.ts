@@ -38,8 +38,11 @@ export function useCalculateCost(menuId: string) {
       // Invalidate cost report query to refetch
       queryClient.invalidateQueries({ queryKey: costKeys.menu(menuId) })
       
-      // Also invalidate menu query to update calculated fields
+      // Invalidate menu detail query to update calculated fields
       queryClient.invalidateQueries({ queryKey: ['menu', menuId] })
+      
+      // CRITICAL: Invalidate menu list to refresh cards with new cost data
+      queryClient.invalidateQueries({ queryKey: ['menus'] })
       
       toast.success('Biaya berhasil dihitung')
     },

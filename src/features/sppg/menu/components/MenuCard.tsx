@@ -80,10 +80,15 @@ function MenuStats({ menu, variant }: MenuStatsProps) {
     )
   }
 
+  // Get nutrition data from calculation or direct values
+  const calories = menu.nutritionCalc?.totalCalories || menu.calories || 0
+  const protein = menu.nutritionCalc?.totalProtein || menu.protein || 0
+  const carbs = menu.nutritionCalc?.totalCarbs || menu.carbohydrates || 0
+
   return (
     <div className={cn(
       "grid gap-3",
-      isDetailed ? "grid-cols-2 lg:grid-cols-4" : "grid-cols-3"
+      isDetailed ? "grid-cols-2 lg:grid-cols-4" : "grid-cols-2 md:grid-cols-4"
     )}>
       {/* Serving Size */}
       <div className="flex flex-col items-center space-y-1 rounded-lg bg-muted/50 p-2">
@@ -92,41 +97,71 @@ function MenuStats({ menu, variant }: MenuStatsProps) {
         <span className="text-sm font-semibold">{menu.servingSize}g</span>
       </div>
 
+      {/* Calories */}
+      <div className="flex flex-col items-center space-y-1 rounded-lg bg-muted/50 p-2">
+        <ChefHat className="h-4 w-4 text-muted-foreground" />
+        <span className="text-xs text-muted-foreground">Kalori</span>
+        <span className="text-sm font-semibold">
+          {calories > 0 ? `${calories} kal` : '-'}
+        </span>
+      </div>
+
+      {/* Protein */}
+      <div className="flex flex-col items-center space-y-1 rounded-lg bg-muted/50 p-2">
+        <Calculator className="h-4 w-4 text-muted-foreground" />
+        <span className="text-xs text-muted-foreground">Protein</span>
+        <span className="text-sm font-semibold">
+          {protein > 0 ? `${protein}g` : '-'}
+        </span>
+      </div>
+
       {/* Cost per Serving */}
       <div className="flex flex-col items-center space-y-1 rounded-lg bg-muted/50 p-2">
         <DollarSign className="h-4 w-4 text-muted-foreground" />
         <span className="text-xs text-muted-foreground">Biaya</span>
         <span className="text-sm font-semibold">
-          {new Intl.NumberFormat('id-ID', {
+          {menu.costPerServing > 0 ? new Intl.NumberFormat('id-ID', {
             style: 'currency',
             currency: 'IDR',
             notation: 'compact'
-          }).format(menu.costPerServing)}
-        </span>
-      </div>
-
-      {/* Cooking Time */}
-      <div className="flex flex-col items-center space-y-1 rounded-lg bg-muted/50 p-2">
-        <Clock className="h-4 w-4 text-muted-foreground" />
-        <span className="text-xs text-muted-foreground">Waktu</span>
-        <span className="text-sm font-semibold">
-          {menu.cookingTime ? `${menu.cookingTime}m` : '-'}
+          }).format(menu.costPerServing) : '-'}
         </span>
       </div>
 
       {/* Detailed view additional stats */}
       {isDetailed && (
-        <div className="flex flex-col items-center space-y-1 rounded-lg bg-muted/50 p-2">
-          <Calculator className="h-4 w-4 text-muted-foreground" />
-          <span className="text-xs text-muted-foreground">Status</span>
-          <div className="flex items-center gap-1">
-            {menu.nutritionStandardCompliance ? (
-              <CheckCircle2 className="h-3 w-3 text-green-500" />
-            ) : (
-              <AlertCircle className="h-3 w-3 text-amber-500" />
-            )}
+        <>
+          {/* Carbs */}
+          <div className="flex flex-col items-center space-y-1 rounded-lg bg-muted/50 p-2">
+            <Clock className="h-4 w-4 text-muted-foreground" />
+            <span className="text-xs text-muted-foreground">Karbohidrat</span>
+            <span className="text-sm font-semibold">
+              {carbs > 0 ? `${carbs}g` : '-'}
+            </span>
           </div>
-        </div>
+
+          {/* Cooking Time */}
+          <div className="flex flex-col items-center space-y-1 rounded-lg bg-muted/50 p-2">
+            <Clock className="h-4 w-4 text-muted-foreground" />
+            <span className="text-xs text-muted-foreground">Waktu</span>
+            <span className="text-sm font-semibold">
+              {menu.cookingTime ? `${menu.cookingTime}m` : '-'}
+            </span>
+          </div>
+
+          {/* AKG Status */}
+          <div className="flex flex-col items-center space-y-1 rounded-lg bg-muted/50 p-2">
+            <Calculator className="h-4 w-4 text-muted-foreground" />
+            <span className="text-xs text-muted-foreground">Status AKG</span>
+            <div className="flex items-center gap-1">
+              {menu.nutritionStandardCompliance ? (
+                <CheckCircle2 className="h-3 w-3 text-green-500" />
+              ) : (
+                <AlertCircle className="h-3 w-3 text-amber-500" />
+              )}
+            </div>
+          </div>
+        </>
       )}
     </div>
   )

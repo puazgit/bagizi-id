@@ -43,6 +43,17 @@ export interface Menu {
   // Nutrition Compliance
   nutritionStandardCompliance: boolean // Apakah memenuhi standar AKG
   
+  // Direct Nutrition Values (from NutritionMenu table)
+  calories?: number | null
+  protein?: number | null
+  carbohydrates?: number | null
+  fat?: number | null
+  fiber?: number | null
+  
+  // Optional Relations (included when needed)
+  nutritionCalc?: MenuNutritionCalculation | null
+  costCalc?: MenuCostCalculation | null
+  
   // Status
   isActive: boolean
   
