@@ -56,6 +56,8 @@ export interface CostIngredientDetail {
   inventoryItem?: {
     itemName: string
     itemCode: string
+    unit: string
+    costPerUnit: number
     preferredSupplier?: {
       supplierName: string
       supplierCode: string

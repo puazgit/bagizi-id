@@ -79,6 +79,7 @@ export async function GET(
               select: {
                 id: true,
                 itemName: true,
+                unit: true,
                 category: true,
                 calories: true,
                 protein: true,
@@ -180,9 +181,9 @@ export async function GET(
       
       // Ingredients breakdown
       ingredients: menu.ingredients.map(ing => ({
-        ingredientName: ing.ingredientName,
+        ingredientName: ing.inventoryItem.itemName,
         quantity: ing.quantity,
-        unit: ing.unit,
+        unit: ing.inventoryItem.unit,
         calories: ing.inventoryItem?.calories || 0,
         protein: ing.inventoryItem?.protein || 0,
         carbohydrates: ing.inventoryItem?.carbohydrates || 0,

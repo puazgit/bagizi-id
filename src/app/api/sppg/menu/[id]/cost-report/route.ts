@@ -58,7 +58,9 @@ export async function GET(
             }
           },
           orderBy: {
-            ingredientName: 'asc'
+            inventoryItem: {
+              itemName: 'asc'
+            }
           }
         }
       }
@@ -145,11 +147,11 @@ export async function GET(
       
       // Ingredients Detail
       ingredients: menu.ingredients.map(ing => ({
-        ingredientName: ing.ingredientName,
+        ingredientName: ing.inventoryItem.itemName,
         quantity: ing.quantity,
-        unit: ing.unit,
-        costPerUnit: ing.costPerUnit || 0,
-        totalCost: ing.totalCost || 0,
+        unit: ing.inventoryItem.unit,
+        costPerUnit: ing.inventoryItem.costPerUnit || 0,
+        totalCost: ing.quantity * (ing.inventoryItem.costPerUnit || 0),
         inventoryItem: ing.inventoryItem ? {
           itemName: ing.inventoryItem.itemName,
           itemCode: ing.inventoryItem.itemCode || ing.id, // Use actual itemCode with fallback to ingredient ID
