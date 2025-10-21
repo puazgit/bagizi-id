@@ -67,7 +67,7 @@ export async function POST(
     if (menu.ingredients.length === 0) {
       return Response.json({
         success: false,
-        error: 'Cannot calculate cost: menu has no ingredients'
+        error: 'Tidak dapat menghitung biaya: menu belum memiliki bahan'
       }, { status: 400 })
     }
 
@@ -82,15 +82,17 @@ export async function POST(
     }> = []
 
     for (const ingredient of menu.ingredients) {
-      const cost = new Prisma.Decimal(ingredient.totalCost)
+      const itemCostPerUnit = ingredient.inventoryItem.costPerUnit || 0
+      const itemTotalCost = ingredient.quantity * itemCostPerUnit
+      const cost = new Prisma.Decimal(itemTotalCost)
       totalIngredientCost = totalIngredientCost.add(cost)
 
       ingredientBreakdown.push({
-        ingredientName: ingredient.ingredientName,
+        ingredientName: ingredient.inventoryItem.itemName,
         quantity: ingredient.quantity,
-        unit: ingredient.unit,
-        costPerUnit: ingredient.costPerUnit,
-        totalCost: ingredient.totalCost
+        unit: ingredient.inventoryItem.unit,
+        costPerUnit: itemCostPerUnit,
+        totalCost: itemTotalCost
       })
     }
 
@@ -258,7 +260,7 @@ export async function POST(
     console.error('POST /api/sppg/menu/[id]/calculate-cost error:', error)
     return Response.json({
       success: false,
-      error: 'Failed to calculate cost',
+      error: 'Gagal menghitung biaya',
       details: process.env.NODE_ENV === 'development' ? error : undefined
     }, { status: 500 })
   }

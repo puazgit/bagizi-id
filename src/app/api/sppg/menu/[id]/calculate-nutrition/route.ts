@@ -69,7 +69,7 @@ export async function POST(
     if (menu.ingredients.length === 0) {
       return Response.json({ 
         success: false, 
-        error: 'Cannot calculate nutrition: Menu has no ingredients' 
+        error: 'Tidak dapat menghitung nutrisi: menu belum memiliki bahan' 
       }, { status: 400 })
     }
 
@@ -191,7 +191,7 @@ export async function POST(
     
     return Response.json({
       success: false,
-      error: 'Failed to calculate nutrition',
+      error: 'Gagal menghitung nutrisi',
       details: process.env.NODE_ENV === 'development' ? error : undefined
     }, { status: 500 })
   }
