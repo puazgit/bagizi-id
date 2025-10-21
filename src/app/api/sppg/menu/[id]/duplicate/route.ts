@@ -162,20 +162,17 @@ export async function POST(
         }
       })
 
-      // Copy ingredients if requested
+      // Copy ingredients if requested (Fix #1: ONLY copy inventoryItemId + quantity + notes)
       if (copyIngredients && originalMenu.ingredients && originalMenu.ingredients.length > 0) {
         await tx.menuIngredient.createMany({
           data: originalMenu.ingredients.map((ingredient) => ({
             menuId: newMenu.id,
-            inventoryItemId: ingredient.inventoryItemId,
-            ingredientName: ingredient.ingredientName,
+            inventoryItemId: ingredient.inventoryItemId, // ✅ Fix #1: REQUIRED
             quantity: ingredient.quantity,
-            unit: ingredient.unit,
-            costPerUnit: ingredient.costPerUnit,
-            totalCost: ingredient.totalCost,
             preparationNotes: ingredient.preparationNotes,
             isOptional: ingredient.isOptional,
-            substitutes: ingredient.substitutes,
+            substitutes: ingredient.substitutes
+            // ❌ Fix #1: REMOVED - ingredientName, unit, costPerUnit, totalCost
           }))
         })
       }

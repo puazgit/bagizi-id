@@ -1,21 +1,21 @@
 /**
- * @fileoverview Menu Ingredient Types
+ * @fileoverview Menu Ingredient Types - Fix #1 Compatible
  * @version Next.js 15.5.4 / Enterprise-grade
+ * @note Fix #1: inventoryItemId is REQUIRED, redundant fields removed
  */
 
 export interface MenuIngredient {
   id: string
   menuId: string
-  inventoryItemId: string | null
-  ingredientName: string
+  inventoryItemId: string // ✅ Fix #1: REQUIRED (no longer nullable)
   quantity: number
-  unit: string
-  costPerUnit: number
-  totalCost: number
   preparationNotes: string | null
   isOptional: boolean
   substitutes: string[]
-  inventoryItem?: {
+  // ❌ Fix #1: REMOVED - ingredientName, unit, costPerUnit, totalCost (redundant)
+  // These values now come from inventoryItem relation
+  inventoryItem: { // ✅ Fix #1: REQUIRED relation
+    id: string
     itemName: string
     unit: string
     currentStock: number
@@ -25,14 +25,12 @@ export interface MenuIngredient {
 }
 
 export interface CreateIngredientInput {
-  inventoryItemId?: string
-  ingredientName: string
+  inventoryItemId: string // ✅ Fix #1: REQUIRED
   quantity: number
-  unit: string
-  costPerUnit: number
   preparationNotes?: string
   isOptional?: boolean
   substitutes?: string[]
+  // ❌ Fix #1: REMOVED - ingredientName, unit, costPerUnit (use inventoryItem instead)
 }
 
 export type UpdateIngredientInput = Partial<CreateIngredientInput>

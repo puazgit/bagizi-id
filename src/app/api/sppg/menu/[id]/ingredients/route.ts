@@ -1,7 +1,8 @@
 /**
- * @fileoverview Menu Ingredients API - Manage ingredients for a specific menu
+ * @fileoverview Menu Ingredients API - Fix #1 Compatible
  * @version Next.js 15.5.4 / Prisma 6.17.1 / Enterprise-grade
  * @author Bagizi-ID Development Team
+ * @note Fix #1: inventoryItemId REQUIRED, redundant fields removed
  */
 
 import { NextRequest } from 'next/server'
@@ -12,15 +13,12 @@ import { z } from 'zod'
 // ================================ VALIDATION SCHEMAS ================================
 
 const ingredientCreateSchema = z.object({
-  inventoryItemId: z.string().cuid().optional().nullable(),
-  ingredientName: z.string().min(1, 'Nama bahan harus diisi'),
+  inventoryItemId: z.string().cuid('Invalid inventory item ID'), // ✅ Fix #1: REQUIRED
   quantity: z.number().positive('Jumlah harus lebih dari 0'),
-  unit: z.string().min(1, 'Satuan harus diisi'),
-  costPerUnit: z.number().min(0, 'Harga per satuan tidak boleh negatif'),
-  totalCost: z.number().min(0, 'Total biaya tidak boleh negatif'),
   preparationNotes: z.string().optional().nullable(),
   isOptional: z.boolean().default(false),
   substitutes: z.array(z.string()).default([])
+  // ❌ Fix #1: REMOVED - ingredientName, unit, costPerUnit, totalCost
 })
 
 // ================================ GET /api/sppg/menu/[id]/ingredients ================================
@@ -90,7 +88,10 @@ export async function GET(
         }
       },
       orderBy: {
-        ingredientName: 'asc'
+        // ✅ Fix #1: Order by inventoryItem name instead of ingredientName
+        inventoryItem: {
+          itemName: 'asc'
+        }
       }
     })
 
@@ -172,36 +173,31 @@ export async function POST(
     
     const validated = validationResult.data
 
-    // 5. If inventoryItemId provided, verify it belongs to same SPPG
-    if (validated.inventoryItemId) {
-      const inventoryItem = await db.inventoryItem.findFirst({
-        where: {
-          id: validated.inventoryItemId,
-          sppgId: session.user.sppgId
-        }
-      })
-
-      if (!inventoryItem) {
-        return Response.json({ 
-          success: false, 
-          error: 'Inventory item not found or access denied' 
-        }, { status: 404 })
+    // 5. Verify inventoryItemId belongs to same SPPG (Fix #1: REQUIRED check)
+    const inventoryItem = await db.inventoryItem.findFirst({
+      where: {
+        id: validated.inventoryItemId,
+        sppgId: session.user.sppgId
       }
+    })
+
+    if (!inventoryItem) {
+      return Response.json({ 
+        success: false, 
+        error: 'Inventory item not found or access denied' 
+      }, { status: 404 })
     }
 
-    // 6. Create ingredient
+    // 6. Create ingredient (Fix #1: ONLY inventoryItemId + quantity + notes)
     const ingredient = await db.menuIngredient.create({
       data: {
         menuId,
-        inventoryItemId: validated.inventoryItemId,
-        ingredientName: validated.ingredientName,
+        inventoryItemId: validated.inventoryItemId, // ✅ Fix #1: REQUIRED
         quantity: validated.quantity,
-        unit: validated.unit,
-        costPerUnit: validated.costPerUnit,
-        totalCost: validated.totalCost,
         preparationNotes: validated.preparationNotes,
         isOptional: validated.isOptional,
         substitutes: validated.substitutes
+        // ❌ Fix #1: REMOVED - ingredientName, unit, costPerUnit, totalCost
       },
       include: {
         inventoryItem: {

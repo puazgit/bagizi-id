@@ -69,27 +69,21 @@ export interface MenuWithDetails extends Menu {
 // ================================ INGREDIENT TYPES ================================
 
 /**
- * Menu Ingredient type matching MenuIngredient Prisma model
+ * Menu Ingredient type - Fix #1 Compatible
+ * @note Fix #1: inventoryItemId REQUIRED, redundant fields removed
  */
 export interface MenuIngredient {
   id: string
   menuId: string
-  inventoryItemId?: string | null
-  
-  // Ingredient Details
-  ingredientName: string
+  inventoryItemId: string // ✅ Fix #1: REQUIRED
   quantity: number
-  unit: string // "kg", "liter", "pcs", "gram"
-  costPerUnit: number
-  totalCost: number
-  
-  // Preparation Notes
   preparationNotes?: string | null
   isOptional: boolean
   substitutes: string[] // Bahan pengganti
+  // ❌ Fix #1: REMOVED - ingredientName, unit, costPerUnit, totalCost (use inventoryItem instead)
   
   // Relations
-  inventoryItem?: InventoryItem | null
+  inventoryItem: InventoryItem // ✅ Fix #1: REQUIRED relation
 }
 
 /**

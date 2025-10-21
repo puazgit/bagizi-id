@@ -118,35 +118,20 @@ export const menuFiltersSchema = z.object({
 // ================================ INGREDIENT SCHEMAS ================================
 
 /**
- * Menu ingredient schema
+ * Menu ingredient schema - Fix #1 Compatible
+ * @note Fix #1: inventoryItemId REQUIRED, redundant fields removed
  */
 export const menuIngredientSchema = z.object({
   menuId: z.string().cuid('Menu ID harus valid'),
-  
-  inventoryItemId: z.string().cuid('Inventory item ID harus valid').optional(),
-  
-  ingredientName: z.string()
-    .min(2, 'Nama bahan minimal 2 karakter')
-    .max(100, 'Nama bahan maksimal 100 karakter'),
-  
+  inventoryItemId: z.string().cuid('Inventory item ID harus valid'), // ✅ Fix #1: REQUIRED
   quantity: z.number()
     .min(0.01, 'Jumlah bahan minimal 0.01')
     .max(10000, 'Jumlah bahan terlalu besar'),
-  
-  unit: z.string()
-    .min(1, 'Unit tidak boleh kosong')
-    .max(20, 'Unit maksimal 20 karakter')
-    .regex(/^[a-zA-Z]+$/, 'Unit hanya boleh berupa huruf'),
-  
-  costPerUnit: z.number()
-    .min(0, 'Biaya per unit tidak boleh negatif')
-    .max(1000000, 'Biaya per unit terlalu tinggi'),
-  
   preparationNotes: z.string()
-    .max(200, 'Catatan persiapan maksimal 200 karakter')
-    .optional(),
-  
+    .max(500, 'Catatan persiapan maksimal 500 karakter')
+    .optional().nullable(),
   isOptional: z.boolean().default(false),
+  // ❌ Fix #1: REMOVED - ingredientName, unit, costPerUnit (use inventoryItem relation)
   
   substitutes: z.array(z.string().max(50))
     .max(5, 'Maksimal 5 bahan pengganti')
@@ -268,24 +253,18 @@ export const nutritionCalculationSchema = z.object({
 // ================================ COST CALCULATION SCHEMAS ================================
 
 /**
- * Ingredient breakdown item schema for JSON validation
+ * Ingredient breakdown item schema - Fix #1 Compatible
+ * Used for cost calculation JSON breakdown
+ * @note Fix #1: Now includes inventoryItemId, redundant fields for legacy support
  */
 export const ingredientBreakdownItemSchema = z.object({
-  ingredientName: z.string()
-    .min(1, 'Nama bahan harus diisi')
-    .max(100, 'Nama bahan terlalu panjang'),
-  quantity: z.number()
-    .min(0, 'Jumlah tidak boleh negatif')
-    .max(100000, 'Jumlah terlalu besar'),
-  unit: z.string()
-    .min(1, 'Satuan harus diisi')
-    .max(20, 'Satuan terlalu panjang'),
-  costPerUnit: z.number()
-    .min(0, 'Biaya per satuan tidak boleh negatif')
-    .max(10000000, 'Biaya per satuan terlalu tinggi'),
-  totalCost: z.number()
-    .min(0, 'Total biaya tidak boleh negatif')
-    .max(100000000, 'Total biaya terlalu tinggi')
+  inventoryItemId: z.string().cuid('Inventory item ID harus valid'),
+  inventoryItemName: z.string().min(1, 'Nama bahan harus diisi'), // From inventoryItem
+  quantity: z.number().min(0, 'Jumlah tidak boleh negatif').max(100000, 'Jumlah terlalu besar'),
+  unit: z.string().min(1, 'Satuan harus diisi').max(20, 'Satuan terlalu panjang'),
+  costPerUnit: z.number().min(0, 'Biaya per satuan tidak boleh negatif').max(10000000, 'Biaya terlalu tinggi'),
+  totalCost: z.number().min(0, 'Total biaya tidak boleh negatif').max(100000000, 'Total biaya terlalu tinggi')
+  // Note: unit, costPerUnit, totalCost kept for calculation purposes (not stored in MenuIngredient)
 })
 
 /**
