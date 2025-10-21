@@ -412,4 +412,55 @@ export const productionApi = {
 
     return response.json()
   },
+
+  /**
+   * Record stock usage for completed production
+   * Automatically creates ProductionStockUsage records for all ingredients
+   * 
+   * @param id - Production ID
+   * @param data - Stock usage data (actualPortions, recordedBy)
+   * @returns Promise with stock usage summary
+   * 
+   * @example
+   * ```typescript
+   * const result = await productionApi.recordStockUsage('prod_123', {
+   *   actualPortions: 100,
+   *   recordedBy: 'user_123'
+   * })
+   * console.log(`Total Cost: ${result.data.totalCost}`)
+   * ```
+   */
+  async recordStockUsage(
+    id: string, 
+    data: { actualPortions: number; recordedBy?: string },
+    headers?: HeadersInit
+  ): Promise<{
+    success: boolean
+    data?: {
+      recordsCreated: number
+      totalCost: number
+      costPerPortion: number
+      ingredients: Array<{
+        inventoryItemId: string
+        quantityUsed: number
+        unit: string
+        totalCost: number
+      }>
+    }
+    error?: string
+  }> {
+    const baseUrl = getBaseUrl()
+    const response = await fetch(`${baseUrl}/api/sppg/production/${id}/record-usage`, {
+      ...getFetchOptions(headers),
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.error || 'Failed to record stock usage')
+    }
+
+    return response.json()
+  },
 }

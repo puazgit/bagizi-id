@@ -41,6 +41,8 @@ import {
   useCompleteProduction,
   useCancelProduction,
 } from '../hooks/useProductions'
+import { productionApi } from '../api'
+import { toast } from 'sonner'
 import { 
   getStatusLabel, 
   getStatusColor, 
@@ -327,12 +329,37 @@ export function ProductionStatus({ production, className, onStatusChange }: Prod
     })
   }
 
-  const handleCompleteProduction = (data: CompleteProductionInput) => {
+  const handleCompleteProduction = async (data: CompleteProductionInput) => {
+    // Step 1: Complete production (COOKING → QUALITY_CHECK)
     completeProduction(
       { id: production.id, data },
       {
-        onSuccess: () => {
+        onSuccess: async () => {
           setShowCompleteDialog(false)
+          
+          // Step 2: Automatically record stock usage
+          try {
+            toast.info('Mencatat penggunaan bahan...')
+            
+            const stockUsageResult = await productionApi.recordStockUsage(production.id, {
+              actualPortions: data.actualPortions,
+            })
+            
+            if (stockUsageResult.success) {
+              toast.success(
+                `✅ Stock usage recorded: ${stockUsageResult.data?.recordsCreated} ingredients, ` +
+                `Total: ${new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(stockUsageResult.data?.totalCost || 0)}`
+              )
+            }
+          } catch (error) {
+            // Non-blocking error - production is still marked complete
+            console.error('Failed to record stock usage:', error)
+            toast.warning(
+              'Produksi selesai, tapi gagal mencatat penggunaan bahan. ' +
+              'Silakan rekam manual dari detail produksi.'
+            )
+          }
+          
           onStatusChange?.()
         },
       }

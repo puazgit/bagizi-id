@@ -30,11 +30,12 @@ import {
   Thermometer,
   Clock,
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { useDeleteProduction } from '../hooks/useProductions'
+import { cn, formatCurrency } from '@/lib/utils'
+import { useDeleteProduction, useProductionCost } from '../hooks'
 import type { FoodProduction } from '@prisma/client'
 import { format } from 'date-fns'
 import { id } from 'date-fns/locale'
+import { DollarSign } from 'lucide-react'
 
 // ============================================================================
 // Types
@@ -63,15 +64,6 @@ interface ProductionCardProps {
 // ============================================================================
 // Helper Functions
 // ============================================================================
-
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('id-ID', {
-    style: 'currency',
-    currency: 'IDR',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount)
-}
 
 function formatDateTime(date: Date | string): string {
   const dateObj = typeof date === 'string' ? new Date(date) : date
@@ -139,6 +131,12 @@ function getMealTypeLabel(mealType: string): string {
  */
 export function ProductionCard({ production, className, onDelete }: ProductionCardProps) {
   const { mutate: deleteProduction, isPending: isDeleting } = useDeleteProduction()
+  
+  // ✅ Fetch calculated cost dynamically from ProductionCostCalculator
+  const { data: costData, isLoading: isCostLoading } = useProductionCost(
+    production.id,
+    production.status !== 'PLANNED' && production.status !== 'CANCELLED' // Only fetch cost for active/completed productions
+  )
 
   const statusConfig = getStatusConfig(production.status)
   const portionProgress = production.actualPortions
@@ -278,6 +276,38 @@ export function ProductionCard({ production, className, onDelete }: ProductionCa
             </div>
           )}
         </div> */}
+
+        {/* ✅ Dynamic Cost Display - Calculated from ProductionStockUsage */}
+        {costData && (
+          <div className="space-y-2 pt-2 border-t">
+            <div className="flex items-center justify-between text-sm">
+              <div className="flex items-center gap-2">
+                <DollarSign className="h-4 w-4 text-muted-foreground" />
+                <span className="text-muted-foreground">Total Biaya</span>
+              </div>
+              <span className="font-semibold">{formatCurrency(costData.totalCost)}</span>
+            </div>
+            {costData.costPerPortion > 0 && (
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>Biaya per Porsi</span>
+                <span className="font-medium">{formatCurrency(costData.costPerPortion)}</span>
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground italic">
+              Dihitung dari penggunaan bahan aktual
+            </p>
+          </div>
+        )}
+
+        {/* Show loading state for cost calculation */}
+        {isCostLoading && (
+          <div className="space-y-2 pt-2 border-t">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <DollarSign className="h-4 w-4 animate-pulse" />
+              <span className="animate-pulse">Menghitung biaya...</span>
+            </div>
+          </div>
+        )}
 
         {/* Temperature Indicator (for COOKING/COMPLETED) */}
         {(production.status === 'COOKING' || production.status === 'COMPLETED') &&

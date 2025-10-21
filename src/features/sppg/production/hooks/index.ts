@@ -5,6 +5,7 @@
 
 // Production CRUD Hooks
 export * from './useProductions'
+export * from './useProductionCost'
 
 // Programs Hooks (NEW - Phase 5.17.5)
 export * from './usePrograms'
