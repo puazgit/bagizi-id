@@ -1,0 +1,13 @@
+{
+  "timestamp": "2025-10-21T02:38:41.065Z",
+  "summary": {
+    "totalIngredients": 61,
+    "orphanedCount": 0,
+    "linkedCount": 61,
+    "orphanedPercentage": "0.00",
+    "uniqueOrphaned": 0,
+    "affectedMenus": 0,
+    "totalMenus": 10
+  },
+  "orphanedIngredients": []
+}

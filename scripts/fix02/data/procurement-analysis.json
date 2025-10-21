@@ -1,0 +1,68 @@
+{
+  "timestamp": "2025-10-21T02:40:29.885Z",
+  "summary": {
+    "totalItems": 7,
+    "orphanedCount": 6,
+    "linkedCount": 1,
+    "uniqueOrphaned": 6,
+    "totalReceived": 2,
+    "withStockMovements": 0,
+    "missingStockMovements": 2
+  },
+  "orphanedItems": [
+    {
+      "itemName": "Bayam Hijau",
+      "unit": "KG",
+      "avgPrice": 8000,
+      "minPrice": 8000,
+      "maxPrice": 8000,
+      "totalQuantity": 20,
+      "usageCount": 1
+    },
+    {
+      "itemName": "Beras Premium Cianjur",
+      "unit": "KARUNG",
+      "avgPrice": 375000,
+      "minPrice": 375000,
+      "maxPrice": 375000,
+      "totalQuantity": 4,
+      "usageCount": 1
+    },
+    {
+      "itemName": "Ikan Nila Segar",
+      "unit": "KG",
+      "avgPrice": 32000,
+      "minPrice": 32000,
+      "maxPrice": 32000,
+      "totalQuantity": 100,
+      "usageCount": 1
+    },
+    {
+      "itemName": "Susu UHT 1 Liter",
+      "unit": "LITER",
+      "avgPrice": 14000,
+      "minPrice": 14000,
+      "maxPrice": 14000,
+      "totalQuantity": 60,
+      "usageCount": 1
+    },
+    {
+      "itemName": "Tomat",
+      "unit": "KG",
+      "avgPrice": 15000,
+      "minPrice": 15000,
+      "maxPrice": 15000,
+      "totalQuantity": 10,
+      "usageCount": 1
+    },
+    {
+      "itemName": "Wortel",
+      "unit": "KG",
+      "avgPrice": 12000,
+      "minPrice": 12000,
+      "maxPrice": 12000,
+      "totalQuantity": 15,
+      "usageCount": 1
+    }
+  ]
+}
