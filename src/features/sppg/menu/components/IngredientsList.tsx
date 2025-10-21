@@ -44,7 +44,7 @@ function formatCurrency(amount: number): string {
  */
 function calculateTotalCost(ingredients: MenuIngredient[]): number {
   return ingredients.reduce((total, ingredient) => {
-    return total + (ingredient.quantity * ingredient.costPerUnit)
+    return total + (ingredient.quantity * (ingredient.inventoryItem.costPerUnit || 0))
   }, 0)
 }
 
@@ -63,8 +63,8 @@ function findMostExpensive(ingredients: MenuIngredient[]): MenuIngredient | null
   if (ingredients.length === 0) return null
   
   return ingredients.reduce((max, ingredient) => {
-    const currentTotal = ingredient.quantity * ingredient.costPerUnit
-    const maxTotal = max.quantity * max.costPerUnit
+    const currentTotal = ingredient.quantity * (ingredient.inventoryItem.costPerUnit || 0)
+    const maxTotal = max.quantity * (max.inventoryItem.costPerUnit || 0)
     return currentTotal > maxTotal ? ingredient : max
   }, ingredients[0])
 }
@@ -209,11 +209,11 @@ export function IngredientsList({ menuId, onEdit }: IngredientsListProps) {
                 <TrendingUp className="h-4 w-4 text-muted-foreground" />
                 <p className="text-sm text-muted-foreground">Termahal</p>
               </div>
-              <p className="text-base font-bold truncate" title={mostExpensive?.ingredientName}>
-                {mostExpensive?.ingredientName || '-'}
+              <p className="text-base font-bold truncate" title={mostExpensive?.inventoryItem.itemName}>
+                {mostExpensive?.inventoryItem.itemName || '-'}
               </p>
               <p className="text-xs text-muted-foreground">
-                {mostExpensive ? formatCurrency(mostExpensive.quantity * mostExpensive.costPerUnit) : '-'}
+                {mostExpensive ? formatCurrency(mostExpensive.quantity * (mostExpensive.inventoryItem.costPerUnit || 0)) : '-'}
               </p>
             </div>
           </div>

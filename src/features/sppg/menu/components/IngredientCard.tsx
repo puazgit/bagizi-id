@@ -64,7 +64,7 @@ export function IngredientCard({ ingredient, menuId, onEdit }: IngredientCardPro
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const { mutate: deleteIngredient, isPending } = useDeleteIngredient(menuId)
 
-  const totalCost = calculateTotalCost(ingredient.quantity, ingredient.costPerUnit)
+  const totalCost = calculateTotalCost(ingredient.quantity, ingredient.inventoryItem.costPerUnit || 0)
 
   // Check if stock is low
   const isLowStock = ingredient.inventoryItem && 
@@ -83,7 +83,7 @@ export function IngredientCard({ ingredient, menuId, onEdit }: IngredientCardPro
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <CardTitle className="text-base truncate">
-                  {ingredient.ingredientName}
+                  {ingredient.inventoryItem.itemName}
                 </CardTitle>
                 {ingredient.isOptional && (
                   <Badge variant="secondary" className="text-xs shrink-0">
@@ -98,7 +98,7 @@ export function IngredientCard({ ingredient, menuId, onEdit }: IngredientCardPro
                 )}
               </div>
               <CardDescription className="mt-1">
-                {ingredient.quantity} {ingredient.unit}
+                {ingredient.quantity} {ingredient.inventoryItem.unit}
               </CardDescription>
             </div>
             <div className="flex gap-1 shrink-0">
@@ -110,7 +110,7 @@ export function IngredientCard({ ingredient, menuId, onEdit }: IngredientCardPro
                 title="Edit bahan"
               >
                 <Edit className="h-4 w-4" />
-                <span className="sr-only">Edit {ingredient.ingredientName}</span>
+                <span className="sr-only">Edit {ingredient.inventoryItem.itemName}</span>
               </Button>
               <Button
                 variant="ghost"
@@ -120,7 +120,7 @@ export function IngredientCard({ ingredient, menuId, onEdit }: IngredientCardPro
                 title="Hapus bahan"
               >
                 <Trash2 className="h-4 w-4" />
-                <span className="sr-only">Hapus {ingredient.ingredientName}</span>
+                <span className="sr-only">Hapus {ingredient.inventoryItem.itemName}</span>
               </Button>
             </div>
           </div>
@@ -153,7 +153,7 @@ export function IngredientCard({ ingredient, menuId, onEdit }: IngredientCardPro
           <div className="space-y-2">
             <div className="flex justify-between items-center text-sm">
               <span className="text-muted-foreground">Harga per satuan:</span>
-              <span className="font-medium">{formatCurrency(ingredient.costPerUnit)}</span>
+              <span className="font-medium">{formatCurrency(ingredient.inventoryItem.costPerUnit || 0)}</span>
             </div>
             <div className="flex justify-between items-center text-sm pt-2 border-t">
               <span className="text-muted-foreground">Total biaya:</span>
@@ -206,7 +206,7 @@ export function IngredientCard({ ingredient, menuId, onEdit }: IngredientCardPro
           <AlertDialogHeader>
             <AlertDialogTitle>Hapus Bahan?</AlertDialogTitle>
             <AlertDialogDescription>
-              Apakah Anda yakin ingin menghapus bahan <strong>{ingredient.ingredientName}</strong>? 
+              Apakah Anda yakin ingin menghapus bahan <strong>{ingredient.inventoryItem.itemName}</strong>? 
               Tindakan ini tidak dapat dibatalkan.
             </AlertDialogDescription>
           </AlertDialogHeader>
