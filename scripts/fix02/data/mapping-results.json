@@ -1,0 +1,82 @@
+{
+  "timestamp": "2025-10-21T02:53:20.530Z",
+  "summary": {
+    "totalMappings": 6,
+    "successfulUpdates": 6,
+    "failedUpdates": 0
+  },
+  "details": [
+    {
+      "mapping": {
+        "procurementItemName": "Bayam Hijau",
+        "procurementUnit": "KG",
+        "inventoryItemId": "cmgxy6l68002o8ounnq1m5bc8",
+        "inventoryItemName": "Bayam",
+        "matchType": "FUZZY",
+        "confidence": 90
+      },
+      "status": "SUCCESS",
+      "count": 1
+    },
+    {
+      "mapping": {
+        "procurementItemName": "Ikan Nila Segar",
+        "procurementUnit": "KG",
+        "inventoryItemId": "cmgxy6l68002i8oun7t5s03hr",
+        "inventoryItemName": "Ikan Nila",
+        "matchType": "FUZZY",
+        "confidence": 90
+      },
+      "status": "SUCCESS",
+      "count": 1
+    },
+    {
+      "mapping": {
+        "procurementItemName": "Susu UHT 1 Liter",
+        "procurementUnit": "LITER",
+        "inventoryItemId": "cmgxy6l6900308ounz8qncn3p",
+        "inventoryItemName": "Susu UHT",
+        "matchType": "FUZZY",
+        "confidence": 90
+      },
+      "status": "SUCCESS",
+      "count": 1
+    },
+    {
+      "mapping": {
+        "procurementItemName": "Tomat",
+        "procurementUnit": "KG",
+        "inventoryItemId": "cmgxy6l69002q8ounrl5205ws",
+        "inventoryItemName": "Tomat",
+        "matchType": "EXACT",
+        "confidence": 100
+      },
+      "status": "SUCCESS",
+      "count": 1
+    },
+    {
+      "mapping": {
+        "procurementItemName": "Wortel",
+        "procurementUnit": "KG",
+        "inventoryItemId": "cmgxy6l68002n8oun15mmftkl",
+        "inventoryItemName": "Wortel",
+        "matchType": "EXACT",
+        "confidence": 100
+      },
+      "status": "SUCCESS",
+      "count": 1
+    },
+    {
+      "mapping": {
+        "procurementItemName": "Beras Premium Cianjur",
+        "procurementUnit": "KARUNG",
+        "inventoryItemId": "cmgzyunug0001sv08elrj90s0",
+        "inventoryItemName": "Beras Premium Cianjur",
+        "matchType": "EXACT",
+        "confidence": 100
+      },
+      "status": "SUCCESS",
+      "count": 1
+    }
+  ]
+}
