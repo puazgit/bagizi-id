@@ -608,7 +608,7 @@ async function seedMenuIngredients(
       {
         menuId: menu1.id,
         inventoryItemId: findInventoryItem('BRP-001'), // ✅ REQUIRED (Fix #1)
-        quantity: 80, // gram
+        quantity: 0.08, // gram
         preparationNotes: 'Cuci beras 80 gram dengan air mengalir hingga jernih (3-4 kali cuci). Rendam dalam air bersih selama 15 menit untuk menghasilkan nasi yang pulen. Tiriskan dengan saringan sebelum dimasak. Perbandingan air:beras = 1.2:1 untuk tekstur nasi yang pas.',
         substitutes: ['Beras Merah (lebih tinggi serat, +Rp 3/g)', 'Beras Organik (lebih sehat, +Rp 8/g)'],
         isOptional: false
@@ -616,7 +616,7 @@ async function seedMenuIngredients(
       {
         menuId: menu1.id,
         inventoryItemId: findInventoryItem('NKM-001'), // ✅ REQUIRED (Fix #1)
-        quantity: 100, // gram
+        quantity: 0.1, // gram
         preparationNotes: 'Kupas nangka muda 100 gram, potong tipis setebal 3-4 cm dan lebar 5 cm. Rebus dalam air mendidih dengan sedikit garam selama 15 menit untuk menghilangkan getah. Tiriskan dan peras airnya. Jangan terlalu lembek agar tekstur tetap kenyal saat dimasak dengan santan.',
         substitutes: ['Nangka Kalengan (lebih praktis, +Rp 5/g)', 'Kol (alternatif sayuran, -Rp 7/g)'],
         isOptional: false
@@ -624,7 +624,7 @@ async function seedMenuIngredients(
       {
         menuId: menu1.id,
         inventoryItemId: findInventoryItem('AYM-001'), // ✅ REQUIRED (Fix #1)
-        quantity: 100, // gram
+        quantity: 0.1, // gram
         preparationNotes: 'Cuci bersih ayam kampung fillet 100 gram. Potong dadu ukuran 2x2 cm untuk memudahkan penyerapan bumbu. Marinasi dengan air jeruk nipis 1 sendok teh dan garam 1/2 sendok teh selama 10 menit. Rebus dengan lengkuas dan sereh hingga empuk (30 menit), lalu suwir halus. Ayam kampung memberikan tekstur lebih kenyal dan aroma khas.',
         substitutes: ['Ayam Broiler Fillet (lebih murah, -Rp 18/g)', 'Ayam Organik (lebih premium, +Rp 15/g)'],
         isOptional: false
@@ -632,7 +632,7 @@ async function seedMenuIngredients(
       {
         menuId: menu1.id,
         inventoryItemId: findInventoryItem('SNT-001'), // ✅ REQUIRED (Fix #1)
-        quantity: 50, // ml
+        quantity: 0.05, // ml
         preparationNotes: 'Gunakan santan kental dari kelapa segar 50 ml (dari 1/4 butir kelapa). Pastikan santan tidak pecah dengan menambahkan 1 sendok teh tepung maizena. Masak dengan api kecil sambil diaduk terus. Santan segar memberikan aroma khas gudeg Sunda yang autentik. Hindari mendidih agar tidak pecah.',
         substitutes: ['Santan Kemasan (lebih praktis, -Rp 2/ml)', 'Santan Instan (paling praktis, -Rp 3/ml)'],
         isOptional: false
@@ -640,7 +640,7 @@ async function seedMenuIngredients(
       {
         menuId: menu1.id,
         inventoryItemId: findInventoryItem('GLM-001'), // ✅ REQUIRED (Fix #1)
-        quantity: 20, // gram
+        quantity: 0.02, // gram
         preparationNotes: 'Sisir halus gula merah 20 gram agar mudah larut dan meresap sempurna ke dalam nangka. Gula merah memberikan rasa manis legit khas gudeg dan warna cokelat kemerahan yang cantik. Jangan terlalu banyak agar tidak terlalu manis. Sisir saat masih dingin agar tidak lengket.',
         substitutes: ['Gula Aren (rasa mirip, +Rp 3/g)', 'Gula Pasir + Kecap Manis (alternatif, -Rp 15/g)'],
         isOptional: false
@@ -648,7 +648,7 @@ async function seedMenuIngredients(
       {
         menuId: menu1.id,
         inventoryItemId: findInventoryItem('LKS-001'), // ✅ REQUIRED (Fix #1)
-        quantity: 5, // gram
+        quantity: 0.005, // gram
         preparationNotes: 'Iris tipis lengkuas 5 gram (sekitar 1 ruas jari), lalu memarkan dengan punggung pisau untuk mengeluarkan aroma maksimal. Lengkuas memberikan aroma harum khas dan menghilangkan bau amis ayam. Masukkan sejak awal memasak untuk aroma yang meresap sempurna.',
         substitutes: ['Jahe (aroma berbeda, -Rp 2/g)', 'Laos Bubuk (kurang aroma, -Rp 10/g)'],
         isOptional: false
@@ -656,7 +656,7 @@ async function seedMenuIngredients(
       {
         menuId: menu1.id,
         inventoryItemId: findInventoryItem('DSL-001'), // ✅ REQUIRED (Fix #1)
-        quantity: 2, // gram (2 lembar)
+        quantity: 0.002, // gram (2 lembar)
         preparationNotes: 'Gunakan 2 lembar daun salam segar (sekitar 2 gram). Cuci bersih dan sobek sedikit untuk mengeluarkan aroma. Daun salam memberikan aroma tradisional khas masakan Sunda. Buang daun sebelum menghidangkan. Daun segar lebih harum dibanding kering.',
         substitutes: ['Daun Salam Kering (kurang aroma, -Rp 15/g)'],
         isOptional: true
@@ -671,61 +671,61 @@ async function seedMenuIngredients(
     data: [
       {
         menuId: menu2.id,
-        inventoryItemId: findInventoryItem('BRP-001'),        quantity: 80,        preparationNotes: 'Cuci beras 80 gram hingga air jernih, rendam 15 menit. Masak dengan perbandingan air 1.2:1 untuk nasi pulen yang pas. Nasi harus hangat dan tidak terlalu lembek agar cocok dimakan dengan lalapan segar.',
+        inventoryItemId: findInventoryItem('BRP-001'),        quantity: 0.08, // was 80g        preparationNotes: 'Cuci beras 80 gram hingga air jernih, rendam 15 menit. Masak dengan perbandingan air 1.2:1 untuk nasi pulen yang pas. Nasi harus hangat dan tidak terlalu lembek agar cocok dimakan dengan lalapan segar.',
         substitutes: ['Beras Merah (lebih sehat, +Rp 3/g)', 'Beras Organik (premium, +Rp 8/g)'],
         isOptional: false
       },
       {
         menuId: menu2.id,
-        inventoryItemId: findInventoryItem('AYM-001'),        quantity: 100,        preparationNotes: 'Cuci bersih paha ayam 100 gram (1 potong sedang). Marinasi dengan bumbu kuning (kunyit 5g, bawang putih 5g, ketumbar 2g, garam 1g) selama minimal 30 menit agar bumbu meresap sempurna. Goreng dengan minyak panas sedang hingga kuning keemasan dan matang merata (15-20 menit). Tiriskan minyak sebelum sajikan.',
+        inventoryItemId: findInventoryItem('AYM-001'),        quantity: 0.1, // was 100g        preparationNotes: 'Cuci bersih paha ayam 100 gram (1 potong sedang). Marinasi dengan bumbu kuning (kunyit 5g, bawang putih 5g, ketumbar 2g, garam 1g) selama minimal 30 menit agar bumbu meresap sempurna. Goreng dengan minyak panas sedang hingga kuning keemasan dan matang merata (15-20 menit). Tiriskan minyak sebelum sajikan.',
         substitutes: ['Ayam Kampung (lebih gurih, +Rp 5/g)', 'Ayam Fillet (lebih lembut, sama harga)'],
         isOptional: false
       },
       {
         menuId: menu2.id,
-        inventoryItemId: findInventoryItem('TAH-001'),        quantity: 50,        preparationNotes: 'Gunakan tahu Sumedang atau tahu putih lokal 50 gram (1 potong besar). Potong kotak persegi 3x3 cm setebal 2 cm. Goreng dalam minyak panas hingga permukaan kuning keemasan dan renyah di luar, lembut di dalam (8-10 menit). Jangan dibalik terlalu sering agar tidak hancur.',
+        inventoryItemId: findInventoryItem('TAH-001'),        quantity: 0.05, // was 50g        preparationNotes: 'Gunakan tahu Sumedang atau tahu putih lokal 50 gram (1 potong besar). Potong kotak persegi 3x3 cm setebal 2 cm. Goreng dalam minyak panas hingga permukaan kuning keemasan dan renyah di luar, lembut di dalam (8-10 menit). Jangan dibalik terlalu sering agar tidak hancur.',
         substitutes: ['Tahu Sutra (lebih lembut, +Rp 5/g)', 'Tempe (protein nabati, sama harga)'],
         isOptional: false
       },
       {
         menuId: menu2.id,
-        inventoryItemId: findInventoryItem('KOL-001'),        quantity: 30,        preparationNotes: 'Pilih kol segar 30 gram (3-4 lembar). Cuci bersih dengan air mengalir, rendam air garam 5 menit untuk menghilangkan ulat kecil. Iris tipis memanjang setebal 0.5 cm. Kol mentah memberikan tekstur renyah dan segar sebagai lalapan. Sajikan segera setelah diiris agar tetap renyah.',
+        inventoryItemId: findInventoryItem('KOL-001'),        quantity: 0.03, // was 30g        preparationNotes: 'Pilih kol segar 30 gram (3-4 lembar). Cuci bersih dengan air mengalir, rendam air garam 5 menit untuk menghilangkan ulat kecil. Iris tipis memanjang setebal 0.5 cm. Kol mentah memberikan tekstur renyah dan segar sebagai lalapan. Sajikan segera setelah diiris agar tetap renyah.',
         substitutes: ['Selada (lebih segar, +Rp 4/g)', 'Sawi Putih (lebih manis, +Rp 2/g)'],
         isOptional: false
       },
       {
         menuId: menu2.id,
-        inventoryItemId: findInventoryItem('TMN-001'),        quantity: 30,        preparationNotes: 'Pilih timun segar hijau 30 gram (1/3 buah sedang). Cuci bersih, kupas kulit tipis-tipis jika pahit. Iris bulat setebal 0.5 cm atau iris panjang memanjang. Timun memberikan kesegaran dan mengurangi rasa pedas sambal. Rendam air dingin 5 menit agar lebih renyah.',
+        inventoryItemId: findInventoryItem('TMN-001'),        quantity: 0.03, // was 30g        preparationNotes: 'Pilih timun segar hijau 30 gram (1/3 buah sedang). Cuci bersih, kupas kulit tipis-tipis jika pahit. Iris bulat setebal 0.5 cm atau iris panjang memanjang. Timun memberikan kesegaran dan mengurangi rasa pedas sambal. Rendam air dingin 5 menit agar lebih renyah.',
         substitutes: ['Mentimun Jepang (lebih manis, +Rp 10/g)'],
         isOptional: false
       },
       {
         menuId: menu2.id,
-        inventoryItemId: findInventoryItem('TMT-001'),        quantity: 20,        preparationNotes: 'Gunakan tomat merah segar 20 gram (1/2 buah sedang). Cuci bersih, potong wedges (8 bagian) atau iris bulat. Tomat memberikan rasa asam segar dan vitamin C. Pilih tomat yang matang merah tapi masih keras agar tidak lembek saat dimakan.',
+        inventoryItemId: findInventoryItem('TMT-001'),        quantity: 0.02, // was 20g        preparationNotes: 'Gunakan tomat merah segar 20 gram (1/2 buah sedang). Cuci bersih, potong wedges (8 bagian) atau iris bulat. Tomat memberikan rasa asam segar dan vitamin C. Pilih tomat yang matang merah tapi masih keras agar tidak lembek saat dimakan.',
         substitutes: ['Tomat Ceri (lebih manis, +Rp 25/g)'],
         isOptional: false
       },
       {
         menuId: menu2.id,
-        inventoryItemId: findInventoryItem('CBR-001'),        quantity: 25,        preparationNotes: 'Ulek 15 gram cabe rawit merah segar, 3 siung bawang merah, 2 siung bawang putih, 5 gram terasi bakar, 1 gram garam, 1 sendok teh air jeruk nipis. Ulek kasar agar tekstur tidak terlalu halus. Sambal terasi khas Sunda harus pedas, gurih terasi, dan segar. Jangan terlalu banyak air agar sambal kental.',
+        inventoryItemId: findInventoryItem('CBR-001'),        quantity: 0.025, // was 25g        preparationNotes: 'Ulek 15 gram cabe rawit merah segar, 3 siung bawang merah, 2 siung bawang putih, 5 gram terasi bakar, 1 gram garam, 1 sendok teh air jeruk nipis. Ulek kasar agar tekstur tidak terlalu halus. Sambal terasi khas Sunda harus pedas, gurih terasi, dan segar. Jangan terlalu banyak air agar sambal kental.',
         substitutes: ['Sambal Bawang (tidak terasi, -Rp 10/g)', 'Sambal Kecap (lebih manis, -Rp 5/g)'],
         isOptional: false
       },
       {
         menuId: menu2.id,
-        inventoryItemId: findInventoryItem('KNY-001'),        quantity: 5,        preparationNotes: 'Parut halus kunyit segar 5 gram (1 ruas jari kecil) untuk bumbu marinasi ayam. Kunyit memberikan warna kuning cerah khas ayam goreng Sunda dan aroma harum. Campurkan dengan bawang putih, ketumbar, dan garam untuk bumbu lengkap. Kunyit segar lebih harum dari bubuk.',
+        inventoryItemId: findInventoryItem('KNY-001'),        quantity: 0.005, // was 5g        preparationNotes: 'Parut halus kunyit segar 5 gram (1 ruas jari kecil) untuk bumbu marinasi ayam. Kunyit memberikan warna kuning cerah khas ayam goreng Sunda dan aroma harum. Campurkan dengan bawang putih, ketumbar, dan garam untuk bumbu lengkap. Kunyit segar lebih harum dari bubuk.',
         substitutes: ['Kunyit Bubuk (lebih praktis, -Rp 8/g)'],
         isOptional: false
       },
       {
         menuId: menu2.id,
-        inventoryItemId: findInventoryItem('BWP-001'),        quantity: 5,        preparationNotes: 'Haluskan 5 gram bawang putih (2 siung besar) untuk bumbu marinasi ayam. Bawang putih memberikan aroma gurih dan membantu melunakkan daging ayam. Haluskan bersama kunyit dan ketumbar untuk bumbu yang meresap sempurna.',
+        inventoryItemId: findInventoryItem('BWP-001'),        quantity: 0.005, // was 5g        preparationNotes: 'Haluskan 5 gram bawang putih (2 siung besar) untuk bumbu marinasi ayam. Bawang putih memberikan aroma gurih dan membantu melunakkan daging ayam. Haluskan bersama kunyit dan ketumbar untuk bumbu yang meresap sempurna.',
         substitutes: ['Bawang Putih Bubuk (darurat, -Rp 20/g)'],
         isOptional: false
       },
       {
         menuId: menu2.id,
-        inventoryItemId: findInventoryItem('KTB-001'),        quantity: 2,        preparationNotes: 'Sangrai 2 gram ketumbar biji (1/2 sendok teh) dengan api kecil hingga harum (3 menit), lalu tumbuk kasar. Ketumbar sangrai memberikan aroma khas dan rasa gurih pada ayam goreng. Jangan sangrai terlalu lama agar tidak gosong dan pahit.',
+        inventoryItemId: findInventoryItem('KTB-001'),        quantity: 0.002, // was 2g        preparationNotes: 'Sangrai 2 gram ketumbar biji (1/2 sendok teh) dengan api kecil hingga harum (3 menit), lalu tumbuk kasar. Ketumbar sangrai memberikan aroma khas dan rasa gurih pada ayam goreng. Jangan sangrai terlalu lama agar tidak gosong dan pahit.',
         substitutes: ['Ketumbar Bubuk (lebih praktis, -Rp 10/g)'],
         isOptional: false
       }
@@ -739,43 +739,43 @@ async function seedMenuIngredients(
     data: [
       {
         menuId: menu3.id,
-        inventoryItemId: findInventoryItem('BRP-001'),        quantity: 80,        preparationNotes: 'Cuci beras 80 gram hingga bersih, rendam 15 menit. Masak dengan perbandingan air 1.2:1 untuk nasi pulen. Nasi harus hangat saat disajikan dengan pepes ikan agar aroma harum daun pisang tercium sempurna.',
+        inventoryItemId: findInventoryItem('BRP-001'),        quantity: 0.08, // was 80g        preparationNotes: 'Cuci beras 80 gram hingga bersih, rendam 15 menit. Masak dengan perbandingan air 1.2:1 untuk nasi pulen. Nasi harus hangat saat disajikan dengan pepes ikan agar aroma harum daun pisang tercium sempurna.',
         substitutes: ['Beras Merah (lebih sehat, +Rp 3/g)', 'Beras Pandan (harum, +Rp 5/g)'],
         isOptional: false
       },
       {
         menuId: menu3.id,
-        inventoryItemId: findInventoryItem('IKN-001'),        quantity: 80,        preparationNotes: 'Pilih ikan mas segar dari Waduk Jatiluhur 80 gram (1 potong sedang). Cuci bersih, buang sisik dan duri halus. Lumuri dengan jeruk nipis 1 sendok teh dan garam 1/2 sendok teh selama 10 menit untuk menghilangkan bau amis. Ikan mas Jatiluhur memiliki daging tebal dan gurih khas air tawar.',
+        inventoryItemId: findInventoryItem('IKN-001'),        quantity: 0.08, // was 80g        preparationNotes: 'Pilih ikan mas segar dari Waduk Jatiluhur 80 gram (1 potong sedang). Cuci bersih, buang sisik dan duri halus. Lumuri dengan jeruk nipis 1 sendok teh dan garam 1/2 sendok teh selama 10 menit untuk menghilangkan bau amis. Ikan mas Jatiluhur memiliki daging tebal dan gurih khas air tawar.',
         substitutes: ['Ikan Nila (lebih ekonomis, -Rp 10/g)', 'Ikan Gurame (lebih premium, +Rp 25/g)'],
         isOptional: false
       },
       {
         menuId: menu3.id,
-        inventoryItemId: findInventoryItem('DPS-001'),        quantity: 1,        preparationNotes: 'Gunakan daun pisang segar ukuran 20x25 cm (1 lembar). Bersihkan dengan lap basah, layukan sebentar di atas api agar lentur dan tidak sobek saat dilipat. Daun pisang memberikan aroma harum khas pepes Sunda. Lipat membentuk amplop dengan bagian mengkilap di dalam agar ikan tidak lengket.',
+        inventoryItemId: findInventoryItem('DPS-001'),        quantity: 0.001, // was 1g        preparationNotes: 'Gunakan daun pisang segar ukuran 20x25 cm (1 lembar). Bersihkan dengan lap basah, layukan sebentar di atas api agar lentur dan tidak sobek saat dilipat. Daun pisang memberikan aroma harum khas pepes Sunda. Lipat membentuk amplop dengan bagian mengkilap di dalam agar ikan tidak lengket.',
         substitutes: ['Alumunium Foil (darurat, tidak ada aroma, -Rp 300)'],
         isOptional: false
       },
       {
         menuId: menu3.id,
-        inventoryItemId: findInventoryItem('TMP-001'),        quantity: 40,        preparationNotes: 'Iris tempe 40 gram (2 potong) setebal 0.5 cm. Celup ke adonan tepung terigu 20g + ketumbar 1g + daun bawang 2g + air 30ml hingga rata tipis. Goreng dalam minyak panas sedang hingga crispy kuning keemasan (3 menit per sisi). Jangan terlalu tebal agar mendoan renyah.',
+        inventoryItemId: findInventoryItem('TMP-001'),        quantity: 0.04, // was 40g        preparationNotes: 'Iris tempe 40 gram (2 potong) setebal 0.5 cm. Celup ke adonan tepung terigu 20g + ketumbar 1g + daun bawang 2g + air 30ml hingga rata tipis. Goreng dalam minyak panas sedang hingga crispy kuning keemasan (3 menit per sisi). Jangan terlalu tebal agar mendoan renyah.',
         substitutes: ['Tempe Goreng Biasa (tanpa tepung, -Rp 2/g)', 'Tahu Goreng (alternatif protein, sama harga)'],
         isOptional: false
       },
       {
         menuId: menu3.id,
-        inventoryItemId: findInventoryItem('LBS-001'),        quantity: 80,        preparationNotes: 'Campur labu siam 30g (potong dadu 2x2cm), kacang panjang 25g (potong 3cm), jagung manis 25g (pipil). Rebus dalam 200ml air mendidih dengan asam jawa 5g, garam 1g, gula merah 3g, lengkuas 2g selama 15 menit. Sayur asem Sunda harus asam segar dengan tekstur sayuran masih renyah.',
+        inventoryItemId: findInventoryItem('LBS-001'),        quantity: 0.08, // was 80g        preparationNotes: 'Campur labu siam 30g (potong dadu 2x2cm), kacang panjang 25g (potong 3cm), jagung manis 25g (pipil). Rebus dalam 200ml air mendidih dengan asam jawa 5g, garam 1g, gula merah 3g, lengkuas 2g selama 15 menit. Sayur asem Sunda harus asam segar dengan tekstur sayuran masih renyah.',
         substitutes: ['Sayur Sop (tidak asam, -Rp 2/g)', 'Sayur Lodeh (lebih gurih, sama harga)'],
         isOptional: false
       },
       {
         menuId: menu3.id,
-        inventoryItemId: findInventoryItem('KRK-001'),        quantity: 10,        preparationNotes: 'Goreng 10 gram kerupuk udang mentah (3-4 keping) dalam minyak panas 180°C hingga mengembang sempurna (5 detik per keping). Angkat segera agar tidak gosong dan tetap renyah. Tiriskan minyak, sajikan hangat. Kerupuk udang menambah tekstur renyah dan gurih.',
+        inventoryItemId: findInventoryItem('KRK-001'),        quantity: 0.01, // was 10g        preparationNotes: 'Goreng 10 gram kerupuk udang mentah (3-4 keping) dalam minyak panas 180°C hingga mengembang sempurna (5 detik per keping). Angkat segera agar tidak gosong dan tetap renyah. Tiriskan minyak, sajikan hangat. Kerupuk udang menambah tekstur renyah dan gurih.',
         substitutes: ['Kerupuk Putih (lebih ekonomis, -Rp 8/g)', 'Emping Melinjo (khas Sunda, +Rp 15/g)'],
         isOptional: false
       },
       {
         menuId: menu3.id,
-        inventoryItemId: findInventoryItem('KNY-001'),        quantity: 8,        preparationNotes: 'Haluskan 8 gram kunyit segar (1 ruas), 5 gram bawang merah (2 siung), 3 gram bawang putih (1 siung), 2 gram cabe merah keriting, 1 gram terasi bakar, 5 gram tomat, 2 gram daun kemangi, garam secukupnya. Lumuri ikan dengan bumbu halus ini sebelum dibungkus daun pisang. Bumbu pepes harus harum kunyit dan terasi.',
+        inventoryItemId: findInventoryItem('KNY-001'),        quantity: 0.008, // was 8g        preparationNotes: 'Haluskan 8 gram kunyit segar (1 ruas), 5 gram bawang merah (2 siung), 3 gram bawang putih (1 siung), 2 gram cabe merah keriting, 1 gram terasi bakar, 5 gram tomat, 2 gram daun kemangi, garam secukupnya. Lumuri ikan dengan bumbu halus ini sebelum dibungkus daun pisang. Bumbu pepes harus harum kunyit dan terasi.',
         substitutes: ['Bumbu Pepes Instan (lebih praktis, -Rp 5/g)'],
         isOptional: false
       }
@@ -789,43 +789,43 @@ async function seedMenuIngredients(
     data: [
       {
         menuId: menu4.id,
-        inventoryItemId: findInventoryItem('BRP-001'),        quantity: 80,        preparationNotes: 'Cuci beras 80 gram hingga bersih, rendam 15 menit. Masak dengan perbandingan air 1.2:1 untuk nasi pulen. Nasi harus hangat dan pulen agar cocok dimakan dengan kuah sayur asem yang segar dan asam.',
+        inventoryItemId: findInventoryItem('BRP-001'),        quantity: 0.08, // was 80g        preparationNotes: 'Cuci beras 80 gram hingga bersih, rendam 15 menit. Masak dengan perbandingan air 1.2:1 untuk nasi pulen. Nasi harus hangat dan pulen agar cocok dimakan dengan kuah sayur asem yang segar dan asam.',
         substitutes: ['Beras Merah (lebih sehat, +Rp 3/g)', 'Beras Organik (premium, +Rp 8/g)'],
         isOptional: false
       },
       {
         menuId: menu4.id,
-        inventoryItemId: findInventoryItem('AYM-001'),        quantity: 70,        preparationNotes: 'Gunakan iga ayam kampung 70 gram (1-2 potong kecil). Cuci bersih, rebus dengan lengkuas 5g, sereh 3g, daun salam 1 lembar, garam 1g dalam 400ml air selama 40 menit hingga empuk dan kaldu gurih. Ayam kampung memberikan kaldu yang lebih harum dan daging lebih kenyal daripada broiler.',
+        inventoryItemId: findInventoryItem('AYM-001'),        quantity: 0.07, // was 70g        preparationNotes: 'Gunakan iga ayam kampung 70 gram (1-2 potong kecil). Cuci bersih, rebus dengan lengkuas 5g, sereh 3g, daun salam 1 lembar, garam 1g dalam 400ml air selama 40 menit hingga empuk dan kaldu gurih. Ayam kampung memberikan kaldu yang lebih harum dan daging lebih kenyal daripada broiler.',
         substitutes: ['Iga Ayam Broiler (lebih murah, -Rp 18/g)', 'Daging Ayam Tanpa Tulang (lebih praktis, sama harga)'],
         isOptional: false
       },
       {
         menuId: menu4.id,
-        inventoryItemId: findInventoryItem('LBS-001'),        quantity: 50,        preparationNotes: 'Kupas labu siam 50 gram, potong dadu 2x2 cm. Labu siam memberikan tekstur renyah dan sedikit manis pada sayur asem. Masukkan setelah kaldu mendidih, masak 10 menit hingga empuk tapi tidak lembek. Labu siam menyerap rasa asam dengan sempurna.',
+        inventoryItemId: findInventoryItem('LBS-001'),        quantity: 0.05, // was 50g        preparationNotes: 'Kupas labu siam 50 gram, potong dadu 2x2 cm. Labu siam memberikan tekstur renyah dan sedikit manis pada sayur asem. Masukkan setelah kaldu mendidih, masak 10 menit hingga empuk tapi tidak lembek. Labu siam menyerap rasa asam dengan sempurna.',
         substitutes: ['Labu Kuning (lebih manis, +Rp 2/g)', 'Terong (tekstur lebih lembut, -Rp 1/g)'],
         isOptional: false
       },
       {
         menuId: menu4.id,
-        inventoryItemId: findInventoryItem('KCG-001'),        quantity: 30,        preparationNotes: 'Siangi kacang panjang 30 gram (3-4 helai), cuci bersih. Potong-potong sepanjang 3 cm. Masukkan 7 menit sebelum angkat agar tetap renyah dan hijau segar. Kacang panjang menambah serat dan tekstur renyah pada sayur asem.',
+        inventoryItemId: findInventoryItem('KCG-001'),        quantity: 0.03, // was 30g        preparationNotes: 'Siangi kacang panjang 30 gram (3-4 helai), cuci bersih. Potong-potong sepanjang 3 cm. Masukkan 7 menit sebelum angkat agar tetap renyah dan hijau segar. Kacang panjang menambah serat dan tekstur renyah pada sayur asem.',
         substitutes: ['Buncis (lebih manis, +Rp 3/g)', 'Kacang Kapri (lebih empuk, +Rp 8/g)'],
         isOptional: false
       },
       {
         menuId: menu4.id,
-        inventoryItemId: findInventoryItem('JGM-001'),        quantity: 40,        preparationNotes: 'Pipil jagung manis 40 gram dari tongkol (sekitar 1/4 tongkol). Cuci bersih. Jagung manis memberikan rasa manis alami yang menyeimbangkan asam dari asam jawa. Masukkan bersama labu siam agar empuk sempurna (10 menit).',
+        inventoryItemId: findInventoryItem('JGM-001'),        quantity: 0.04, // was 40g        preparationNotes: 'Pipil jagung manis 40 gram dari tongkol (sekitar 1/4 tongkol). Cuci bersih. Jagung manis memberikan rasa manis alami yang menyeimbangkan asam dari asam jawa. Masukkan bersama labu siam agar empuk sempurna (10 menit).',
         substitutes: ['Jagung Pipil Frozen (lebih praktis, +Rp 5/g)'],
         isOptional: false
       },
       {
         menuId: menu4.id,
-        inventoryItemId: findInventoryItem('ASM-001'),        quantity: 15,        preparationNotes: 'Larutkan 15 gram asam jawa (1 sendok makan penuh) dalam 50ml air hangat, peras dan saring untuk mendapatkan air asam jawa murni. Asam jawa memberikan rasa asam segar khas sayur asem Sunda. Tambahkan 5 menit sebelum angkat agar rasa asam tidak terlalu tajam. Jangan terlalu banyak agar tidak kecut.',
+        inventoryItemId: findInventoryItem('ASM-001'),        quantity: 0.015, // was 15g        preparationNotes: 'Larutkan 15 gram asam jawa (1 sendok makan penuh) dalam 50ml air hangat, peras dan saring untuk mendapatkan air asam jawa murni. Asam jawa memberikan rasa asam segar khas sayur asem Sunda. Tambahkan 5 menit sebelum angkat agar rasa asam tidak terlalu tajam. Jangan terlalu banyak agar tidak kecut.',
         substitutes: ['Asam Jawa Cair (lebih praktis, +Rp 2/g)', 'Air Jeruk Nipis (rasa berbeda, -Rp 3/g)'],
         isOptional: false
       },
       {
         menuId: menu4.id,
-        inventoryItemId: findInventoryItem('BWM-001'),        quantity: 25,        preparationNotes: 'Iris tipis 15 gram bawang merah (3 siung), 5 gram cabe merah keriting (1 buah), 5 gram gula merah. Tumis bumbu iris dengan 1 sendok teh minyak hingga harum (3 menit), lalu masukkan ke kuah sayur asem bersama lengkuas dan sereh. Bumbu iris memberikan aroma harum dan rasa kompleks pada sayur asem.',
+        inventoryItemId: findInventoryItem('BWM-001'),        quantity: 0.025, // was 25g        preparationNotes: 'Iris tipis 15 gram bawang merah (3 siung), 5 gram cabe merah keriting (1 buah), 5 gram gula merah. Tumis bumbu iris dengan 1 sendok teh minyak hingga harum (3 menit), lalu masukkan ke kuah sayur asem bersama lengkuas dan sereh. Bumbu iris memberikan aroma harum dan rasa kompleks pada sayur asem.',
         substitutes: ['Bumbu Halus (lebih praktis, kurang harum, sama harga)'],
         isOptional: false
       }
@@ -839,37 +839,37 @@ async function seedMenuIngredients(
     data: [
       {
         menuId: menu5.id,
-        inventoryItemId: findInventoryItem('BRP-001'),        quantity: 80,        preparationNotes: 'Cuci beras 80 gram hingga bersih, rendam 15 menit. Masak dengan perbandingan air 1.2:1 untuk nasi pulen hangat. Nasi harus pulen dan hangat agar cocok dimakan dengan empal gepuk yang gurih empuk.',
+        inventoryItemId: findInventoryItem('BRP-001'),        quantity: 0.08, // was 80g        preparationNotes: 'Cuci beras 80 gram hingga bersih, rendam 15 menit. Masak dengan perbandingan air 1.2:1 untuk nasi pulen hangat. Nasi harus pulen dan hangat agar cocok dimakan dengan empal gepuk yang gurih empuk.',
         substitutes: ['Beras Merah (lebih sehat, +Rp 3/g)', 'Beras Pandan (harum, +Rp 5/g)'],
         isOptional: false
       },
       {
         menuId: menu5.id,
-        inventoryItemId: findInventoryItem('DSP-001'),        quantity: 70,        preparationNotes: 'Gunakan daging sapi sengkel 70 gram (1 potong kecil). Rebus dengan 400ml air, lengkuas 5g, sereh 3g, daun salam 1 lembar selama 90 menit hingga sangat empuk. Angkat, dinginkan 10 menit. Gepuk/pukul daging dengan ulekan hingga pipih setebal 1 cm untuk tekstur lembut khas empal. Goreng kering dengan minyak sedikit hingga cokelat keemasan (15 menit). Empal gepuk Sunda harus empuk, gurih, dan sedikit manis.',
+        inventoryItemId: findInventoryItem('DSP-001'),        quantity: 0.07, // was 70g        preparationNotes: 'Gunakan daging sapi sengkel 70 gram (1 potong kecil). Rebus dengan 400ml air, lengkuas 5g, sereh 3g, daun salam 1 lembar selama 90 menit hingga sangat empuk. Angkat, dinginkan 10 menit. Gepuk/pukul daging dengan ulekan hingga pipih setebal 1 cm untuk tekstur lembut khas empal. Goreng kering dengan minyak sedikit hingga cokelat keemasan (15 menit). Empal gepuk Sunda harus empuk, gurih, dan sedikit manis.',
         substitutes: ['Daging Sapi Has Dalam (lebih empuk, +Rp 30/g)', 'Daging Sapi Sandung Lamur (lebih gurih, +Rp 10/g)'],
         isOptional: false
       },
       {
         menuId: menu5.id,
-        inventoryItemId: findInventoryItem('KTB-001'),        quantity: 20,        preparationNotes: 'Haluskan 5 gram ketumbar sangrai, 8 gram bawang merah (2 siung), 3 gram bawang putih (1 siung), 2 gram lengkuas, 1 gram gula merah, 1 gram garam. Marinasi daging rebus dengan bumbu halus ini selama 30 menit sebelum digoreng. Bumbu ketumbar sangrai memberikan aroma khas empal Sunda yang gurih dan harum.',
+        inventoryItemId: findInventoryItem('KTB-001'),        quantity: 0.02, // was 20g        preparationNotes: 'Haluskan 5 gram ketumbar sangrai, 8 gram bawang merah (2 siung), 3 gram bawang putih (1 siung), 2 gram lengkuas, 1 gram gula merah, 1 gram garam. Marinasi daging rebus dengan bumbu halus ini selama 30 menit sebelum digoreng. Bumbu ketumbar sangrai memberikan aroma khas empal Sunda yang gurih dan harum.',
         substitutes: ['Bumbu Empal Instan (lebih praktis, -Rp 5/g)'],
         isOptional: false
       },
       {
         menuId: menu5.id,
-        inventoryItemId: findInventoryItem('CBR-001'),        quantity: 25,        preparationNotes: 'Ulek kasar 15 gram cabe rawit merah (10 buah), 5 gram tomat ceri (1 buah), 3 gram bawang merah (1 siung), 1 gram terasi bakar, 1 gram garam. Sambal dadak harus pedas segar dan ulek kasar, tidak halus. Jangan tambahkan air agar sambal kental dan tahan lama. Sambal dadak khas pendamping empal gepuk Sunda.',
+        inventoryItemId: findInventoryItem('CBR-001'),        quantity: 0.025, // was 25g        preparationNotes: 'Ulek kasar 15 gram cabe rawit merah (10 buah), 5 gram tomat ceri (1 buah), 3 gram bawang merah (1 siung), 1 gram terasi bakar, 1 gram garam. Sambal dadak harus pedas segar dan ulek kasar, tidak halus. Jangan tambahkan air agar sambal kental dan tahan lama. Sambal dadak khas pendamping empal gepuk Sunda.',
         substitutes: ['Sambal Tomat (lebih manis, -Rp 10/g)', 'Sambal Hijau (rasa berbeda, sama harga)'],
         isOptional: false
       },
       {
         menuId: menu5.id,
-        inventoryItemId: findInventoryItem('KOL-001'),        quantity: 40,        preparationNotes: 'Campurkan 20 gram kubis iris tipis, 15 gram timun iris bulat, 5 gram kemangi segar. Cuci bersih semua lalapan, rendam air garam 5 menit lalu bilas. Lalapan harus segar dan renyah sebagai penyeimbang empal yang gurih. Sajikan segera agar tidak layu.',
+        inventoryItemId: findInventoryItem('KOL-001'),        quantity: 0.04, // was 40g        preparationNotes: 'Campurkan 20 gram kubis iris tipis, 15 gram timun iris bulat, 5 gram kemangi segar. Cuci bersih semua lalapan, rendam air garam 5 menit lalu bilas. Lalapan harus segar dan renyah sebagai penyeimbang empal yang gurih. Sajikan segera agar tidak layu.',
         substitutes: ['Lalapan Selada + Tomat (lebih segar, +Rp 5/g)'],
         isOptional: false
       },
       {
         menuId: menu5.id,
-        inventoryItemId: findInventoryItem('KRK-001'),        quantity: 15,        preparationNotes: 'Goreng 15 gram kerupuk kulit mentah (3-4 keping besar) dalam minyak panas 180°C hingga mengembang sempurna dan renyah (8-10 detik per keping). Kerupuk kulit harus mengembang sempurna, renyah, dan tidak berminyak. Tiriskan dengan baik, sajikan segera agar tetap renyah. Kerupuk kulit adalah pendamping khas empal gepuk Sunda.',
+        inventoryItemId: findInventoryItem('KRK-001'),        quantity: 0.015, // was 15g        preparationNotes: 'Goreng 15 gram kerupuk kulit mentah (3-4 keping besar) dalam minyak panas 180°C hingga mengembang sempurna dan renyah (8-10 detik per keping). Kerupuk kulit harus mengembang sempurna, renyah, dan tidak berminyak. Tiriskan dengan baik, sajikan segera agar tetap renyah. Kerupuk kulit adalah pendamping khas empal gepuk Sunda.',
         substitutes: ['Kerupuk Udang (lebih gurih, sama harga)', 'Kerupuk Melarat (lebih renyah, +Rp 10/g)'],
         isOptional: false
       }
@@ -883,25 +883,25 @@ async function seedMenuIngredients(
     data: [
       {
         menuId: menu6.id,
-        inventoryItemId: findInventoryItem('ROT-001'),        quantity: 70,        preparationNotes: 'Gunakan 2 lembar roti gandum tawar segar (70 gram total). Roti gandum lebih sehat dengan serat tinggi dan vitamin B kompleks. Panggang sebentar dengan mentega agar renyah dan harum (3 menit per sisi). Jangan terlalu kering agar tetap lembut di dalam.',
+        inventoryItemId: findInventoryItem('ROT-001'),        quantity: 0.07, // was 70g        preparationNotes: 'Gunakan 2 lembar roti gandum tawar segar (70 gram total). Roti gandum lebih sehat dengan serat tinggi dan vitamin B kompleks. Panggang sebentar dengan mentega agar renyah dan harum (3 menit per sisi). Jangan terlalu kering agar tetap lembut di dalam.',
         substitutes: ['Roti Tawar Putih (kurang serat, -Rp 8/g)', 'Roti Multigrain (lebih sehat, +Rp 15/g)'],
         isOptional: false
       },
       {
         menuId: menu6.id,
-        inventoryItemId: findInventoryItem('PSG-001'),        quantity: 80,        preparationNotes: 'Kupas pisang ambon matang 80 gram (1 buah sedang). Potong memanjang tipis setebal 0.5 cm atau iris bulat. Pisang ambon memberikan rasa manis alami, kalium tinggi, dan tekstur lembut. Pilih pisang yang matang kuning dengan bintik cokelat agar lebih manis dan harum.',
+        inventoryItemId: findInventoryItem('PSG-001'),        quantity: 0.08, // was 80g        preparationNotes: 'Kupas pisang ambon matang 80 gram (1 buah sedang). Potong memanjang tipis setebal 0.5 cm atau iris bulat. Pisang ambon memberikan rasa manis alami, kalium tinggi, dan tekstur lembut. Pilih pisang yang matang kuning dengan bintik cokelat agar lebih manis dan harum.',
         substitutes: ['Pisang Raja (lebih manis, +Rp 5/g)', 'Pisang Cavendish (import, +Rp 10/g)'],
         isOptional: false
       },
       {
         menuId: menu6.id,
-        inventoryItemId: findInventoryItem('SLC-001'),        quantity: 30,        preparationNotes: 'Oles 30 gram selai cokelat (2 sendok makan) merata di permukaan roti gandum. Gunakan selai cokelat dengan kandungan kakao minimal 30% untuk rasa cokelat yang kaya. Oles tipis merata agar tidak terlalu manis dan menutupi rasa pisang.',
+        inventoryItemId: findInventoryItem('SLC-001'),        quantity: 0.03, // was 30g        preparationNotes: 'Oles 30 gram selai cokelat (2 sendok makan) merata di permukaan roti gandum. Gunakan selai cokelat dengan kandungan kakao minimal 30% untuk rasa cokelat yang kaya. Oles tipis merata agar tidak terlalu manis dan menutupi rasa pisang.',
         substitutes: ['Selai Kacang (protein tinggi, sama harga)', 'Selai Strawberry (rasa berbeda, -Rp 5/g)'],
         isOptional: false
       },
       {
         menuId: menu6.id,
-        inventoryItemId: findInventoryItem('MTG-001'),        quantity: 10,        preparationNotes: 'Oles tipis 10 gram mentega (1 sendok teh) di sisi luar roti sebelum dipanggang. Mentega memberikan aroma harum, tekstur renyah, dan rasa gurih. Gunakan api sedang agar mentega tidak gosong. Mentega juga menambah kalori dan vitamin A untuk anak-anak.',
+        inventoryItemId: findInventoryItem('MTG-001'),        quantity: 0.01, // was 10g        preparationNotes: 'Oles tipis 10 gram mentega (1 sendok teh) di sisi luar roti sebelum dipanggang. Mentega memberikan aroma harum, tekstur renyah, dan rasa gurih. Gunakan api sedang agar mentega tidak gosong. Mentega juga menambah kalori dan vitamin A untuk anak-anak.',
         substitutes: ['Margarin (lebih ekonomis, -Rp 15/g)', 'Butter Unsalted (premium, +Rp 20/g)'],
         isOptional: false
       }
@@ -915,31 +915,31 @@ async function seedMenuIngredients(
     data: [
       {
         menuId: menu7.id,
-        inventoryItemId: findInventoryItem('KCG-001'),        quantity: 80,        preparationNotes: 'Cuci bersih 80 gram kacang hijau (4 sendok makan), buang kotoran dan kacang yang mengapung. Rendam dalam air bersih 2-3 jam agar cepat empuk. Rebus dengan 400ml air dan 2 lembar daun pandan dalam panci hingga mendidih, kecilkan api dan masak 40 menit hingga kacang lembut dan pecah. Kacang hijau kaya protein, serat, dan zat besi untuk anak-anak.',
+        inventoryItemId: findInventoryItem('KCG-001'),        quantity: 0.08, // was 80g        preparationNotes: 'Cuci bersih 80 gram kacang hijau (4 sendok makan), buang kotoran dan kacang yang mengapung. Rendam dalam air bersih 2-3 jam agar cepat empuk. Rebus dengan 400ml air dan 2 lembar daun pandan dalam panci hingga mendidih, kecilkan api dan masak 40 menit hingga kacang lembut dan pecah. Kacang hijau kaya protein, serat, dan zat besi untuk anak-anak.',
         substitutes: ['Kacang Hijau Kupas (lebih cepat matang, +Rp 8/g)'],
         isOptional: false
       },
       {
         menuId: menu7.id,
-        inventoryItemId: findInventoryItem('SNT-001'),        quantity: 100,        preparationNotes: 'Gunakan 100ml santan kental dari 1/4 kelapa parut. Tambahkan santan 5 menit sebelum angkat agar tidak pecah dan tetap kental. Aduk perlahan agar santan tidak menggumpal. Santan memberikan rasa gurih dan tekstur creamy pada bubur kacang hijau. Jangan mendidihkan santan agar tidak pecah.',
+        inventoryItemId: findInventoryItem('SNT-001'),        quantity: 0.1, // was 100g        preparationNotes: 'Gunakan 100ml santan kental dari 1/4 kelapa parut. Tambahkan santan 5 menit sebelum angkat agar tidak pecah dan tetap kental. Aduk perlahan agar santan tidak menggumpal. Santan memberikan rasa gurih dan tekstur creamy pada bubur kacang hijau. Jangan mendidihkan santan agar tidak pecah.',
         substitutes: ['Santan Instan (lebih praktis, sama harga)', 'Susu Cair (rasa berbeda, +Rp 5/ml)'],
         isOptional: false
       },
       {
         menuId: menu7.id,
-        inventoryItemId: findInventoryItem('GLP-001'),        quantity: 40,        preparationNotes: 'Tambahkan 40 gram gula pasir (3 sendok makan) setelah kacang lembut. Aduk hingga larut sempurna. Gula pasir memberikan rasa manis yang pas, tidak terlalu pekat seperti gula merah. Sesuaikan tingkat kemanisan dengan selera anak-anak. Jangan terlalu manis agar tidak menutupi aroma pandan.',
+        inventoryItemId: findInventoryItem('GLP-001'),        quantity: 0.04, // was 40g        preparationNotes: 'Tambahkan 40 gram gula pasir (3 sendok makan) setelah kacang lembut. Aduk hingga larut sempurna. Gula pasir memberikan rasa manis yang pas, tidak terlalu pekat seperti gula merah. Sesuaikan tingkat kemanisan dengan selera anak-anak. Jangan terlalu manis agar tidak menutupi aroma pandan.',
         substitutes: ['Gula Aren (rasa lebih kaya, +Rp 10/g)', 'Madu (lebih sehat, +Rp 80/g)'],
         isOptional: false
       },
       {
         menuId: menu7.id,
-        inventoryItemId: findInventoryItem('PDN-001'),        quantity: 2,        preparationNotes: 'Cuci bersih 2 lembar daun pandan segar, simpul ujungnya agar tidak lepas saat direbus. Masukkan bersamaan dengan kacang hijau dari awal agar aroma pandan meresap sempurna. Daun pandan memberikan aroma harum khas dan warna hijau alami. Angkat daun pandan sebelum disajikan.',
+        inventoryItemId: findInventoryItem('PDN-001'),        quantity: 0.002, // was 2g        preparationNotes: 'Cuci bersih 2 lembar daun pandan segar, simpul ujungnya agar tidak lepas saat direbus. Masukkan bersamaan dengan kacang hijau dari awal agar aroma pandan meresap sempurna. Daun pandan memberikan aroma harum khas dan warna hijau alami. Angkat daun pandan sebelum disajikan.',
         substitutes: ['Ekstrak Pandan (lebih praktis, -Rp 50/porsi)'],
         isOptional: false
       },
       {
         menuId: menu7.id,
-        inventoryItemId: findInventoryItem('GRM-001'),        quantity: 2,        preparationNotes: 'Tambahkan sejumput garam (2 gram / 1/4 sendok teh) setelah gula larut untuk menyeimbangkan rasa manis. Garam membuat rasa manis lebih bulat dan menonjolkan aroma santan. Jangan terlalu banyak agar tidak terasa asin.',
+        inventoryItemId: findInventoryItem('GRM-001'),        quantity: 0.002, // was 2g        preparationNotes: 'Tambahkan sejumput garam (2 gram / 1/4 sendok teh) setelah gula larut untuk menyeimbangkan rasa manis. Garam membuat rasa manis lebih bulat dan menonjolkan aroma santan. Jangan terlalu banyak agar tidak terasa asin.',
         substitutes: [],
         isOptional: false
       }
@@ -953,31 +953,31 @@ async function seedMenuIngredients(
     data: [
       {
         menuId: menu8.id,
-        inventoryItemId: findInventoryItem('TPG-001'),        quantity: 60,        preparationNotes: 'Ayak 60 gram tepung beras (5 sendok makan) agar tidak menggumpal. Tepung beras memberikan tekstur lembut dan kenyal khas nagasari. Campurkan dengan 150ml santan dan 2 sendok makan gula pasir, aduk rata hingga adonan halus tanpa gumpalan. Masak dengan api kecil sambil diaduk terus hingga mengental seperti pasta (8-10 menit).',
+        inventoryItemId: findInventoryItem('TPG-001'),        quantity: 0.06, // was 60g        preparationNotes: 'Ayak 60 gram tepung beras (5 sendok makan) agar tidak menggumpal. Tepung beras memberikan tekstur lembut dan kenyal khas nagasari. Campurkan dengan 150ml santan dan 2 sendok makan gula pasir, aduk rata hingga adonan halus tanpa gumpalan. Masak dengan api kecil sambil diaduk terus hingga mengental seperti pasta (8-10 menit).',
         substitutes: ['Tepung Ketan (lebih kenyal, +Rp 3/g)'],
         isOptional: false
       },
       {
         menuId: menu8.id,
-        inventoryItemId: findInventoryItem('SNT-001'),        quantity: 150,        preparationNotes: 'Gunakan 150ml santan kental dari 1/3 kelapa parut. Santan memberikan aroma harum dan rasa gurih pada nagasari. Masak santan dengan api kecil agar tidak pecah. Aduk terus saat mencampur dengan tepung beras. Santan yang baik membuat nagasari lembut dan tidak cepat basi.',
+        inventoryItemId: findInventoryItem('SNT-001'),        quantity: 0.15, // was 150g        preparationNotes: 'Gunakan 150ml santan kental dari 1/3 kelapa parut. Santan memberikan aroma harum dan rasa gurih pada nagasari. Masak santan dengan api kecil agar tidak pecah. Aduk terus saat mencampur dengan tepung beras. Santan yang baik membuat nagasari lembut dan tidak cepat basi.',
         substitutes: ['Santan Instan (lebih praktis, sama harga)'],
         isOptional: false
       },
       {
         menuId: menu8.id,
-        inventoryItemId: findInventoryItem('PSG-001'),        quantity: 100,        preparationNotes: 'Kupas pisang raja matang 100 gram (1 buah), potong memanjang tipis setebal 1 cm. Pisang raja lebih harum dan manis daripada pisang ambon. Letakkan 2-3 potong pisang di tengah adonan nagasari sebelum dikukus. Pisang raja tidak mudah hancur saat dikukus dan aromanya harum khas.',
+        inventoryItemId: findInventoryItem('PSG-001'),        quantity: 0.1, // was 100g        preparationNotes: 'Kupas pisang raja matang 100 gram (1 buah), potong memanjang tipis setebal 1 cm. Pisang raja lebih harum dan manis daripada pisang ambon. Letakkan 2-3 potong pisang di tengah adonan nagasari sebelum dikukus. Pisang raja tidak mudah hancur saat dikukus dan aromanya harum khas.',
         substitutes: ['Pisang Kepok (lebih murah, -Rp 6/g)', 'Pisang Ambon (lebih lembut, -Rp 3/g)'],
         isOptional: false
       },
       {
         menuId: menu8.id,
-        inventoryItemId: findInventoryItem('GLP-001'),        quantity: 30,        preparationNotes: 'Larutkan 30 gram gula pasir (2.5 sendok makan) ke dalam adonan santan tepung beras. Gula memberikan rasa manis yang pas, tidak berlebihan. Aduk hingga gula larut sempurna sebelum dimasak. Rasa nagasari harus manis alami dari gula dan pisang, tidak terlalu pekat.',
+        inventoryItemId: findInventoryItem('GLP-001'),        quantity: 0.03, // was 30g        preparationNotes: 'Larutkan 30 gram gula pasir (2.5 sendok makan) ke dalam adonan santan tepung beras. Gula memberikan rasa manis yang pas, tidak berlebihan. Aduk hingga gula larut sempurna sebelum dimasak. Rasa nagasari harus manis alami dari gula dan pisang, tidak terlalu pekat.',
         substitutes: ['Gula Aren (rasa lebih kompleks, +Rp 12/g)'],
         isOptional: false
       },
       {
         menuId: menu8.id,
-        inventoryItemId: findInventoryItem('DPS-001'),        quantity: 1,        preparationNotes: 'Potong daun pisang 20x15 cm (1 lembar per porsi). Bersihkan dengan lap basah, layukan di atas api agar lentur. Daun pisang memberikan aroma harum khas pada nagasari. Tuang 3 sendok makan adonan, tambah pisang di tengah, tutup dengan 2 sendok adonan lagi. Lipat rapi, kukus 30 menit hingga matang.',
+        inventoryItemId: findInventoryItem('DPS-001'),        quantity: 0.001, // was 1g        preparationNotes: 'Potong daun pisang 20x15 cm (1 lembar per porsi). Bersihkan dengan lap basah, layukan di atas api agar lentur. Daun pisang memberikan aroma harum khas pada nagasari. Tuang 3 sendok makan adonan, tambah pisang di tengah, tutup dengan 2 sendok adonan lagi. Lipat rapi, kukus 30 menit hingga matang.',
         substitutes: ['Alumunium Foil (darurat, tidak ada aroma, -Rp 300)'],
         isOptional: false
       }
@@ -991,31 +991,31 @@ async function seedMenuIngredients(
     data: [
       {
         menuId: menu9.id,
-        inventoryItemId: findInventoryItem('PSG-001'),        quantity: 120,        preparationNotes: 'Kupas pisang kepok setengah matang 120 gram (2 buah sedang). Belah memanjang menjadi 2 bagian. Pisang kepok lebih padat dan tidak mudah hancur saat digoreng. Pisang setengah matang menghasilkan gorengan yang renyah dan tidak terlalu lembek. Jangan gunakan pisang terlalu matang karena akan lembek saat digoreng.',
+        inventoryItemId: findInventoryItem('PSG-001'),        quantity: 0.12, // was 120g        preparationNotes: 'Kupas pisang kepok setengah matang 120 gram (2 buah sedang). Belah memanjang menjadi 2 bagian. Pisang kepok lebih padat dan tidak mudah hancur saat digoreng. Pisang setengah matang menghasilkan gorengan yang renyah dan tidak terlalu lembek. Jangan gunakan pisang terlalu matang karena akan lembek saat digoreng.',
         substitutes: ['Pisang Tanduk (lebih besar, +Rp 5/g)', 'Pisang Raja (lebih manis, +Rp 6/g)'],
         isOptional: false
       },
       {
         menuId: menu9.id,
-        inventoryItemId: findInventoryItem('TPG-001'),        quantity: 50,        preparationNotes: 'Campurkan 50 gram tepung terigu (4 sendok makan) dengan 30g tepung beras, 1/2 sendok teh baking powder, 1 sendok makan gula pasir, sejumput garam, 80ml air dingin. Aduk rata hingga adonan kental seperti yogurt. Adonan tepung yang pas membuat pisang goreng renyah di luar dan lembut di dalam. Dinginkan adonan 10 menit sebelum digunakan.',
+        inventoryItemId: findInventoryItem('TPG-001'),        quantity: 0.05, // was 50g        preparationNotes: 'Campurkan 50 gram tepung terigu (4 sendok makan) dengan 30g tepung beras, 1/2 sendok teh baking powder, 1 sendok makan gula pasir, sejumput garam, 80ml air dingin. Aduk rata hingga adonan kental seperti yogurt. Adonan tepung yang pas membuat pisang goreng renyah di luar dan lembut di dalam. Dinginkan adonan 10 menit sebelum digunakan.',
         substitutes: ['Tepung Serbaguna (sama saja, sama harga)'],
         isOptional: false
       },
       {
         menuId: menu9.id,
-        inventoryItemId: findInventoryItem('KJU-001'),        quantity: 30,        preparationNotes: 'Parut kasar 30 gram keju cheddar (2-3 lapis tipis keju). Taburkan keju parut di atas pisang goreng yang masih panas agar meleleh sedikit. Keju cheddar memberikan rasa gurih dan creamy yang disukai anak-anak. Gunakan keju berkualitas baik agar aromanya harum. Keju menambah kalsium dan protein.',
+        inventoryItemId: findInventoryItem('KJU-001'),        quantity: 0.03, // was 30g        preparationNotes: 'Parut kasar 30 gram keju cheddar (2-3 lapis tipis keju). Taburkan keju parut di atas pisang goreng yang masih panas agar meleleh sedikit. Keju cheddar memberikan rasa gurih dan creamy yang disukai anak-anak. Gunakan keju berkualitas baik agar aromanya harum. Keju menambah kalsium dan protein.',
         substitutes: ['Keju Edam (lebih lembut, +Rp 20/g)', 'Keju Quick Melt (meleleh cepat, +Rp 10/g)'],
         isOptional: false
       },
       {
         menuId: menu9.id,
-        inventoryItemId: findInventoryItem('MYK-001'),        quantity: 100,        preparationNotes: 'Panaskan 100ml minyak goreng dalam wajan dengan api sedang hingga suhu 170-180°C. Celupkan pisang ke adonan tepung hingga rata, goreng 3-4 menit per sisi hingga kuning keemasan dan renyah. Jangan terlalu panas agar tidak gosong. Tiriskan minyak dengan baik agar pisang goreng tidak berminyak.',
+        inventoryItemId: findInventoryItem('MYK-001'),        quantity: 0.1, // was 100g        preparationNotes: 'Panaskan 100ml minyak goreng dalam wajan dengan api sedang hingga suhu 170-180°C. Celupkan pisang ke adonan tepung hingga rata, goreng 3-4 menit per sisi hingga kuning keemasan dan renyah. Jangan terlalu panas agar tidak gosong. Tiriskan minyak dengan baik agar pisang goreng tidak berminyak.',
         substitutes: ['Minyak Kelapa (lebih harum, +Rp 4/ml)'],
         isOptional: false
       },
       {
         menuId: menu9.id,
-        inventoryItemId: findInventoryItem('GLP-001'),        quantity: 10,        preparationNotes: 'Campurkan 10 gram gula pasir (1 sendok makan) ke dalam adonan tepung untuk sedikit rasa manis. Gula membantu warna keemasan saat digoreng dan menambah rasa. Jangan terlalu banyak agar tidak terlalu manis dan menutupi rasa pisang alami.',
+        inventoryItemId: findInventoryItem('GLP-001'),        quantity: 0.01, // was 10g        preparationNotes: 'Campurkan 10 gram gula pasir (1 sendok makan) ke dalam adonan tepung untuk sedikit rasa manis. Gula membantu warna keemasan saat digoreng dan menambah rasa. Jangan terlalu banyak agar tidak terlalu manis dan menutupi rasa pisang alami.',
         substitutes: [],
         isOptional: false
       }
@@ -1029,31 +1029,31 @@ async function seedMenuIngredients(
     data: [
       {
         menuId: menu10.id,
-        inventoryItemId: findInventoryItem('KDL-001'),        quantity: 80,        preparationNotes: 'Rendam 80 gram kedelai kuning kering (5 sendok makan) dalam air 8 jam atau semalaman hingga mengembang 2x lipat. Kupas kulit ari dengan meremas dalam air. Blender kedelai dengan 600ml air hingga sangat halus (3-4 menit). Saring dengan kain saring halus, peras untuk mendapatkan susu kedelai murni. Kedelai kaya protein nabati, isoflavon, dan cocok untuk anak lactose intolerant.',
+        inventoryItemId: findInventoryItem('KDL-001'),        quantity: 0.08, // was 80g        preparationNotes: 'Rendam 80 gram kedelai kuning kering (5 sendok makan) dalam air 8 jam atau semalaman hingga mengembang 2x lipat. Kupas kulit ari dengan meremas dalam air. Blender kedelai dengan 600ml air hingga sangat halus (3-4 menit). Saring dengan kain saring halus, peras untuk mendapatkan susu kedelai murni. Kedelai kaya protein nabati, isoflavon, dan cocok untuk anak lactose intolerant.',
         substitutes: ['Kedelai Hitam (lebih kaya antioksidan, +Rp 8/g)'],
         isOptional: false
       },
       {
         menuId: menu10.id,
-        inventoryItemId: findInventoryItem('CKT-001'),        quantity: 20,        preparationNotes: 'Larutkan 20 gram bubuk cokelat murni (3 sendok makan) dalam 50ml air hangat hingga tidak ada gumpalan. Gunakan cokelat dengan kandungan kakao minimal 40% untuk rasa cokelat yang kaya. Masukkan larutan cokelat ke susu kedelai yang sudah mendidih, aduk rata. Cokelat menambah antioksidan dan rasa yang disukai anak-anak.',
+        inventoryItemId: findInventoryItem('CKT-001'),        quantity: 0.02, // was 20g        preparationNotes: 'Larutkan 20 gram bubuk cokelat murni (3 sendok makan) dalam 50ml air hangat hingga tidak ada gumpalan. Gunakan cokelat dengan kandungan kakao minimal 40% untuk rasa cokelat yang kaya. Masukkan larutan cokelat ke susu kedelai yang sudah mendidih, aduk rata. Cokelat menambah antioksidan dan rasa yang disukai anak-anak.',
         substitutes: ['Bubuk Milo (lebih manis, +Rp 30/g)', 'Dark Chocolate Chips (lebih premium, +Rp 80/g)'],
         isOptional: false
       },
       {
         menuId: menu10.id,
-        inventoryItemId: findInventoryItem('GLP-001'),        quantity: 50,        preparationNotes: 'Tambahkan 50 gram gula pasir (4 sendok makan) ke dalam susu kedelai setelah mendidih. Aduk hingga larut sempurna. Gula menghilangkan rasa langu kedelai dan memberikan rasa manis yang pas untuk anak-anak. Sesuaikan tingkat kemanisan dengan selera. Masak 10 menit dengan api kecil sambil diaduk agar gula larut sempurna.',
+        inventoryItemId: findInventoryItem('GLP-001'),        quantity: 0.05, // was 50g        preparationNotes: 'Tambahkan 50 gram gula pasir (4 sendok makan) ke dalam susu kedelai setelah mendidih. Aduk hingga larut sempurna. Gula menghilangkan rasa langu kedelai dan memberikan rasa manis yang pas untuk anak-anak. Sesuaikan tingkat kemanisan dengan selera. Masak 10 menit dengan api kecil sambil diaduk agar gula larut sempurna.',
         substitutes: ['Gula Aren (rasa lebih kompleks, +Rp 12/g)', 'Madu (lebih sehat, +Rp 100/g)'],
         isOptional: false
       },
       {
         menuId: menu10.id,
-        inventoryItemId: findInventoryItem('PDN-001'),        quantity: 2,        preparationNotes: 'Cuci bersih 2 lembar daun pandan, simpul ujungnya. Masukkan saat merebus susu kedelai untuk menghilangkan bau langu dan menambah aroma harum. Rebus susu kedelai dengan daun pandan selama 15 menit dengan api kecil sambil diaduk agar tidak gosong di dasar panci. Angkat daun pandan sebelum disajikan.',
+        inventoryItemId: findInventoryItem('PDN-001'),        quantity: 0.002, // was 2g        preparationNotes: 'Cuci bersih 2 lembar daun pandan, simpul ujungnya. Masukkan saat merebus susu kedelai untuk menghilangkan bau langu dan menambah aroma harum. Rebus susu kedelai dengan daun pandan selama 15 menit dengan api kecil sambil diaduk agar tidak gosong di dasar panci. Angkat daun pandan sebelum disajikan.',
         substitutes: ['Ekstrak Vanila (rasa berbeda, +Rp 200/porsi)'],
         isOptional: false
       },
       {
         menuId: menu10.id,
-        inventoryItemId: findInventoryItem('GRM-001'),        quantity: 1,        preparationNotes: 'Tambahkan sejumput garam (1 gram / 1/4 sendok teh) untuk menyeimbangkan rasa manis dan mengurangi rasa langu kedelai. Garam membuat rasa cokelat lebih menonjol. Jangan terlalu banyak agar tidak terasa asin.',
+        inventoryItemId: findInventoryItem('GRM-001'),        quantity: 0.001, // was 1g        preparationNotes: 'Tambahkan sejumput garam (1 gram / 1/4 sendok teh) untuk menyeimbangkan rasa manis dan mengurangi rasa langu kedelai. Garam membuat rasa cokelat lebih menonjol. Jangan terlalu banyak agar tidak terasa asin.',
         substitutes: [],
         isOptional: false
       }
