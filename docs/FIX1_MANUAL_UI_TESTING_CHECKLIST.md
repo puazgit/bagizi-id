@@ -5,6 +5,23 @@
 
 ---
 
+## 🔐 Test Credentials
+
+**Login URL**: http://localhost:3000/login
+
+**Test User** (Recommended):
+- **Email**: `admin@sppg-purwakarta.com`
+- **Password**: `password123`
+- **Role**: SPPG Admin
+- **SPPG**: Demo SPPG Purwakarta
+- **Features**: Full access to menu management, complete data
+
+**Alternative Users**:
+- Kepala SPPG: `kepala@sppg-purwakarta.com` / `password123`
+- Ahli Gizi: `gizi@sppg-purwakarta.com` / `password123`
+
+---
+
 ## ✅ Testing Progress
 
 ### **Test Suite 1: Menu List Page** 
