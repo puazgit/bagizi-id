@@ -1,0 +1,30 @@
+{
+  "timestamp": "2025-10-21T03:04:47.670Z",
+  "summary": {
+    "totalProductions": 3,
+    "withEstimatedCost": 3,
+    "withActualCost": 1,
+    "withCostPerPortion": 0,
+    "hasStockUsageModel": true,
+    "productionsWithIngredients": 3
+  },
+  "issues": [
+    {
+      "issue": "Stale Cost Data",
+      "description": "Stored costs don't update when inventory prices change",
+      "severity": "HIGH",
+      "impact": "Financial reporting inaccuracy over time"
+    },
+    {
+      "issue": "Scattered Cost Logic",
+      "description": "Cost calculation duplicated across different parts of code",
+      "severity": "MEDIUM",
+      "impact": "Maintenance difficulty, inconsistent calculations"
+    }
+  ],
+  "recommendations": [
+    "Create ProductionStockUsage model",
+    "Remove stored cost fields",
+    "Implement dynamic cost calculation service"
+  ]
+}

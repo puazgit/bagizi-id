@@ -1047,41 +1047,42 @@ model AuditLog {
 }
 
 model InventoryItem {
-  id                  String            @id @default(cuid())
+  id                  String                 @id @default(cuid())
   sppgId              String
   itemName            String
   itemCode            String?
   brand               String?
   category            InventoryCategory
   unit                String
-  currentStock        Float             @default(0)
+  currentStock        Float                  @default(0)
   minStock            Float
   maxStock            Float
   reorderQuantity     Float?
   lastPrice           Float?
   averagePrice        Float?
   costPerUnit         Float?
-  preferredSupplierId String?           @db.VarChar(50)
+  preferredSupplierId String?                @db.VarChar(50)
   legacySupplierName  String?
   supplierContact     String?
   leadTime            Int?
   storageLocation     String
   storageCondition    String?
-  hasExpiry           Boolean           @default(false)
+  hasExpiry           Boolean                @default(false)
   shelfLife           Int?
   calories            Float?
   protein             Float?
   carbohydrates       Float?
   fat                 Float?
   fiber               Float?
-  isActive            Boolean           @default(true)
-  createdAt           DateTime          @default(now())
-  updatedAt           DateTime          @updatedAt
-  preferredSupplier   Supplier?         @relation("SupplierItems", fields: [preferredSupplierId], references: [id])
-  sppg                SPPG              @relation(fields: [sppgId], references: [id], onDelete: Cascade)
+  isActive            Boolean                @default(true)
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @updatedAt
+  preferredSupplier   Supplier?              @relation("SupplierItems", fields: [preferredSupplierId], references: [id])
+  sppg                SPPG                   @relation(fields: [sppgId], references: [id], onDelete: Cascade)
   menuIngredients     MenuIngredient[]
   procurementItems    ProcurementItem[]
   stockMovements      StockMovement[]
+  productionUsages    ProductionStockUsage[] // ✅ Track usage in food production for cost calculation
 
   @@unique([sppgId, itemCode])
   @@index([sppgId, category])
@@ -1386,6 +1387,7 @@ model FoodProduction {
   updatedAt         DateTime               @updatedAt
   distributions     FoodDistribution[]
   schedules         DistributionSchedule[] @relation("ProductionSchedules") // ✅ Schedules from this production
+  usageRecords      ProductionStockUsage[] // ✅ Stock usage tracking for cost calculation
   menu              NutritionMenu          @relation(fields: [menuId], references: [id], onDelete: Cascade)
   program           NutritionProgram       @relation(fields: [programId], references: [id], onDelete: Cascade)
   sppg              SPPG                   @relation(fields: [sppgId], references: [id], onDelete: Cascade)
@@ -1424,6 +1426,33 @@ model QualityControl {
   @@index([productionId, checkType])
   @@index([checkType, passed])
   @@map("quality_controls")
+}
+
+/// Production Stock Usage Tracking
+/// Tracks actual inventory items used during food production for accurate cost calculation
+model ProductionStockUsage {
+  id              String   @id @default(cuid())
+  productionId    String
+  inventoryItemId String
+  quantityUsed    Float // Actual quantity consumed during production
+  unit            String // Unit of measurement (kg, liter, gram, ml, etc.)
+  unitCostAtUse   Float // Cost per unit at the time of production (frozen snapshot)
+  totalCost       Float // quantityUsed * unitCostAtUse (calculated and stored for performance)
+  usedAt          DateTime @default(now()) // When the stock was consumed
+  recordedBy      String // User ID who recorded the usage
+  notes           String? // Optional notes about the usage (e.g., waste, substitutions)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  production    FoodProduction @relation(fields: [productionId], references: [id], onDelete: Cascade)
+  inventoryItem InventoryItem  @relation(fields: [inventoryItemId], references: [id])
+
+  // Indexes for performance
+  @@index([productionId]) // Fast lookup by production
+  @@index([inventoryItemId]) // Fast lookup by inventory item
+  @@index([usedAt]) // Fast lookup by date for reporting
+  @@map("production_stock_usage")
 }
 
 model FoodDistribution {
