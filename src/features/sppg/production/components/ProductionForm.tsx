@@ -114,6 +114,8 @@ export function ProductionForm({
     production?.menuId || ''
   )
   const [selectedMenu, setSelectedMenu] = useState<NutritionMenu | null>(null)
+  // ✅ Display-only estimated cost (not sent to API)
+  const [estimatedCostDisplay, setEstimatedCostDisplay] = useState<number>(0)
 
   // Get default time range
   const defaultTimes = getDefaultTimeRange()
@@ -129,7 +131,7 @@ export function ProductionForm({
       plannedStartTime: production.plannedStartTime,
       plannedEndTime: production.plannedEndTime,
       headCook: production.headCook,
-      estimatedCost: production.estimatedCost,
+      // ❌ estimatedCost removed - not stored in DB anymore
       batchNumber: production.batchNumber,
       assistantCooks: [],
       supervisorId: production.supervisorId || undefined,
@@ -143,7 +145,7 @@ export function ProductionForm({
       plannedStartTime: new Date(defaultTimes.start),
       plannedEndTime: new Date(defaultTimes.end),
       headCook: '',
-      estimatedCost: 0,
+      // ❌ estimatedCost removed - not stored in DB anymore
       batchNumber: '',
     },
   })
@@ -182,7 +184,7 @@ export function ProductionForm({
           menu.costPerServing || 0, 
           watchPlannedPortions
         )
-        form.setValue('estimatedCost', estimatedCost)
+        setEstimatedCostDisplay(estimatedCost)
         
         // Set target temperature (standard for all food production)
         form.setValue('targetTemperature', 85)
@@ -197,9 +199,9 @@ export function ProductionForm({
         selectedMenu.costPerServing || 0,
         watchPlannedPortions
       )
-      form.setValue('estimatedCost', estimatedCost)
+      setEstimatedCostDisplay(estimatedCost)
     }
-  }, [watchPlannedPortions, selectedMenu, form])
+  }, [watchPlannedPortions, selectedMenu])
 
   // Auto-generate batch number when date changes
   useEffect(() => {
@@ -415,7 +417,7 @@ export function ProductionForm({
               )}
             </div>
 
-            {/* Estimated Cost (Auto-calculated) */}
+            {/* Estimated Cost (Display Only - Auto-calculated) */}
             <div className="space-y-2">
               <Label htmlFor="estimatedCost">Estimasi Biaya Total</Label>
               <div className="relative">
@@ -424,14 +426,15 @@ export function ProductionForm({
                 </span>
                 <Input
                   id="estimatedCost"
-                  type="number"
-                  className="pl-10"
-                  {...form.register('estimatedCost', { valueAsNumber: true })}
+                  type="text"
+                  className="pl-10 bg-muted/50"
+                  value={formatCurrency(estimatedCostDisplay)}
                   disabled
+                  readOnly
                 />
               </div>
               <p className="text-xs text-muted-foreground">
-                Otomatis dihitung dari biaya per porsi × jumlah porsi
+                Otomatis dihitung dari biaya per porsi × jumlah porsi (display only, tidak disimpan)
               </p>
             </div>
 

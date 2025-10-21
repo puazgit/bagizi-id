@@ -301,7 +301,7 @@ export function useCompleteProduction() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: { actualPortions: number; actualCost?: number; actualTemperature?: number } }) =>
+    mutationFn: ({ id, data }: { id: string; data: { actualPortions: number; actualTemperature?: number } }) =>
       productionApi.completeProduction(id, data),
     onSuccess: (response, variables) => {
       // Update cache

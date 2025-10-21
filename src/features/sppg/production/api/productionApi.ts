@@ -36,7 +36,7 @@ export interface ProductionInput {
   headCook: string // User ID
   assistantCooks?: string[] // Array of User IDs
   supervisorId?: string // User ID
-  estimatedCost: number
+  // ❌ estimatedCost removed - use ProductionCostCalculator.calculateEstimatedCost()
   targetTemperature?: number
   notes?: string
 }
@@ -122,7 +122,7 @@ export interface QualityCheckResponse {
 export interface StatusUpdateInput {
   reason?: string // For CANCELLED status
   actualPortions?: number // For COMPLETED status
-  actualCost?: number // For COMPLETED status
+  // ❌ actualCost removed - use ProductionCostCalculator.calculateProductionCost()
   actualTemperature?: number // For quality check
   qualityPassed?: boolean // For quality check
   wasteAmount?: number // For COMPLETED status

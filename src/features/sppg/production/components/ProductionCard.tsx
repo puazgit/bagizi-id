@@ -264,19 +264,20 @@ export function ProductionCard({ production, className, onDelete }: ProductionCa
           )}
         </div>
 
-        {/* Cost Overview */}
-        <div className="space-y-2 pt-2 border-t">
+        {/* Cost Overview - Temporarily disabled until dynamic calculation implemented */}
+        {/* TODO: Use ProductionCostCalculator service to calculate costs dynamically */}
+        {/* <div className="space-y-2 pt-2 border-t">
           <div className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground">Estimasi Biaya</span>
-            <span className="font-semibold">{formatCurrency(production.estimatedCost)}</span>
+            <span className="font-semibold">{formatCurrency(calculatedEstimatedCost)}</span>
           </div>
-          {production.actualCost && (
+          {calculatedActualCost && (
             <div className="flex items-center justify-between text-xs text-muted-foreground">
               <span>Aktual</span>
-              <span className="font-medium">{formatCurrency(production.actualCost)}</span>
+              <span className="font-medium">{formatCurrency(calculatedActualCost)}</span>
             </div>
           )}
-        </div>
+        </div> */}
 
         {/* Temperature Indicator (for COOKING/COMPLETED) */}
         {(production.status === 'COOKING' || production.status === 'COMPLETED') &&

@@ -1367,9 +1367,6 @@ model FoodProduction {
   plannedEndTime    DateTime
   actualStartTime   DateTime?
   actualEndTime     DateTime?
-  estimatedCost     Float
-  actualCost        Float?
-  costPerPortion    Float?
   targetTemperature Float?
   actualTemperature Float?
   hygieneScore      Int?

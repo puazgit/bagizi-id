@@ -128,7 +128,7 @@ function CompleteProductionDialog({
 }) {
   const [formData, setFormData] = useState<CompleteProductionInput>({
     actualPortions: production.plannedPortions,
-    actualCost: production.estimatedCost,
+    // ❌ actualCost removed - will be calculated by ProductionCostCalculator
     actualTemperature: production.targetTemperature || 85,
     wasteAmount: 0,
     wasteNotes: '',
@@ -151,7 +151,7 @@ function CompleteProductionDialog({
         <form onSubmit={handleSubmit}>
           <div className="space-y-4 py-4">
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
+              <div className="space-y-2 col-span-2">
                 <Label htmlFor="actualPortions">Jumlah Porsi Aktual</Label>
                 <Input
                   id="actualPortions"
@@ -164,19 +164,7 @@ function CompleteProductionDialog({
                   required
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="actualCost">Biaya Aktual</Label>
-                <Input
-                  id="actualCost"
-                  type="number"
-                  min="0"
-                  value={formData.actualCost}
-                  onChange={(e) =>
-                    setFormData({ ...formData, actualCost: Number(e.target.value) })
-                  }
-                  required
-                />
-              </div>
+              {/* ❌ actualCost input removed - costs calculated by ProductionCostCalculator */}
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">

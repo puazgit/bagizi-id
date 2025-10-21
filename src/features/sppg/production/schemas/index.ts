@@ -58,9 +58,7 @@ export const productionCreateSchema = z.object({
     .min(1, 'Kepala koki wajib diisi')
     .max(100, 'Nama kepala koki maksimal 100 karakter'),
   
-  estimatedCost: z.number()
-    .nonnegative('Biaya tidak boleh negatif')
-    .max(1000000000, 'Biaya maksimal 1 miliar'),
+  // ❌ estimatedCost removed - will be calculated by ProductionCostCalculator
   
   // Optional Fields
   batchNumber: z.string()
@@ -112,9 +110,7 @@ export const completeProductionSchema = z.object({
     .min(1, 'Minimal 1 porsi')
     .max(10000, 'Maksimal 10,000 porsi'),
   
-  actualCost: z.number()
-    .nonnegative('Biaya tidak boleh negatif')
-    .optional(),
+  // ❌ actualCost removed - will be calculated by ProductionCostCalculator
   
   actualTemperature: z.number()
     .min(-20, 'Suhu minimal -20°C')
