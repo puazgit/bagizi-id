@@ -74,7 +74,8 @@ export async function POST(
     // 5. Calculate total ingredient cost
     let totalIngredientCost = new Prisma.Decimal(0)
     const ingredientBreakdown: Array<{
-      ingredientName: string
+      inventoryItemId: string
+      inventoryItemName: string
       quantity: number
       unit: string
       costPerUnit: number
@@ -88,7 +89,8 @@ export async function POST(
       totalIngredientCost = totalIngredientCost.add(cost)
 
       ingredientBreakdown.push({
-        ingredientName: ingredient.inventoryItem.itemName,
+        inventoryItemId: ingredient.inventoryItemId,
+        inventoryItemName: ingredient.inventoryItem.itemName,
         quantity: ingredient.quantity,
         unit: ingredient.inventoryItem.unit,
         costPerUnit: itemCostPerUnit,
