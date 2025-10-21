@@ -82,11 +82,9 @@ export function MenuIngredientForm({
   const form = useForm<IngredientFormData>({
     resolver: zodResolver(ingredientSchema),
     defaultValues: {
-      ingredientName: ingredient?.ingredientName || '',
+      inventoryItemId: ingredient?.inventoryItemId || '',
       quantity: ingredient?.quantity || 0,
-      unit: ingredient?.unit || 'gram',
-      costPerUnit: ingredient?.costPerUnit || 0,
-      preparationNotes: ingredient?.preparationNotes || undefined,
+      preparationNotes: ingredient?.preparationNotes || null,
       isOptional: ingredient?.isOptional ?? false,
       substitutes: ingredient?.substitutes || []
     }
@@ -96,21 +94,30 @@ export function MenuIngredientForm({
   useEffect(() => {
     if (ingredient) {
       form.reset({
-        ingredientName: ingredient.ingredientName,
+        inventoryItemId: ingredient.inventoryItemId,
         quantity: ingredient.quantity,
-        unit: ingredient.unit,
-        costPerUnit: ingredient.costPerUnit,
-        preparationNotes: ingredient.preparationNotes || undefined,
+        preparationNotes: ingredient.preparationNotes || null,
         isOptional: ingredient.isOptional ?? false,
         substitutes: ingredient.substitutes || []
       })
+      
+      // Set selected inventory item for edit mode
+      if (ingredient.inventoryItem) {
+        setSelectedInventoryItem({
+          id: ingredient.inventoryItem.id,
+          itemName: ingredient.inventoryItem.itemName,
+          unit: ingredient.inventoryItem.unit,
+          costPerUnit: ingredient.inventoryItem.costPerUnit || 0,
+          currentStock: 0, // We don't have this in MenuIngredient type
+          minStock: 0
+        } as InventoryItem)
+      }
     }
   }, [ingredient, form])
 
   // Watch values for real-time calculation
   const quantity = form.watch('quantity')
-  const costPerUnit = form.watch('costPerUnit')
-  const totalCost = quantity * costPerUnit
+  const totalCost = quantity * (selectedInventoryItem?.costPerUnit || 0)
 
   // Substitute input state
   const substitutes = form.watch('substitutes') || []
@@ -118,11 +125,11 @@ export function MenuIngredientForm({
   /**
    * Check for duplicate ingredients
    */
-  const checkDuplicate = (ingredientName: string): MenuIngredient | null => {
+  const checkDuplicate = (inventoryItemId: string): MenuIngredient | null => {
     if (!existingIngredients || isEditing) return null
     
     const duplicate = existingIngredients.find(
-      (ing) => ing.ingredientName.toLowerCase().trim() === ingredientName.toLowerCase().trim()
+      (ing) => ing.inventoryItemId === inventoryItemId
     )
     
     return duplicate || null
@@ -169,9 +176,17 @@ export function MenuIngredientForm({
   }
 
   const onSubmit = (data: IngredientFormData) => {
-    // 1. Check for duplicates (only when creating)
+    // 1. Validate inventory item is selected
+    if (!data.inventoryItemId) {
+      toast.error('Pilih bahan dari inventory', {
+        description: 'Anda harus memilih bahan dari daftar inventory'
+      })
+      return
+    }
+
+    // 2. Check for duplicates (only when creating)
     if (!isEditing) {
-      const duplicate = checkDuplicate(data.ingredientName)
+      const duplicate = checkDuplicate(data.inventoryItemId)
       if (duplicate) {
         setDuplicateIngredient(duplicate)
         setPendingFormData(data)
@@ -180,7 +195,7 @@ export function MenuIngredientForm({
       }
     }
 
-    // 2. Check stock availability
+    // 3. Check stock availability
     const stockCheck = checkStockAvailability(data.quantity)
     if (!stockCheck.hasStock) {
       toast.error('Stok tidak mencukupi', {
@@ -189,7 +204,7 @@ export function MenuIngredientForm({
       return
     }
 
-    // 3. Proceed with creation/update
+    // 4. Proceed with creation/update
     submitForm(data)
   }
 
@@ -197,13 +212,10 @@ export function MenuIngredientForm({
    * Submit form data (extracted for reuse)
    */
   const submitForm = (data: IngredientFormData) => {
-    // Calculate totalCost (required by API)
-    const totalCost = data.quantity * data.costPerUnit
-    
-    // Transform null to undefined for API and add totalCost
+    // Transform for API
     const apiData = {
-      ...data,
-      totalCost, // Add calculated totalCost
+      inventoryItemId: data.inventoryItemId,
+      quantity: data.quantity,
       preparationNotes: data.preparationNotes || undefined,
       isOptional: data.isOptional ?? false,
       substitutes: data.substitutes || []
@@ -264,24 +276,22 @@ export function MenuIngredientForm({
 
   /**
    * Handle inventory item selection
-   * Auto-fill form fields from inventory data
+   * Set inventoryItemId and store item for display
    */
   const handleInventorySelect = (itemId: string) => {
     const selectedItem = inventoryItems?.find(item => item.id === itemId)
     if (selectedItem) {
-      // Store selected item for stock validation
+      // Store selected item for stock validation and display
       setSelectedInventoryItem(selectedItem)
       
-      // Auto-fill form fields
-      form.setValue('ingredientName', selectedItem.itemName)
-      form.setValue('unit', selectedItem.unit)
-      if (selectedItem.costPerUnit) {
-        form.setValue('costPerUnit', selectedItem.costPerUnit)
-      }
+      // Set inventoryItemId in form
+      form.setValue('inventoryItemId', selectedItem.id)
       
       // Show info about current stock
       if (selectedItem.currentStock < selectedItem.minStock) {
-        console.warn(`Low stock warning: ${selectedItem.itemName} (${selectedItem.currentStock} ${selectedItem.unit})`)
+        toast.warning('Stok Rendah', {
+          description: `${selectedItem.itemName} memiliki stok rendah: ${selectedItem.currentStock} ${selectedItem.unit}`
+        })
       }
     }
   }
@@ -313,206 +323,186 @@ export function MenuIngredientForm({
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            {/* Inventory Item Selector (Optional) */}
-            {!isEditing && inventoryItems && inventoryItems.length > 0 && (
-              <div className="space-y-4">
-                <Badge variant="default" className="flex items-center gap-2 w-fit">
-                  <Package className="h-3 w-3" />
-                  Pilih dari Inventory
-                </Badge>
-                
-                <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
-                  <Label htmlFor="inventory-selector" className="text-sm font-medium mb-2 block">
-                    Pilih bahan dari inventory (opsional)
-                  </Label>
-                  <Select onValueChange={handleInventorySelect}>
-                    <SelectTrigger id="inventory-selector">
-                      <SelectValue placeholder="Cari bahan di inventory..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {isLoadingInventory ? (
-                        <SelectItem value="loading" disabled>Memuat...</SelectItem>
-                      ) : (
-                        <>
-                          {inventoryItems.map((item) => (
-                            <SelectItem key={item.id} value={item.id}>
-                              <div className="flex items-center justify-between w-full">
-                                <span className="font-medium">{item.itemName}</span>
-                                <span className="text-xs text-muted-foreground ml-4">
-                                  Stock: {item.currentStock} {item.unit}
-                                  {item.currentStock < item.minStock && (
-                                    <span className="text-destructive ml-2">⚠️ Low</span>
-                                  )}
-                                </span>
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </>
-                      )}
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Memilih dari inventory akan otomatis mengisi nama, satuan, dan harga
-                  </p>
-                </div>
-                
-                <Separator className="my-6" />
-              </div>
-            )}
-
-            {/* Basic Information */}
+            {/* Inventory Item Selector (REQUIRED) */}
             <div className="space-y-4">
-              <Badge variant="outline">Informasi Bahan</Badge>
+              <Badge variant="default" className="flex items-center gap-2 w-fit">
+                <Package className="h-3 w-3" />
+                Pilih Bahan
+              </Badge>
               
               <FormField
                 control={form.control}
-                name="ingredientName"
+                name="inventoryItemId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Nama Bahan</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Contoh: Beras Merah" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="quantity"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Jumlah</FormLabel>
+                    <FormLabel>Bahan dari Inventory *</FormLabel>
+                    <Select 
+                      onValueChange={(value) => {
+                        field.onChange(value)
+                        handleInventorySelect(value)
+                      }} 
+                      value={field.value}
+                      disabled={isEditing} // Disable when editing
+                    >
                       <FormControl>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          placeholder="100"
-                          {...field}
-                          onChange={(e) => field.onChange(Number(e.target.value))}
-                        />
+                        <SelectTrigger id="inventory-selector">
+                          <SelectValue placeholder="Pilih bahan dari inventory..." />
+                        </SelectTrigger>
                       </FormControl>
-                      <FormMessage />
-                      
-                      {/* Real-time Stock Validation */}
-                      {selectedInventoryItem && quantity > 0 && (
-                        <div className="mt-2">
-                          {(() => {
-                            const stockCheck = checkStockAvailability(quantity)
-                            if (!stockCheck.hasStock) {
-                              return (
-                                <Alert variant="destructive" className="py-2">
-                                  <AlertTriangle className="h-4 w-4" />
-                                  <AlertDescription className="text-xs">
-                                    {stockCheck.warning}
-                                  </AlertDescription>
-                                </Alert>
-                              )
-                            } else if (stockCheck.warning) {
-                              return (
-                                <Alert className="py-2 border-yellow-500 bg-yellow-50 dark:bg-yellow-950">
-                                  <AlertTriangle className="h-4 w-4 text-yellow-600" />
-                                  <AlertDescription className="text-xs text-yellow-800 dark:text-yellow-200">
-                                    {stockCheck.warning}
-                                  </AlertDescription>
-                                </Alert>
-                              )
-                            }
-                            return null
-                          })()}
-                        </div>
-                      )}
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="unit"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Satuan</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Pilih satuan" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {/* Group by category */}
-                          <SelectItem value="gram">gram (g)</SelectItem>
-                          <SelectItem value="kg">kilogram (kg)</SelectItem>
-                          <SelectItem value="ons">ons</SelectItem>
-                          <SelectItem value="liter">liter (L)</SelectItem>
-                          <SelectItem value="ml">mililiter (mL)</SelectItem>
-                          <SelectItem value="pcs">pieces (pcs)</SelectItem>
-                          <SelectItem value="buah">buah</SelectItem>
-                          <SelectItem value="bungkus">bungkus</SelectItem>
-                          <SelectItem value="sdm">sendok makan (sdm)</SelectItem>
-                          <SelectItem value="sdt">sendok teh (sdt)</SelectItem>
-                          <SelectItem value="cup">cup</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormDescription>
-                        Pilih satuan yang sesuai untuk bahan ini
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-            </div>
-
-            <Separator />
-
-            {/* Cost Information */}
-            <div className="space-y-4">
-              <Badge variant="secondary">Informasi Biaya</Badge>
-              
-              <FormField
-                control={form.control}
-                name="costPerUnit"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Harga per Satuan (Rp)</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        placeholder="15000"
-                        {...field}
-                        onChange={(e) => field.onChange(Number(e.target.value))}
-                      />
-                    </FormControl>
+                      <SelectContent>
+                        {isLoadingInventory ? (
+                          <SelectItem value="loading" disabled>Memuat...</SelectItem>
+                        ) : (
+                          <>
+                            {inventoryItems?.map((item) => (
+                              <SelectItem key={item.id} value={item.id}>
+                                <div className="flex items-center justify-between w-full">
+                                  <span className="font-medium">{item.itemName}</span>
+                                  <span className="text-xs text-muted-foreground ml-4">
+                                    Stock: {item.currentStock} {item.unit}
+                                    {item.currentStock < item.minStock && (
+                                      <span className="text-destructive ml-2">⚠️ Low</span>
+                                    )}
+                                  </span>
+                                </div>
+                              </SelectItem>
+                            )) || []}
+                          </>
+                        )}
+                      </SelectContent>
+                    </Select>
                     <FormDescription>
-                      Harga per satuan yang digunakan untuk perhitungan total biaya
+                      Pilih bahan dari inventory untuk menu ini
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
+              
+              {/* Display selected item info */}
+              {selectedInventoryItem && (
+                <div className="rounded-lg border border-primary/20 bg-primary/5 dark:bg-primary/10 p-4">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                    <div>
+                      <span className="text-muted-foreground">Nama:</span>
+                      <p className="font-semibold">{selectedInventoryItem.itemName}</p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Satuan:</span>
+                      <p className="font-semibold">{selectedInventoryItem.unit}</p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Harga/Unit:</span>
+                      <p className="font-semibold">
+                        {new Intl.NumberFormat('id-ID', {
+                          style: 'currency',
+                          currency: 'IDR',
+                          minimumFractionDigits: 0
+                        }).format(selectedInventoryItem.costPerUnit || 0)}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Stok:</span>
+                      <p className={`font-semibold ${
+                        selectedInventoryItem.currentStock < selectedInventoryItem.minStock 
+                          ? 'text-destructive' 
+                          : 'text-green-600'
+                      }`}>
+                        {selectedInventoryItem.currentStock} {selectedInventoryItem.unit}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <Separator />
+
+            {/* Quantity Information */}
+            <div className="space-y-4">
+              <Badge variant="outline">Jumlah Bahan</Badge>
+
+              <FormField
+                control={form.control}
+                name="quantity"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Jumlah {selectedInventoryItem ? `(${selectedInventoryItem.unit})` : ''}</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        placeholder="100"
+                        {...field}
+                        onChange={(e) => field.onChange(Number(e.target.value))}
+                        disabled={!selectedInventoryItem}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      {selectedInventoryItem 
+                        ? `Masukkan jumlah dalam ${selectedInventoryItem.unit}`
+                        : 'Pilih bahan terlebih dahulu'
+                      }
+                    </FormDescription>
+                    <FormMessage />
+                    
+                    {/* Real-time Stock Validation */}
+                    {selectedInventoryItem && quantity > 0 && (
+                      <div className="mt-2">
+                        {(() => {
+                          const stockCheck = checkStockAvailability(quantity)
+                          if (!stockCheck.hasStock) {
+                            return (
+                              <Alert variant="destructive" className="py-2">
+                                <AlertTriangle className="h-4 w-4" />
+                                <AlertDescription className="text-xs">
+                                  {stockCheck.warning}
+                                </AlertDescription>
+                              </Alert>
+                            )
+                          } else if (stockCheck.warning) {
+                            return (
+                              <Alert className="py-2 border-yellow-500 bg-yellow-50 dark:bg-yellow-950">
+                                <AlertTriangle className="h-4 w-4 text-yellow-600" />
+                                <AlertDescription className="text-xs text-yellow-800 dark:text-yellow-200">
+                                  {stockCheck.warning}
+                                </AlertDescription>
+                              </Alert>
+                            )
+                          }
+                          return null
+                        })()}
+                      </div>
+                    )}
+                  </FormItem>
+                )}
+              />
 
               {/* Real-time Total Cost Display */}
-              <div className="p-4 bg-primary/5 dark:bg-primary/10 rounded-lg border border-primary/20">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Calculator className="h-5 w-5 text-primary" />
-                    <span className="font-semibold text-foreground">Total Biaya</span>
+              {selectedInventoryItem && quantity > 0 && (
+                <div className="p-4 bg-primary/5 dark:bg-primary/10 rounded-lg border border-primary/20">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Calculator className="h-5 w-5 text-primary" />
+                      <span className="font-semibold text-foreground">Total Biaya</span>
+                    </div>
+                    <span className="text-2xl font-bold text-primary">
+                      {new Intl.NumberFormat('id-ID', {
+                        style: 'currency',
+                        currency: 'IDR',
+                        minimumFractionDigits: 0
+                      }).format(totalCost)}
+                    </span>
                   </div>
-                  <span className="text-2xl font-bold text-primary">
-                    {new Intl.NumberFormat('id-ID', {
+                  <p className="text-xs text-muted-foreground mt-2">
+                    {quantity} {selectedInventoryItem.unit} × {new Intl.NumberFormat('id-ID', {
                       style: 'currency',
                       currency: 'IDR',
                       minimumFractionDigits: 0
-                    }).format(totalCost)}
-                  </span>
+                    }).format(selectedInventoryItem.costPerUnit || 0)}
+                  </p>
                 </div>
-                <p className="text-xs text-muted-foreground mt-2">
-                  {quantity} {form.watch('unit')} × Rp {costPerUnit.toLocaleString('id-ID')}
-                </p>
-              </div>
+              )}
             </div>
 
             <Separator />
@@ -637,7 +627,7 @@ export function MenuIngredientForm({
             </AlertDialogTitle>
             <AlertDialogDescription className="space-y-3 pt-2">
               <p>
-                Bahan <strong className="text-foreground">{duplicateIngredient?.ingredientName}</strong> sudah ada dalam menu ini.
+                Bahan <strong className="text-foreground">{duplicateIngredient?.inventoryItem.itemName}</strong> sudah ada dalam menu ini.
               </p>
               
               {duplicateIngredient && (
@@ -645,19 +635,27 @@ export function MenuIngredientForm({
                   <p className="flex justify-between">
                     <span className="text-muted-foreground">Jumlah saat ini:</span>
                     <span className="font-medium text-foreground">
-                      {duplicateIngredient.quantity} {duplicateIngredient.unit}
+                      {duplicateIngredient.quantity} {duplicateIngredient.inventoryItem.unit}
                     </span>
                   </p>
                   <p className="flex justify-between">
                     <span className="text-muted-foreground">Harga per unit:</span>
                     <span className="font-medium text-foreground">
-                      Rp {duplicateIngredient.costPerUnit.toLocaleString('id-ID')}
+                      {new Intl.NumberFormat('id-ID', {
+                        style: 'currency',
+                        currency: 'IDR',
+                        minimumFractionDigits: 0
+                      }).format(duplicateIngredient.inventoryItem.costPerUnit || 0)}
                     </span>
                   </p>
                   <p className="flex justify-between">
                     <span className="text-muted-foreground">Total biaya:</span>
                     <span className="font-medium text-foreground">
-                      Rp {(duplicateIngredient.quantity * duplicateIngredient.costPerUnit).toLocaleString('id-ID')}
+                      {new Intl.NumberFormat('id-ID', {
+                        style: 'currency',
+                        currency: 'IDR',
+                        minimumFractionDigits: 0
+                      }).format(duplicateIngredient.quantity * (duplicateIngredient.inventoryItem.costPerUnit || 0))}
                     </span>
                   </p>
                 </div>

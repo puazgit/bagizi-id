@@ -10,8 +10,8 @@ export const ingredientSchema = z.object({
   inventoryItemId: z.string().cuid('Invalid inventory item ID'), // ✅ Fix #1: REQUIRED
   quantity: z.number().min(0.01, 'Quantity must be greater than 0').max(10000),
   preparationNotes: z.string().max(500).nullish(),
-  isOptional: z.boolean().optional().default(false),
-  substitutes: z.array(z.string().max(100)).optional().default([])
+  isOptional: z.boolean().default(false),
+  substitutes: z.array(z.string().max(100)).default([])
   // ❌ Fix #1: REMOVED - ingredientName, unit, costPerUnit (use inventoryItem relation)
 })
 
