@@ -97,10 +97,17 @@ export async function GET(request: NextRequest) {
           ingredients: {
             select: {
               id: true,
-              ingredientName: true,
+              inventoryItemId: true,
               quantity: true,
-              unit: true,
-              totalCost: true
+              preparationNotes: true,
+              inventoryItem: {
+                select: {
+                  id: true,
+                  itemName: true,
+                  unit: true,
+                  costPerUnit: true
+                }
+              }
             }
           },
           nutritionCalc: {
