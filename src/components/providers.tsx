@@ -67,9 +67,9 @@ export function Providers({ children }: ProvidersProps) {
         >
           {children}
           
-          {/* Toast notifications */}
+          {/* Toast notifications - Bottom right for non-intrusive UX */}
           <Toaster 
-            position="top-right"
+            position="bottom-right"
             richColors
             closeButton
             duration={4000}

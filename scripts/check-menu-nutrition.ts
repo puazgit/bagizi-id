@@ -62,7 +62,7 @@ async function checkMenuNutrition() {
     console.log(`  Vitamin D: ${nutr.totalVitaminD} mcg`)
     console.log(`  Vitamin E: ${nutr.totalVitaminE} mg`)
     console.log(`  Vitamin K: ${nutr.totalVitaminK} mcg`)
-    console.log(`  Folat: ${nutr.totalFolat} mcg`)
+    console.log(`  Folate: ${nutr.totalFolate} mcg`)
     
     console.log('\n⚡ Minerals:')
     console.log(`  Calcium: ${nutr.totalCalcium} mg`)

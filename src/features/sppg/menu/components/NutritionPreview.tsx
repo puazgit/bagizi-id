@@ -102,27 +102,12 @@ export function NutritionPreview({ menuId }: NutritionPreviewProps) {
 
   return (
     <div className="space-y-6">
-      {/* Header with Calculate Button */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-lg font-semibold">Informasi Nutrisi</h3>
-          <p className="text-sm text-muted-foreground">
-            Nilai gizi per porsi ({report.servingSize}g)
-          </p>
-        </div>
-        <Button onClick={handleCalculate} disabled={isCalculating} variant="outline">
-          {isCalculating ? (
-            <>
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
-              Menghitung...
-            </>
-          ) : (
-            <>
-              <Calculator className="h-4 w-4 mr-2" />
-              Hitung Ulang
-            </>
-          )}
-        </Button>
+      {/* Header */}
+      <div>
+        <h3 className="text-lg font-semibold">Informasi Nutrisi</h3>
+        <p className="text-sm text-muted-foreground">
+          Nilai gizi per porsi ({report.servingSize}g)
+        </p>
       </div>
 
       {/* Compliance Score & AKG Badge */}
@@ -332,11 +317,6 @@ export function NutritionPreview({ menuId }: NutritionPreviewProps) {
                   <TableRow key={index}>
                     <TableCell className="font-medium">
                       {ingredient.ingredientName}
-                      {ingredient.inventoryItem && (
-                        <span className="text-xs text-muted-foreground block">
-                          {ingredient.inventoryItem.itemCode}
-                        </span>
-                      )}
                     </TableCell>
                     <TableCell className="text-right">
                       {ingredient.quantity} {ingredient.unit}

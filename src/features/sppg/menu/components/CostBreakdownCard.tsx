@@ -31,6 +31,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { useCostReport, useCalculateCost } from '../hooks/useCost'
+import { formatCurrency as formatCurrencyUtil } from '@/lib/currency'
 
 interface CostBreakdownCardProps {
   menuId: string
@@ -45,12 +46,8 @@ export function CostBreakdownCard({ menuId }: CostBreakdownCardProps) {
   }
 
   const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(value)
+    // Use centralized currency formatter
+    return formatCurrencyUtil(value)
   }
 
   if (isLoading) {
@@ -124,27 +121,18 @@ export function CostBreakdownCard({ menuId }: CostBreakdownCardProps) {
 
   return (
     <div className="space-y-6">
-      {/* Header with Calculate Button */}
-      <div className="flex items-center justify-between">
+      {/* Header */}
+      <div className="flex items-start justify-between">
         <div>
           <h3 className="text-lg font-semibold">Analisis Biaya</h3>
           <p className="text-sm text-muted-foreground">
-            Breakdown biaya produksi menu
+            Breakdown biaya produksi menu dengan estimasi biaya operasional
           </p>
         </div>
-        <Button onClick={handleCalculate} disabled={isCalculating} variant="outline">
-          {isCalculating ? (
-            <>
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
-              Menghitung...
-            </>
-          ) : (
-            <>
-              <Calculator className="h-4 w-4 mr-2" />
-              Hitung Ulang
-            </>
-          )}
-        </Button>
+        <Badge variant="outline" className="text-xs">
+          <Calculator className="h-3 w-3 mr-1" />
+          Auto-calculated
+        </Badge>
       </div>
 
       {/* Total Cost Summary */}
@@ -226,10 +214,18 @@ export function CostBreakdownCard({ menuId }: CostBreakdownCardProps) {
       {/* Labor Cost Detail */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <Users className="h-5 w-5 text-green-600 dark:text-green-400" />
-            Biaya Tenaga Kerja
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Users className="h-5 w-5 text-green-600 dark:text-green-400" />
+              Biaya Tenaga Kerja
+            </CardTitle>
+            <Badge variant="secondary" className="text-xs">
+              Estimasi: Rp 20rb/jam
+            </Badge>
+          </div>
+          <CardDescription className="text-xs mt-1">
+            Berdasarkan tarif standar SPPG Jakarta (~UMR 2024)
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -273,10 +269,18 @@ export function CostBreakdownCard({ menuId }: CostBreakdownCardProps) {
         {/* Utilities */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <Zap className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
-              Biaya Utilitas
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Zap className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
+                Biaya Utilitas
+              </CardTitle>
+              <Badge variant="secondary" className="text-xs">
+                Per batch
+              </Badge>
+            </div>
+            <CardDescription className="text-xs mt-1">
+              Gas (LPG 3kg), listrik (~500W), air (~100L)
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex items-center justify-between">
@@ -310,10 +314,18 @@ export function CostBreakdownCard({ menuId }: CostBreakdownCardProps) {
         {/* Operational */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <Settings className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-              Biaya Operasional
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Settings className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                Biaya Operasional
+              </CardTitle>
+              <Badge variant="secondary" className="text-xs">
+                Rp 500/porsi
+              </Badge>
+            </div>
+            <CardDescription className="text-xs mt-1">
+              Kemasan, depresiasi alat, kebersihan
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex items-center justify-between">
@@ -504,12 +516,8 @@ function CostBreakdownBar({ label, value, total, icon, color }: CostBreakdownBar
   const percentage = (value / total) * 100
 
   const formatCurrency = (val: number) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(val)
+    // Use centralized currency formatter
+    return formatCurrencyUtil(val)
   }
 
   return (

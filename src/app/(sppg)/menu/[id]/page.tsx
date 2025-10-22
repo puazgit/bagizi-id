@@ -5,7 +5,7 @@
 
 'use client'
 
-import { use, useState, useRef } from 'react'
+import { use, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { 
@@ -31,6 +31,16 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { AlertCircle } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
@@ -39,14 +49,12 @@ import { cn } from '@/lib/utils'
 
 import { useMenu, useDeleteMenu } from '@/features/sppg/menu/hooks'
 import { 
-  MenuIngredientForm,
   IngredientsList,
   RecipeStepEditor, 
   NutritionPreview, 
   CostBreakdownCard,
   MenuActionsToolbar
 } from '@/features/sppg/menu/components'
-import type { MenuIngredient } from '@/features/sppg/menu/types/ingredient.types'
 import { toast } from 'sonner'
 
 interface MenuDetailPageProps {
@@ -84,27 +92,29 @@ function MenuDetailSkeleton() {
 export default function MenuDetailPage({ params }: MenuDetailPageProps) {
   const { id } = use(params)
   const router = useRouter()
-  
-  // Edit state for ingredients
-  const [editingIngredient, setEditingIngredient] = useState<MenuIngredient | null>(null)
-  const ingredientFormRef = useRef<HTMLDivElement>(null)
 
   const { data: menu, isLoading, error } = useMenu(id)
-  const { mutate: deleteMenu } = useDeleteMenu()
+  const { mutate: deleteMenu, isPending: isDeleting } = useDeleteMenu()
+  
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
 
-  const handleDelete = () => {    if (!menu) return
+  const handleDelete = () => {
+    setShowDeleteDialog(true)
+  }
+
+  const confirmDelete = () => {
+    if (!menu) return
     
-    if (window.confirm(`Hapus menu "${menu.menuName}"?\n\nTindakan ini tidak dapat dibatalkan.`)) {
-      deleteMenu(menu.id, {
-        onSuccess: () => {
-          toast.success('Menu berhasil dihapus')
-          router.push('/menu')
-        },
-        onError: (error) => {
-          toast.error(error.message || 'Gagal menghapus menu')
-        }
-      })
-    }
+    deleteMenu(menu.id, {
+      onSuccess: () => {
+        toast.success('Menu berhasil dihapus')
+        router.push('/menu')
+      },
+      onError: (error) => {
+        toast.error(error.message || 'Gagal menghapus menu')
+      }
+    })
+    setShowDeleteDialog(false)
   }
 
   if (isLoading) {
@@ -480,48 +490,7 @@ export default function MenuDetailPage({ params }: MenuDetailPageProps) {
 
         {/* Tab 2: Ingredients */}
         <TabsContent value="ingredients" className="space-y-6">
-          <IngredientsList 
-            menuId={menu.id} 
-            onEdit={(ingredient: MenuIngredient) => {
-              setEditingIngredient(ingredient)
-              // Scroll to form smoothly
-              setTimeout(() => {
-                ingredientFormRef.current?.scrollIntoView({ 
-                  behavior: 'smooth',
-                  block: 'start'
-                })
-              }, 100)
-            }} 
-          />
-          
-          <Separator />
-          
-          <div ref={ingredientFormRef} id="ingredient-form">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">
-                {editingIngredient ? 'Edit Bahan' : 'Tambah Bahan Baru'}
-              </h3>
-              {editingIngredient && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setEditingIngredient(null)}
-                >
-                  Batal Edit
-                </Button>
-              )}
-            </div>
-            <MenuIngredientForm 
-              menuId={menu.id}
-              ingredient={editingIngredient || undefined}
-              onSuccess={() => {
-                setEditingIngredient(null)
-                // Scroll back to list
-                window.scrollTo({ top: 0, behavior: 'smooth' })
-              }}
-              onCancel={() => setEditingIngredient(null)}
-            />
-          </div>
+          <IngredientsList menuId={menu.id} />
         </TabsContent>
 
         {/* Tab 3: Recipe Steps */}
@@ -539,6 +508,37 @@ export default function MenuDetailPage({ params }: MenuDetailPageProps) {
           <CostBreakdownCard menuId={menu.id} />
         </TabsContent>
       </Tabs>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Konfirmasi Hapus Menu</AlertDialogTitle>
+            <AlertDialogDescription>
+              Apakah Anda yakin ingin menghapus menu <span className="font-semibold">&ldquo;{menu.menuName}&rdquo;</span>?
+              <br /><br />
+              Tindakan ini akan menghapus:
+              <ul className="list-disc list-inside mt-2 space-y-1">
+                <li>Semua data bahan untuk menu ini</li>
+                <li>Langkah-langkah resep</li>
+                <li>Hasil perhitungan nutrisi dan biaya</li>
+              </ul>
+              <br />
+              <span className="text-destructive font-semibold">Tindakan ini tidak dapat dibatalkan.</span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? 'Menghapus...' : 'Ya, Hapus Menu'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

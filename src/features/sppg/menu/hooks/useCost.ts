@@ -34,15 +34,26 @@ export function useCalculateCost(menuId: string) {
   return useMutation({
     mutationFn: (data: CalculateCostInput = {}) => 
       costApi.calculate(menuId, data),
-    onSuccess: () => {
+    onSuccess: async () => {
+      console.log('💰 Cost calculation success! Starting cache refresh...')
+      
       // Invalidate cost report query to refetch
-      queryClient.invalidateQueries({ queryKey: costKeys.menu(menuId) })
+      await queryClient.invalidateQueries({ queryKey: costKeys.menu(menuId) })
+      console.log('✅ Invalidated cost report')
       
       // Invalidate menu detail query to update calculated fields
-      queryClient.invalidateQueries({ queryKey: ['menu', menuId] })
+      await queryClient.invalidateQueries({ queryKey: ['sppg', 'menus', menuId] })
+      console.log('✅ Invalidated menu detail')
       
-      // CRITICAL: Invalidate menu list to refresh cards with new cost data
-      queryClient.invalidateQueries({ queryKey: ['menus'] })
+      // CRITICAL: Invalidate menu list queries to mark them stale
+      // Use exact: false to match all queries starting with ['sppg', 'menus']
+      console.log('� Invalidating all menu list queries...')
+      await queryClient.invalidateQueries({ 
+        queryKey: ['sppg', 'menus'],
+        exact: false, // Match all queries starting with this key
+        refetchType: 'none' // Don't refetch now, will refetch on next mount
+      })
+      console.log('✅ Menu list queries invalidated!')
       
       toast.success('Biaya berhasil dihitung')
     },

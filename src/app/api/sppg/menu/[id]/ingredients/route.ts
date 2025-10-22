@@ -78,6 +78,8 @@ export async function GET(
             category: true,
             unit: true,
             currentStock: true,
+            minStock: true,           // ✅ Added for stock status
+            costPerUnit: true,        // ✅ FIX: Added missing costPerUnit field
             lastPrice: true,
             calories: true,
             protein: true,
@@ -206,7 +208,16 @@ export async function POST(
             itemName: true,
             itemCode: true,
             category: true,
-            unit: true
+            unit: true,
+            currentStock: true,
+            minStock: true,           // ✅ Added for stock status
+            costPerUnit: true,        // ✅ FIX: Added missing costPerUnit field
+            lastPrice: true,
+            calories: true,
+            protein: true,
+            carbohydrates: true,
+            fat: true,
+            fiber: true
           }
         }
       }

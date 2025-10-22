@@ -34,15 +34,22 @@ export function useCalculateNutrition(menuId: string) {
   return useMutation({
     mutationFn: (data: CalculateNutritionInput = {}) => 
       nutritionApi.calculate(menuId, data),
-    onSuccess: () => {
-      // Invalidate nutrition report query to refetch
-      queryClient.invalidateQueries({ queryKey: nutritionKeys.menu(menuId) })
+    onSuccess: async () => {
+      // Invalidate all related queries to refetch with new nutrition data
+      await queryClient.invalidateQueries({ queryKey: nutritionKeys.menu(menuId) })
       
       // Invalidate menu detail query to update calculated fields
-      queryClient.invalidateQueries({ queryKey: ['menu', menuId] })
+      await queryClient.invalidateQueries({ queryKey: ['sppg', 'menus', menuId] })
       
-      // CRITICAL: Invalidate menu list to refresh cards with new nutrition data
-      queryClient.invalidateQueries({ queryKey: ['menus'] })
+      // CRITICAL: Invalidate menu list queries to mark them stale
+      // Use exact: false to match all queries starting with ['sppg', 'menus']
+      console.log('� Invalidating all menu list queries...')
+      await queryClient.invalidateQueries({ 
+        queryKey: ['sppg', 'menus'],
+        exact: false, // Match all queries starting with this key
+        refetchType: 'none' // Don't refetch now, will refetch on next mount
+      })
+      console.log('✅ Menu list queries invalidated!')
       
       toast.success('Nutrisi berhasil dihitung')
     },

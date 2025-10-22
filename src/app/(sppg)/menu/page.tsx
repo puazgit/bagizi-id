@@ -37,7 +37,7 @@ import type { MenuFilters, Menu as BaseMenu } from '@/features/sppg/menu/types'
 import type { MealType } from '@prisma/client'
 
 // Extended Menu interface for display with nutrition data
-interface MenuWithNutrition extends BaseMenu {
+interface MenuWithNutrition extends Omit<BaseMenu, 'nutritionCalc' | 'costCalc'> {
   calories: number
   protein: number
   carbohydrates: number
@@ -48,6 +48,10 @@ interface MenuWithNutrition extends BaseMenu {
     totalCarbs: number
     totalFat: number
     meetsAKG: boolean
+  } | null
+  costCalc?: {
+    costPerPortion: number
+    grandTotalCost: number
   } | null
 }
 
@@ -81,6 +85,14 @@ export default function MenuPage() {
 
   const { data: menuResponse, isLoading, error } = useMenus(filters)
   
+  // DEBUG: Log raw data from API
+  console.log('📋 MenuPage: Raw menu response', {
+    totalMenus: menuResponse?.menus?.length,
+    firstMenu: menuResponse?.menus?.[0]?.menuName,
+    hasAnyCostCalc: menuResponse?.menus?.some(m => m.costCalc),
+    sampleCostCalc: menuResponse?.menus?.find(m => m.menuName === 'Susu Kedelai Cokelat')?.costCalc
+  })
+  
   // Transform menus data to include nutrition values with proper typing
   const rawMenus = menuResponse?.menus || []
   const menus: MenuWithNutrition[] = rawMenus.map(menu => {
@@ -92,6 +104,10 @@ export default function MenuPage() {
         totalFat: number
         meetsAKG: boolean
       } | null
+      costCalc?: {
+        costPerPortion: number
+        grandTotalCost: number
+      } | null
     }
     
     return {
@@ -101,7 +117,8 @@ export default function MenuPage() {
       carbohydrates: menuWithCalc.nutritionCalc?.totalCarbs || 0,
       fat: menuWithCalc.nutritionCalc?.totalFat || 0,
       isVegan: false, // TODO: Add isVegan field to schema
-      nutritionCalc: menuWithCalc.nutritionCalc
+      nutritionCalc: menuWithCalc.nutritionCalc,
+      costCalc: menuWithCalc.costCalc  // CRITICAL: Preserve costCalc!
     }
   })
   
@@ -343,7 +360,19 @@ export default function MenuPage() {
           {/* Grid View */}
           {viewMode === 'grid' && (
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {menus.map((menu) => (
+              {menus.map((menu) => {
+                // DEBUG: Log menu data for Susu Kedelai Cokelat
+                if (menu.menuName === 'Susu Kedelai Cokelat') {
+                  console.log('🎴 Inline Card Render:', menu.menuName, {
+                    id: menu.id,
+                    costPerServing: menu.costPerServing,
+                    hasCostCalc: !!menu.costCalc,
+                    costCalcValue: menu.costCalc?.costPerPortion,
+                    finalCostUsed: menu.costCalc?.costPerPortion || menu.costPerServing
+                  })
+                }
+                
+                return (
                 <Card key={menu.id} className="hover:shadow-lg transition-all duration-200">
                   <CardHeader>
                     <div className="flex items-start justify-between">
@@ -394,25 +423,25 @@ export default function MenuPage() {
                       <div className="space-y-1">
                         <p className="text-xs text-muted-foreground">Kalori</p>
                         <p className="text-lg font-semibold">
-                          {menu.calories} <span className="text-xs font-normal">kkal</span>
+                          {menu.nutritionCalc?.totalCalories || menu.calories} <span className="text-xs font-normal">kkal</span>
                         </p>
                       </div>
                       <div className="space-y-1">
                         <p className="text-xs text-muted-foreground">Protein</p>
                         <p className="text-lg font-semibold">
-                          {menu.protein} <span className="text-xs font-normal">g</span>
+                          {menu.nutritionCalc?.totalProtein || menu.protein} <span className="text-xs font-normal">g</span>
                         </p>
                       </div>
                       <div className="space-y-1">
                         <p className="text-xs text-muted-foreground">Karbohidrat</p>
                         <p className="text-lg font-semibold">
-                          {menu.carbohydrates} <span className="text-xs font-normal">g</span>
+                          {menu.nutritionCalc?.totalCarbs || menu.carbohydrates} <span className="text-xs font-normal">g</span>
                         </p>
                       </div>
                       <div className="space-y-1">
                         <p className="text-xs text-muted-foreground">Lemak</p>
                         <p className="text-lg font-semibold">
-                          {menu.fat} <span className="text-xs font-normal">g</span>
+                          {menu.nutritionCalc?.totalFat || menu.fat} <span className="text-xs font-normal">g</span>
                         </p>
                       </div>
                     </div>
@@ -449,7 +478,7 @@ export default function MenuPage() {
                           currency: 'IDR',
                           minimumFractionDigits: 0,
                           maximumFractionDigits: 0,
-                        }).format(menu.costPerServing)}
+                        }).format(menu.costCalc?.costPerPortion || menu.costPerServing)}
                       </span>
                     </div>
                   </CardContent>
@@ -462,7 +491,8 @@ export default function MenuPage() {
                     </Button>
                   </CardFooter>
                 </Card>
-              ))}
+                )
+              })}
             </div>
           )}
 

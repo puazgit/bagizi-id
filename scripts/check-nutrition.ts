@@ -42,7 +42,7 @@ async function checkNutritionCalculations() {
     console.log(`      Vitamin B12: ${calc.totalVitaminB12} mcg`)
     console.log(`      Vitamin C:   ${calc.totalVitaminC} mg`)
     console.log(`      Vitamin D:   ${calc.totalVitaminD} mcg`)
-    console.log(`      Folat:       ${calc.totalFolat} mcg`)
+    console.log(`      Folate:      ${calc.totalFolate} mcg`)
     
     console.log(`\n   ⚡ Key Minerals:`)
     console.log(`      Calcium:     ${calc.totalCalcium} mg`)

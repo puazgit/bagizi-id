@@ -221,7 +221,7 @@ export async function POST(
             totalVitaminD: calc.totalVitaminD,
             totalVitaminE: calc.totalVitaminE,
             totalVitaminK: calc.totalVitaminK,
-            totalFolat: calc.totalFolat,
+            totalFolate: calc.totalFolate,
             
             // Minerals
             totalCalcium: calc.totalCalcium,

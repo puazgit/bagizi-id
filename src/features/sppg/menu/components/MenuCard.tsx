@@ -84,6 +84,16 @@ function MenuStats({ menu, variant }: MenuStatsProps) {
   const calories = menu.nutritionCalc?.totalCalories || menu.calories || 0
   const protein = menu.nutritionCalc?.totalProtein || menu.protein || 0
   const carbs = menu.nutritionCalc?.totalCarbs || menu.carbohydrates || 0
+  const cost = menu.costCalc?.costPerPortion || menu.costPerServing || 0
+
+  // DEBUG: Always log for Susu Kedelai Cokelat
+  console.log('🔍 MenuCard Render:', menu.menuName, {
+    id: menu.id,
+    costPerServing: menu.costPerServing,
+    hasCostCalc: !!menu.costCalc,
+    costCalcValue: menu.costCalc?.costPerPortion,
+    finalCostUsed: cost
+  })
 
   return (
     <div className={cn(
@@ -120,11 +130,11 @@ function MenuStats({ menu, variant }: MenuStatsProps) {
         <DollarSign className="h-4 w-4 text-muted-foreground" />
         <span className="text-xs text-muted-foreground">Biaya</span>
         <span className="text-sm font-semibold">
-          {menu.costPerServing > 0 ? new Intl.NumberFormat('id-ID', {
+          {cost > 0 ? new Intl.NumberFormat('id-ID', {
             style: 'currency',
             currency: 'IDR',
             notation: 'compact'
-          }).format(menu.costPerServing) : '-'}
+          }).format(cost) : '-'}
         </span>
       </div>
 

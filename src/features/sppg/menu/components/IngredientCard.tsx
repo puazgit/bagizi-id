@@ -28,13 +28,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { MenuIngredientDialog } from './MenuIngredientDialog'
 import { useDeleteIngredient } from '@/features/sppg/menu/hooks/useIngredients'
 import type { MenuIngredient } from '@/features/sppg/menu/types/ingredient.types'
 
 interface IngredientCardProps {
   ingredient: MenuIngredient
   menuId: string
-  onEdit: () => void
 }
 
 /**
@@ -60,7 +60,7 @@ function calculateTotalCost(quantity: number, costPerUnit: number): number {
  * IngredientCard component
  * Displays a single ingredient with actions for edit/delete
  */
-export function IngredientCard({ ingredient, menuId, onEdit }: IngredientCardProps) {
+export function IngredientCard({ ingredient, menuId }: IngredientCardProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const { mutate: deleteIngredient, isPending } = useDeleteIngredient(menuId)
 
@@ -102,16 +102,17 @@ export function IngredientCard({ ingredient, menuId, onEdit }: IngredientCardPro
               </CardDescription>
             </div>
             <div className="flex gap-1 shrink-0">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={onEdit}
-                className="h-8 w-8"
-                title="Edit bahan"
-              >
-                <Edit className="h-4 w-4" />
-                <span className="sr-only">Edit {ingredient.inventoryItem.itemName}</span>
-              </Button>
+              <MenuIngredientDialog menuId={menuId} ingredient={ingredient}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  title="Edit bahan"
+                >
+                  <Edit className="h-4 w-4" />
+                  <span className="sr-only">Edit {ingredient.inventoryItem.itemName}</span>
+                </Button>
+              </MenuIngredientDialog>
               <Button
                 variant="ghost"
                 size="icon"

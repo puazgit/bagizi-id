@@ -7,7 +7,7 @@
 
 'use client'
 
-import { PackageOpen, TrendingUp, Calculator, DollarSign } from 'lucide-react'
+import { PackageOpen, TrendingUp, DollarSign, Plus } from 'lucide-react'
 import {
   Card,
   CardContent,
@@ -19,12 +19,12 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { IngredientCard } from './IngredientCard'
+import { MenuIngredientDialog } from './MenuIngredientDialog'
 import { useMenuIngredients } from '@/features/sppg/menu/hooks/useIngredients'
 import type { MenuIngredient } from '@/features/sppg/menu/types/ingredient.types'
 
 interface IngredientsListProps {
   menuId: string
-  onEdit: (ingredient: MenuIngredient) => void
 }
 
 /**
@@ -99,17 +99,29 @@ function IngredientsSkeleton() {
 /**
  * Empty state when no ingredients
  */
-function EmptyIngredientsState() {
+function EmptyIngredientsState({ menuId }: { menuId: string }) {
   return (
-    <Alert>
-      <PackageOpen className="h-4 w-4" />
-      <AlertDescription>
-        <p className="font-medium">Belum ada bahan ditambahkan</p>
-        <p className="text-sm text-muted-foreground mt-1">
-          Tambahkan bahan pertama menggunakan form di bawah ini.
-        </p>
-      </AlertDescription>
-    </Alert>
+    <Card>
+      <CardContent className="py-12">
+        <div className="text-center space-y-4">
+          <div className="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+            <PackageOpen className="h-8 w-8 text-primary" />
+          </div>
+          <div className="space-y-2">
+            <h3 className="text-lg font-semibold">Belum ada bahan</h3>
+            <p className="text-sm text-muted-foreground max-w-md mx-auto">
+              Tambahkan bahan pertama untuk menu ini. Klik tombol di bawah untuk memulai.
+            </p>
+          </div>
+          <MenuIngredientDialog menuId={menuId}>
+            <Button size="lg">
+              <Plus className="h-4 w-4 mr-2" />
+              Tambah Bahan Pertama
+            </Button>
+          </MenuIngredientDialog>
+        </div>
+      </CardContent>
+    </Card>
   )
 }
 
@@ -117,7 +129,7 @@ function EmptyIngredientsState() {
  * IngredientsList component
  * Displays list of menu ingredients with summary statistics
  */
-export function IngredientsList({ menuId, onEdit }: IngredientsListProps) {
+export function IngredientsList({ menuId }: IngredientsListProps) {
   const { data: ingredients, isLoading, error } = useMenuIngredients(menuId)
 
   // Loading state
@@ -138,7 +150,7 @@ export function IngredientsList({ menuId, onEdit }: IngredientsListProps) {
 
   // Empty state
   if (!ingredients || ingredients.length === 0) {
-    return <EmptyIngredientsState />
+    return <EmptyIngredientsState menuId={menuId} />
   }
 
   // Calculate statistics
@@ -153,7 +165,7 @@ export function IngredientsList({ menuId, onEdit }: IngredientsListProps) {
       <Card>
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
-            <Calculator className="h-5 w-5 text-primary" />
+            <PackageOpen className="h-5 w-5 text-primary" />
             Ringkasan Bahan
           </CardTitle>
           <CardDescription>
@@ -217,14 +229,6 @@ export function IngredientsList({ menuId, onEdit }: IngredientsListProps) {
               </p>
             </div>
           </div>
-
-          {/* Quick Actions */}
-          <div className="flex gap-2 mt-4 pt-4 border-t">
-            <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
-              <Calculator className="h-4 w-4 mr-2" />
-              Hitung Ulang
-            </Button>
-          </div>
         </CardContent>
       </Card>
 
@@ -237,6 +241,12 @@ export function IngredientsList({ menuId, onEdit }: IngredientsListProps) {
               {totalItems} bahan untuk menu ini
             </p>
           </div>
+          <MenuIngredientDialog menuId={menuId}>
+            <Button>
+              <Plus className="h-4 w-4 mr-2" />
+              Tambah Bahan
+            </Button>
+          </MenuIngredientDialog>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -245,7 +255,6 @@ export function IngredientsList({ menuId, onEdit }: IngredientsListProps) {
               key={ingredient.id}
               ingredient={ingredient}
               menuId={menuId}
-              onEdit={() => onEdit(ingredient)}
             />
           ))}
         </div>

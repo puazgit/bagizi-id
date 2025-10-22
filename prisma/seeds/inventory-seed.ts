@@ -35,12 +35,34 @@ export async function seedInventory() {
     storageCondition?: string
     isActive: boolean
     sppgId: string
-    // Nutrition data (per 100g/100ml)
+    // Nutrition data (per 100g/100ml) - Based on TKPI (Tabel Komposisi Pangan Indonesia)
     calories?: number
     protein?: number
     carbohydrates?: number
     fat?: number
     fiber?: number
+    // Vitamins (per 100g)
+    vitaminA?: number       // mcg RAE
+    vitaminB1?: number      // mg (Thiamin)
+    vitaminB2?: number      // mg (Riboflavin)
+    vitaminB3?: number      // mg (Niacin)
+    vitaminB6?: number      // mg
+    vitaminB12?: number     // mcg
+    vitaminC?: number       // mg
+    vitaminD?: number       // mcg
+    vitaminE?: number       // mg
+    vitaminK?: number       // mcg
+    folate?: number         // mcg
+    // Minerals (per 100g)
+    calcium?: number        // mg
+    iron?: number           // mg
+    magnesium?: number      // mg
+    phosphorus?: number     // mg
+    potassium?: number      // mg
+    sodium?: number         // mg
+    zinc?: number           // mg
+    selenium?: number       // mcg
+    iodine?: number         // mcg
   }> = [
     // KARBOHIDRAT
     {
@@ -56,12 +78,26 @@ export async function seedInventory() {
       storageCondition: 'DRY',
       isActive: true,
       sppgId: sppg.id,
-      // Nutrition per 100g
+      // Nutrition per 100g (TKPI Data)
       calories: 110,
       protein: 2.5,
       carbohydrates: 23,
       fat: 0.9,
-      fiber: 1.8
+      fiber: 1.8,
+      // Vitamins
+      vitaminB1: 0.15,
+      vitaminB2: 0.05,
+      vitaminB3: 1.9,
+      vitaminB6: 0.2,
+      folate: 8,
+      // Minerals
+      calcium: 10,
+      iron: 0.8,
+      magnesium: 43,
+      phosphorus: 108,
+      potassium: 86,
+      sodium: 1,
+      zinc: 1.1
     },
     {
       itemName: 'Beras Putih',
@@ -80,7 +116,21 @@ export async function seedInventory() {
       protein: 2.4,
       carbohydrates: 28,
       fat: 0.3,
-      fiber: 0.2
+      fiber: 0.2,
+      // Vitamins
+      vitaminB1: 0.07,
+      vitaminB2: 0.03,
+      vitaminB3: 1.6,
+      vitaminB6: 0.15,
+      folate: 3,
+      // Minerals
+      calcium: 6,
+      iron: 0.5,
+      magnesium: 12,
+      phosphorus: 43,
+      potassium: 35,
+      sodium: 1,
+      zinc: 0.6
     },
     {
       itemName: 'Tepung Terigu',
@@ -99,7 +149,21 @@ export async function seedInventory() {
       protein: 10,
       carbohydrates: 76,
       fat: 1,
-      fiber: 2.7
+      fiber: 2.7,
+      // Vitamins
+      vitaminB1: 0.4,
+      vitaminB2: 0.2,
+      vitaminB3: 4,
+      vitaminB6: 0.2,
+      folate: 26,
+      // Minerals
+      calcium: 15,
+      iron: 1.2,
+      magnesium: 22,
+      phosphorus: 108,
+      potassium: 107,
+      sodium: 2,
+      zinc: 0.7
     },
     {
       itemName: 'Mie Telur',
@@ -118,7 +182,22 @@ export async function seedInventory() {
       protein: 13,
       carbohydrates: 73,
       fat: 3.5,
-      fiber: 2
+      fiber: 2,
+      // Vitamins
+      vitaminA: 50,
+      vitaminB1: 0.3,
+      vitaminB2: 0.2,
+      vitaminB3: 3,
+      vitaminB6: 0.15,
+      folate: 20,
+      // Minerals
+      calcium: 20,
+      iron: 1.8,
+      magnesium: 25,
+      phosphorus: 120,
+      potassium: 95,
+      sodium: 400,
+      zinc: 1
     },
     {
       itemName: 'Tepung Beras',
@@ -137,7 +216,21 @@ export async function seedInventory() {
       protein: 6,
       carbohydrates: 80,
       fat: 0.7,
-      fiber: 1.3
+      fiber: 1.3,
+      // Vitamins
+      vitaminB1: 0.06,
+      vitaminB2: 0.02,
+      vitaminB3: 1.3,
+      vitaminB6: 0.1,
+      folate: 4,
+      // Minerals
+      calcium: 5,
+      iron: 0.4,
+      magnesium: 9,
+      phosphorus: 36,
+      potassium: 30,
+      sodium: 1,
+      zinc: 0.5
     },
     {
       itemName: 'Roti Gandum',
@@ -156,10 +249,25 @@ export async function seedInventory() {
       protein: 8.8,
       carbohydrates: 41,
       fat: 3.4,
-      fiber: 6.7
+      fiber: 6.7,
+      // Vitamins
+      vitaminB1: 0.2,
+      vitaminB2: 0.1,
+      vitaminB3: 3.5,
+      vitaminB6: 0.2,
+      vitaminE: 0.3,
+      folate: 30,
+      // Minerals
+      calcium: 100,
+      iron: 2.5,
+      magnesium: 70,
+      phosphorus: 180,
+      potassium: 220,
+      sodium: 450,
+      zinc: 1.5
     },
 
-    // PROTEIN
+    // PROTEIN HEWANI
     {
       itemName: 'Ayam Fillet',
       itemCode: 'AYM-001',
@@ -177,7 +285,24 @@ export async function seedInventory() {
       protein: 31,
       carbohydrates: 0,
       fat: 3.6,
-      fiber: 0
+      fiber: 0,
+      // Vitamins
+      vitaminA: 21,
+      vitaminB1: 0.08,
+      vitaminB2: 0.12,
+      vitaminB3: 10.9,
+      vitaminB6: 0.6,
+      vitaminB12: 0.3,
+      folate: 4,
+      // Minerals
+      calcium: 11,
+      iron: 0.9,
+      magnesium: 29,
+      phosphorus: 220,
+      potassium: 340,
+      sodium: 70,
+      zinc: 1.3,
+      selenium: 27
     },
     {
       itemName: 'Daging Sapi',
@@ -203,19 +328,215 @@ export async function seedInventory() {
       itemCode: 'TLR-001',
       category: 'PROTEIN',
       unit: 'kg',
-      currentStock: 30,
-      minStock: 15,
-      maxStock: 80,
+      currentStock: 50,
+      minStock: 30,
+      maxStock: 150,
       costPerUnit: 28000,
       storageLocation: 'Chiller',
       storageCondition: 'COOL',
       isActive: true,
       sppgId: sppg.id,
-      calories: 143,
-      protein: 13,
-      carbohydrates: 1.1,
-      fat: 10,
-      fiber: 0
+      calories: 155,
+      protein: 12.6,
+      carbohydrates: 0.7,
+      fat: 10.6,
+      fiber: 0,
+      // Vitamins (TKPI Data)
+      vitaminA: 160,
+      vitaminB1: 0.04,
+      vitaminB2: 0.44,
+      vitaminB3: 0.07,
+      vitaminB6: 0.17,
+      vitaminB12: 0.89,
+      vitaminD: 2,
+      vitaminE: 1,
+      folate: 47,
+      // Minerals
+      calcium: 50,
+      iron: 1.8,
+      magnesium: 12,
+      phosphorus: 198,
+      potassium: 138,
+      sodium: 124,
+      zinc: 1.3,
+      selenium: 30
+    },
+    {
+      itemName: 'Tempe',
+      itemCode: 'TMP-001',
+      category: 'PROTEIN',
+      unit: 'kg',
+      currentStock: 25,
+      minStock: 15,
+      maxStock: 60,
+      costPerUnit: 12000,
+      storageLocation: 'Chiller',
+      storageCondition: 'COOL',
+      isActive: true,
+      sppgId: sppg.id,
+      calories: 201,
+      protein: 20.8,
+      carbohydrates: 13.5,
+      fat: 8.8,
+      fiber: 1.4,
+      // Vitamins (TKPI Data)
+      vitaminB1: 0.15,
+      vitaminB2: 0.65,
+      vitaminB3: 4,
+      vitaminB6: 0.3,
+      vitaminB12: 0.08,
+      folate: 24,
+      // Minerals
+      calcium: 155,
+      iron: 4,
+      magnesium: 81,
+      phosphorus: 326,
+      potassium: 234,
+      sodium: 9,
+      zinc: 1.7
+    },
+    {
+      itemName: 'Tahu',
+      itemCode: 'TAH-001',
+      category: 'PROTEIN',
+      unit: 'kg',
+      currentStock: 18,
+      minStock: 8,
+      maxStock: 40,
+      costPerUnit: 10000,
+      storageLocation: 'Chiller',
+      storageCondition: 'COOL',
+      isActive: true,
+      sppgId: sppg.id,
+      calories: 76,
+      protein: 8,
+      carbohydrates: 1.9,
+      fat: 4.8,
+      fiber: 0.3,
+      // Vitamins (TKPI Data)
+      vitaminB1: 0.06,
+      vitaminB2: 0.05,
+      vitaminB3: 0.2,
+      vitaminB6: 0.05,
+      folate: 15,
+      // Minerals
+      calcium: 350,      // TINGGI kalsium!
+      iron: 5.4,         // TINGGI zat besi!
+      magnesium: 37,
+      phosphorus: 183,
+      potassium: 121,
+      sodium: 7,
+      zinc: 0.8
+    },
+    {
+      itemName: 'Kedelai Kuning',
+      itemCode: 'KDL-001',
+      category: 'PROTEIN',
+      unit: 'kg',
+      currentStock: 25,
+      minStock: 10,
+      maxStock: 80,
+      costPerUnit: 15000,
+      storageLocation: 'Gudang Kering',
+      storageCondition: 'DRY',
+      isActive: true,
+      sppgId: sppg.id,
+      calories: 446,
+      protein: 36,
+      carbohydrates: 30,
+      fat: 20,
+      fiber: 9.3,
+      // Vitamins
+      vitaminB1: 0.87,
+      vitaminB2: 0.87,
+      vitaminB3: 1.6,
+      vitaminB6: 0.38,
+      vitaminE: 0.85,
+      folate: 375,
+      // Minerals
+      calcium: 277,
+      iron: 15.7,
+      magnesium: 280,
+      phosphorus: 704,
+      potassium: 1797,
+      sodium: 2,
+      zinc: 4.9
+    },
+
+    // SAYURAN
+    {
+      itemName: 'Wortel',
+      itemCode: 'WRT-001',
+      category: 'SAYURAN',
+      unit: 'kg',
+      currentStock: 35,
+      minStock: 15,
+      maxStock: 100,
+      costPerUnit: 8000,
+      storageLocation: 'Chiller',
+      storageCondition: 'COOL',
+      isActive: true,
+      sppgId: sppg.id,
+      calories: 41,
+      protein: 0.9,
+      carbohydrates: 10,
+      fat: 0.2,
+      fiber: 2.8,
+      // Vitamins (TKPI Data)
+      vitaminA: 835,     // mcg RAE - SUPER TINGGI!
+      vitaminB1: 0.07,
+      vitaminB2: 0.06,
+      vitaminB3: 0.98,
+      vitaminB6: 0.14,
+      vitaminC: 6,
+      vitaminE: 0.66,
+      vitaminK: 13,
+      folate: 19,
+      // Minerals
+      calcium: 33,
+      iron: 0.3,
+      magnesium: 12,
+      phosphorus: 35,
+      potassium: 320,
+      sodium: 69,
+      zinc: 0.24
+    },
+    {
+      itemName: 'Bayam',
+      itemCode: 'BYM-001',
+      category: 'SAYURAN',
+      unit: 'kg',
+      currentStock: 20,
+      minStock: 10,
+      maxStock: 60,
+      costPerUnit: 6000,
+      storageLocation: 'Chiller',
+      storageCondition: 'COOL',
+      isActive: true,
+      sppgId: sppg.id,
+      calories: 23,
+      protein: 2.9,
+      carbohydrates: 3.6,
+      fat: 0.4,
+      fiber: 2.2,
+      // Vitamins (TKPI Data)
+      vitaminA: 469,
+      vitaminB1: 0.08,
+      vitaminB2: 0.19,
+      vitaminB3: 0.72,
+      vitaminB6: 0.2,
+      vitaminC: 28,
+      vitaminE: 2,
+      vitaminK: 483,     // SUPER TINGGI vitamin K!
+      folate: 194,
+      // Minerals
+      calcium: 99,
+      iron: 2.7,
+      magnesium: 79,
+      phosphorus: 49,
+      potassium: 558,
+      sodium: 79,
+      zinc: 0.5
     },
     {
       itemName: 'Ikan Nila',
@@ -407,7 +728,25 @@ export async function seedInventory() {
       protein: 1.5,
       carbohydrates: 2.2,
       fat: 0.2,
-      fiber: 1
+      fiber: 1,
+      // Vitamins (TKPI Data)
+      vitaminA: 969,
+      vitaminB1: 0.05,
+      vitaminB2: 0.1,
+      vitaminB3: 0.5,
+      vitaminB6: 0.09,
+      vitaminC: 52,
+      vitaminE: 0.8,
+      vitaminK: 389,
+      folate: 79,
+      // Minerals
+      calcium: 220,
+      iron: 2.9,
+      magnesium: 12,
+      phosphorus: 38,
+      potassium: 252,
+      sodium: 18,
+      zinc: 0.2
     },
     {
       itemName: 'Kentang',
@@ -426,7 +765,22 @@ export async function seedInventory() {
       protein: 2,
       carbohydrates: 17,
       fat: 0.1,
-      fiber: 2.2
+      fiber: 2.2,
+      // Vitamins
+      vitaminB1: 0.08,
+      vitaminB2: 0.03,
+      vitaminB3: 1.1,
+      vitaminB6: 0.3,
+      vitaminC: 20,
+      folate: 15,
+      // Minerals
+      calcium: 12,
+      iron: 0.8,
+      magnesium: 23,
+      phosphorus: 57,
+      potassium: 421,
+      sodium: 6,
+      zinc: 0.3
     },
     {
       itemName: 'Buncis',
@@ -445,7 +799,24 @@ export async function seedInventory() {
       protein: 1.8,
       carbohydrates: 7,
       fat: 0.2,
-      fiber: 2.7
+      fiber: 2.7,
+      // Vitamins
+      vitaminA: 35,
+      vitaminB1: 0.08,
+      vitaminB2: 0.1,
+      vitaminB3: 0.7,
+      vitaminB6: 0.14,
+      vitaminC: 12,
+      vitaminK: 43,
+      folate: 33,
+      // Minerals
+      calcium: 37,
+      iron: 1,
+      magnesium: 25,
+      phosphorus: 38,
+      potassium: 211,
+      sodium: 6,
+      zinc: 0.2
     },
     {
       itemName: 'Labu Siam',
@@ -464,7 +835,19 @@ export async function seedInventory() {
       protein: 0.8,
       carbohydrates: 4.5,
       fat: 0.1,
-      fiber: 1.7
+      fiber: 1.7,
+      // Vitamins
+      vitaminC: 7,
+      vitaminB6: 0.08,
+      folate: 18,
+      // Minerals
+      calcium: 17,
+      iron: 0.3,
+      magnesium: 12,
+      phosphorus: 18,
+      potassium: 125,
+      sodium: 2,
+      zinc: 0.7
     },
     {
       itemName: 'Kacang Panjang',
@@ -483,7 +866,26 @@ export async function seedInventory() {
       protein: 2.8,
       carbohydrates: 8,
       fat: 0.4,
-      fiber: 3.4
+      fiber: 3.4,
+      // Vitamins (TKPI Data - LENGKAP!)
+      vitaminA: 865,      // mcg RAE - TINGGI vitamin A!
+      vitaminB1: 0.09,    // mg (Thiamin)
+      vitaminB2: 0.11,    // mg (Riboflavin)
+      vitaminB3: 0.8,     // mg (Niacin)
+      vitaminB6: 0.14,    // mg
+      vitaminC: 18,       // mg - sumber vitamin C bagus
+      vitaminE: 0.6,      // mg
+      vitaminK: 43,       // mcg
+      folate: 42,         // mcg
+      // Minerals (TKPI Data)
+      calcium: 50,        // mg
+      iron: 0.7,          // mg
+      magnesium: 28,      // mg
+      phosphorus: 38,     // mg
+      potassium: 230,     // mg
+      sodium: 3,          // mg
+      zinc: 0.3,          // mg
+      selenium: 1         // mcg
     },
 
     // BUAH-BUAHAN

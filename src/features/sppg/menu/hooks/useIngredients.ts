@@ -41,7 +41,9 @@ export function useCreateIngredient(menuId: string) {
     onSuccess: () => {
       // Invalidate and refetch ingredients
       queryClient.invalidateQueries({ queryKey: ingredientKeys.menu(menuId) })
-      toast.success('Bahan berhasil ditambahkan')
+      toast.success('Bahan berhasil ditambahkan', {
+        description: '💡 Jangan lupa hitung ulang Nutrisi dan Biaya untuk melihat perubahan'
+      })
     },
     onError: (error: Error) => {
       toast.error(error.message || 'Gagal menambahkan bahan')
@@ -61,7 +63,9 @@ export function useUpdateIngredient(menuId: string) {
     onSuccess: () => {
       // Invalidate and refetch
       queryClient.invalidateQueries({ queryKey: ingredientKeys.menu(menuId) })
-      toast.success('Bahan berhasil diperbarui')
+      toast.success('Bahan berhasil diperbarui', {
+        description: '💡 Jangan lupa hitung ulang Nutrisi dan Biaya untuk melihat perubahan'
+      })
     },
     onError: (error: Error) => {
       toast.error(error.message || 'Gagal memperbarui bahan')
@@ -80,7 +84,9 @@ export function useDeleteIngredient(menuId: string) {
     onSuccess: () => {
       // Invalidate and refetch
       queryClient.invalidateQueries({ queryKey: ingredientKeys.menu(menuId) })
-      toast.success('Bahan berhasil dihapus')
+      toast.success('Bahan berhasil dihapus', {
+        description: '💡 Jangan lupa hitung ulang Nutrisi dan Biaya untuk melihat perubahan'
+      })
     },
     onError: (error: Error) => {
       toast.error(error.message || 'Gagal menghapus bahan')

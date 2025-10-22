@@ -72,6 +72,7 @@ export async function POST(
     }
 
     // 5. Calculate total ingredient cost
+    // CRITICAL: Scale ingredient quantities from 100g base to actual serving size
     let totalIngredientCost = new Prisma.Decimal(0)
     const ingredientBreakdown: Array<{
       inventoryItemId: string
@@ -84,14 +85,20 @@ export async function POST(
 
     for (const ingredient of menu.ingredients) {
       const itemCostPerUnit = ingredient.inventoryItem.costPerUnit || 0
-      const itemTotalCost = ingredient.quantity * itemCostPerUnit
+      
+      // BUG FIX: Scale quantity from 100g base to actual serving size
+      // Example: 0.12 kg (100g) → 0.156 kg (130g) for servingSize=130g
+      const actualQuantity = ingredient.quantity * (menu.servingSize / 100)
+      
+      // Calculate cost using actual scaled quantity
+      const itemTotalCost = actualQuantity * itemCostPerUnit
       const cost = new Prisma.Decimal(itemTotalCost)
       totalIngredientCost = totalIngredientCost.add(cost)
 
       ingredientBreakdown.push({
         inventoryItemId: ingredient.inventoryItemId,
         inventoryItemName: ingredient.inventoryItem.itemName,
-        quantity: ingredient.quantity,
+        quantity: actualQuantity, // Store actual scaled quantity, not 100g base
         unit: ingredient.inventoryItem.unit,
         costPerUnit: itemCostPerUnit,
         totalCost: itemTotalCost
@@ -101,22 +108,48 @@ export async function POST(
     // 6. Parse request body for cost details (optional)
     const body = await request.json().catch(() => ({}))
     
-    // Labor costs
-    const laborCostPerHour = new Prisma.Decimal(body.laborCostPerHour || 0)
-    const preparationHours = new Prisma.Decimal(body.preparationHours || 0)
-    const cookingHours = new Prisma.Decimal(body.cookingHours || 0)
+    // REALISTIC DEFAULTS based on SPPG operations in Indonesia
+    // These are calculated per batch (plannedPortions or batchSize)
+    const defaultPlannedPortions = body.plannedPortions || menu.batchSize || 100
+    
+    // Labor costs - Based on UMR Jakarta 2024 (~Rp 5,000,000/month = ~Rp 25,000/hour)
+    // Typical SPPG cooking staff: Rp 15,000-25,000/hour
+    const laborCostPerHour = new Prisma.Decimal(body.laborCostPerHour ?? 20000) // Rp 20,000/hour
+    
+    // Preparation + Cooking time estimation based on batch size
+    // Small batch (<50): 1.5 hours, Medium (50-150): 2.5 hours, Large (>150): 4 hours
+    let defaultHours = 2.5
+    if (defaultPlannedPortions < 50) {
+      defaultHours = 1.5
+    } else if (defaultPlannedPortions > 150) {
+      defaultHours = 4.0
+    }
+    
+    const preparationHours = new Prisma.Decimal(body.preparationHours ?? defaultHours * 0.4) // 40% prep
+    const cookingHours = new Prisma.Decimal(body.cookingHours ?? defaultHours * 0.6) // 60% cooking
     const totalLaborCost = laborCostPerHour.mul(preparationHours.add(cookingHours))
 
-    // Utility costs
-    const gasCost = new Prisma.Decimal(body.gasCost || 0)
-    const electricityCost = new Prisma.Decimal(body.electricityCost || 0)
-    const waterCost = new Prisma.Decimal(body.waterCost || 0)
+    // Utility costs per batch
+    // Gas: LPG 3kg = Rp 20,000, typically used 1/4 per batch = Rp 5,000
+    // Electricity: ~500W x 2 hours = 1 kWh x Rp 1,500 = Rp 1,500
+    // Water: ~100 liters x Rp 10 = Rp 1,000
+    const gasCost = new Prisma.Decimal(body.gasCost ?? 5000) // Rp 5,000 per batch
+    const electricityCost = new Prisma.Decimal(body.electricityCost ?? 1500) // Rp 1,500 per batch
+    const waterCost = new Prisma.Decimal(body.waterCost ?? 1000) // Rp 1,000 per batch
     const totalUtilityCost = gasCost.add(electricityCost).add(waterCost)
 
-    // Other operational costs
-    const packagingCost = new Prisma.Decimal(body.packagingCost || 0)
-    const equipmentCost = new Prisma.Decimal(body.equipmentCost || 0)
-    const cleaningCost = new Prisma.Decimal(body.cleaningCost || 0)
+    // Other operational costs per batch
+    // Packaging: Plastik/box = Rp 500-1000 per porsi
+    const packagingCostPerPortion = 500 // Rp 500/porsi
+    const packagingCost = new Prisma.Decimal(
+      body.packagingCost ?? (packagingCostPerPortion * defaultPlannedPortions)
+    )
+    
+    // Equipment depreciation: Kompor, panci, alat masak ~Rp 10jt / 5 tahun / 250 hari kerja = Rp 8,000/hari
+    const equipmentCost = new Prisma.Decimal(body.equipmentCost ?? 8000) // Rp 8,000 per batch
+    
+    // Cleaning supplies: Sabun, tissue, dll = Rp 5,000 per batch
+    const cleaningCost = new Prisma.Decimal(body.cleaningCost ?? 5000) // Rp 5,000 per batch
 
     // Overhead
     const overheadPercentage = new Prisma.Decimal(body.overheadPercentage || 15)
@@ -130,7 +163,8 @@ export async function POST(
     const grandTotalCost = totalDirectCost.add(totalIndirectCost)
 
     // Per portion calculation
-    const plannedPortions = body.plannedPortions || 1
+    // Use batchSize as default if plannedPortions not provided in request
+    const plannedPortions = body.plannedPortions || menu.batchSize || 1
     const costPerPortion = grandTotalCost.div(plannedPortions)
 
     // Budget allocation (optional for SPPG budget planning)

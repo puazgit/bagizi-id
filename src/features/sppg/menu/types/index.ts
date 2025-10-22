@@ -187,7 +187,7 @@ export interface MenuNutritionCalculation {
   totalVitaminD: number
   totalVitaminE: number
   totalVitaminK: number
-  totalFolat: number
+  totalFolate: number
   
   // Minerals (calculated)
   totalCalcium: number

@@ -1074,6 +1074,28 @@ model InventoryItem {
   carbohydrates       Float?
   fat                 Float?
   fiber               Float?
+  // Vitamins (per 100g)
+  vitaminA            Float?
+  vitaminB1           Float?
+  vitaminB2           Float?
+  vitaminB3           Float?
+  vitaminB6           Float?
+  vitaminB12          Float?
+  vitaminC            Float?
+  vitaminD            Float?
+  vitaminE            Float?
+  vitaminK            Float?
+  folate              Float?
+  // Minerals (per 100g)
+  calcium             Float?
+  iron                Float?
+  magnesium           Float?
+  phosphorus          Float?
+  potassium           Float?
+  sodium              Float?
+  zinc                Float?
+  selenium            Float?
+  iodine              Float?
   isActive            Boolean                @default(true)
   createdAt           DateTime               @default(now())
   updatedAt           DateTime               @updatedAt
@@ -1742,7 +1764,7 @@ model MenuNutritionCalculation {
   totalVitaminD           Float                 @default(0)
   totalVitaminE           Float                 @default(0)
   totalVitaminK           Float                 @default(0)
-  totalFolat              Float                 @default(0)
+  totalFolate             Float                 @default(0)
   totalCalcium            Float                 @default(0)
   totalPhosphorus         Float                 @default(0)
   totalIron               Float                 @default(0)

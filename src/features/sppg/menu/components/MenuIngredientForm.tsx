@@ -108,8 +108,8 @@ export function MenuIngredientForm({
           itemName: ingredient.inventoryItem.itemName,
           unit: ingredient.inventoryItem.unit,
           costPerUnit: ingredient.inventoryItem.costPerUnit || 0,
-          currentStock: 0, // We don't have this in MenuIngredient type
-          minStock: 0
+          currentStock: ingredient.inventoryItem.currentStock, // ✅ FIX: Use actual stock from API
+          minStock: ingredient.inventoryItem.minStock           // ✅ FIX: Use actual minStock from API
         } as InventoryItem)
       }
     }
@@ -226,6 +226,15 @@ export function MenuIngredientForm({
         { ingredientId: ingredient.id, data: apiData },
         { 
           onSuccess: () => {
+            // ✅ FIX: Reset form to empty state after successful update
+            form.reset({
+              inventoryItemId: '',
+              quantity: 0,
+              preparationNotes: undefined,
+              isOptional: false,
+              substitutes: []
+            })
+            setSelectedInventoryItem(null) // Reset inventory selection
             onSuccess?.()
           }
         }
@@ -233,7 +242,14 @@ export function MenuIngredientForm({
     } else {
       createIngredient(apiData, { 
         onSuccess: () => {
-          form.reset() // Reset form after successful creation
+          // Reset form to empty state after successful creation
+          form.reset({
+            inventoryItemId: '',
+            quantity: 0,
+            preparationNotes: undefined,
+            isOptional: false,
+            substitutes: []
+          })
           setSelectedInventoryItem(null) // Reset inventory selection
           onSuccess?.()
         }
@@ -345,11 +361,11 @@ export function MenuIngredientForm({
                       disabled={isEditing} // Disable when editing
                     >
                       <FormControl>
-                        <SelectTrigger id="inventory-selector">
+                        <SelectTrigger id="inventory-selector" className="w-full">
                           <SelectValue placeholder="Pilih bahan dari inventory..." />
                         </SelectTrigger>
                       </FormControl>
-                      <SelectContent>
+                      <SelectContent className="max-w-[var(--radix-select-trigger-width)]">
                         {isLoadingInventory ? (
                           <SelectItem value="loading" disabled>Memuat...</SelectItem>
                         ) : (

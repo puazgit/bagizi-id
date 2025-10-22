@@ -44,10 +44,18 @@ const QUERY_KEYS = {
 export function useMenus(filters?: Partial<MenuFilters>) {
   return useQuery({
     queryKey: [...QUERY_KEYS.menus, filters],
-    queryFn: () => menuApi.getMenus(filters),
+    queryFn: async () => {
+      console.log('🔄 useMenus: Fetching menu data...')
+      const result = await menuApi.getMenus(filters)
+      console.log('✅ useMenus: Data fetched', {
+        totalMenus: result.data?.menus?.length,
+        firstMenuWithCost: result.data?.menus?.find(m => m.costCalc)?.menuName
+      })
+      return result
+    },
     select: (data) => data.data,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 10 * 60 * 1000, // 10 minutes
+    staleTime: 0, // Always consider data stale, refetch on mount when invalidated
+    gcTime: 10 * 60 * 1000, // 10 minutes - keep in cache for navigation
   })
 }
 

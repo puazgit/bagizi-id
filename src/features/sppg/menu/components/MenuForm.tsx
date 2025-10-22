@@ -37,7 +37,6 @@ import {
   ChefHat, 
   Clock, 
   DollarSign, 
-  Users, 
   CheckCircle,
   Loader2,
   Info
@@ -45,6 +44,7 @@ import {
 import { cn } from '@/lib/utils'
 import { useCreateMenu, useUpdateMenu } from '../hooks'
 import { useAllergenOptions } from '../hooks/useAllergens'
+import { usePrograms } from '../hooks/usePrograms'
 import { menuCreateSchema } from '../schemas'
 import type { Menu, MenuUpdateInput, MenuInput } from '../types'
 import type { MealType } from '@prisma/client'
@@ -126,8 +126,25 @@ export function MenuForm({
   // Fetch allergens from database
   const { options: allergenOptions, isLoading: isLoadingAllergens } = useAllergenOptions()
 
+  // Fetch programs from database
+  const { data: programs, isLoading: isLoadingPrograms } = usePrograms()
+
   // ================================ FORM SETUP ================================
   
+  // Auto-generate menu code based on meal type and timestamp
+  const generateMenuCode = React.useCallback((mealType: MealType) => {
+    const prefix = {
+      'SARAPAN': 'SAR',
+      'SNACK_PAGI': 'SNP',
+      'MAKAN_SIANG': 'MKS',
+      'SNACK_SORE': 'SNS',
+      'MAKAN_MALAM': 'MKM'
+    }[mealType] || 'MNU'
+    
+    const timestamp = Date.now().toString().slice(-6)
+    return `${prefix}-${timestamp}`
+  }, [])
+
   const form = useForm({
     resolver: zodResolver(menuCreateSchema),
     defaultValues: isEditing ? {
@@ -137,12 +154,12 @@ export function MenuForm({
       description: menu.description || '',
       mealType: menu.mealType,
       servingSize: menu.servingSize,
-      cookingTime: menu.cookingTime || undefined,
-      preparationTime: menu.preparationTime || undefined,
+      cookingTime: menu.cookingTime,
+      preparationTime: menu.preparationTime,
       difficulty: (menu.difficulty as 'EASY' | 'MEDIUM' | 'HARD' | undefined) || undefined,
       cookingMethod: (menu.cookingMethod as 'STEAM' | 'BOIL' | 'FRY' | 'BAKE' | 'GRILL' | 'ROAST' | undefined) || undefined,
-      batchSize: menu.batchSize || undefined,
-      budgetAllocation: menu.budgetAllocation || undefined,
+      batchSize: menu.batchSize,
+      budgetAllocation: menu.budgetAllocation,
       allergens: menu.allergens || [],
       isHalal: menu.isHalal,
       isVegetarian: menu.isVegetarian,
@@ -170,27 +187,35 @@ export function MenuForm({
   // ================================ FORM HANDLERS ================================
 
   const onSubmit = (data: MenuFormData) => {
+    console.log('🎯 MenuForm onSubmit called', { isEditing, data })
+    
     if (isEditing && menu) {
+      console.log('📝 Updating menu', menu.id)
       updateMenu(
         { id: menu.id, data: data as unknown as Partial<MenuUpdateInput> },
         {
           onSuccess: (response) => {
+            console.log('✅ Update menu success', response)
             toast.success('Menu berhasil diperbarui')
             onSuccess?.(response.data!)
           },
           onError: (error) => {
+            console.error('❌ Update menu error', error)
             toast.error(error.message)
           }
         }
       )
     } else {
+      console.log('➕ Creating new menu', data)
       createMenu(data as unknown as MenuInput, {
         onSuccess: (response) => {
+          console.log('✅ Create menu success', response)
           toast.success('Menu berhasil dibuat')
           form.reset()
           onSuccess?.(response.data!.menu)
         },
         onError: (error) => {
+          console.error('❌ Create menu error', error)
           toast.error(error.message)
         }
       })
@@ -233,7 +258,19 @@ export function MenuForm({
 
       <CardContent>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+          <form 
+            onSubmit={(e) => {
+              console.log('📋 Form submit event triggered')
+              e.preventDefault()
+              form.handleSubmit((data) => {
+                console.log('🔍 Form validation passed, calling onSubmit', data)
+                onSubmit(data)
+              }, (errors) => {
+                console.error('❌ Form validation failed', errors)
+              })()
+            }} 
+            className="space-y-8"
+          >
             
             {/* Basic Information Section */}
             <div className="space-y-6">
@@ -244,7 +281,37 @@ export function MenuForm({
                 <Info className="h-4 w-4 text-muted-foreground" />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Program Gizi */}
+                <FormField
+                  control={form.control}
+                  name="programId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Program Gizi *</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                        disabled={isEditing || isLoadingPrograms}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Pilih program..." />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent className="max-w-[var(--radix-select-trigger-width)]">
+                          {programs?.map((program) => (
+                            <SelectItem key={program.id} value={program.id}>
+                              {program.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
                 {/* Menu Name */}
                 <FormField
                   control={form.control}
@@ -258,14 +325,13 @@ export function MenuForm({
                           {...field}
                         />
                       </FormControl>
-                      <FormDescription>
-                        Nama menu yang jelas dan menarik
-                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
+              </div>
 
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Menu Code */}
                 <FormField
                   control={form.control}
@@ -274,15 +340,29 @@ export function MenuForm({
                     <FormItem>
                       <FormLabel>Kode Menu *</FormLabel>
                       <FormControl>
-                        <Input 
-                          placeholder="MN-GDG-001"
-                          {...field}
-                          className="font-mono"
-                        />
+                        <div className="flex gap-2">
+                          <Input 
+                            placeholder="MN-GDG-001"
+                            {...field}
+                            className="font-mono"
+                            readOnly={!isEditing}
+                          />
+                          {!isEditing && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => {
+                                const mealType = form.getValues('mealType')
+                                const newCode = generateMenuCode(mealType)
+                                form.setValue('menuCode', newCode)
+                              }}
+                              className="shrink-0"
+                            >
+                              Generate
+                            </Button>
+                          )}
+                        </div>
                       </FormControl>
-                      <FormDescription>
-                        Kode unik untuk identifikasi menu
-                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -303,16 +383,13 @@ export function MenuForm({
                         {...field}
                       />
                     </FormControl>
-                    <FormDescription>
-                      Jelaskan menu ini untuk memudahkan identifikasi
-                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
 
               {/* Meal Type & Serving Size */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name="mealType"
@@ -321,14 +398,14 @@ export function MenuForm({
                       <FormLabel>Jenis Makanan *</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
-                          <SelectTrigger>
+                          <SelectTrigger className="w-full">
                             <SelectValue placeholder="Pilih jenis makanan" />
                           </SelectTrigger>
                         </FormControl>
-                        <SelectContent>
+                        <SelectContent className="max-w-[var(--radix-select-trigger-width)]">
                           {MEAL_TYPE_OPTIONS.map((option) => (
                             <SelectItem key={option.value} value={option.value}>
-                              <div className="flex flex-col">
+                              <div className="flex flex-col items-start text-left">
                                 <span>{option.label}</span>
                                 <span className="text-xs text-muted-foreground">
                                   {option.description}
@@ -348,10 +425,7 @@ export function MenuForm({
                   name="servingSize"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="flex items-center gap-2">
-                        <Users className="h-4 w-4" />
-                        Ukuran Porsi (gram) *
-                      </FormLabel>
+                      <FormLabel>Ukuran Porsi (gram) *</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -362,9 +436,6 @@ export function MenuForm({
                           onChange={(e) => field.onChange(Number(e.target.value))}
                         />
                       </FormControl>
-                      <FormDescription>
-                        Berat porsi per anak dalam gram (50-1000g)
-                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -383,7 +454,7 @@ export function MenuForm({
                 <Clock className="h-4 w-4 text-muted-foreground" />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {/* Cooking Time */}
                 <FormField
                   control={form.control}
@@ -397,8 +468,11 @@ export function MenuForm({
                           min="1"
                           max="480"
                           placeholder="30"
-                          {...field}
+                          value={field.value ?? ''}
                           onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
+                          name={field.name}
+                          onBlur={field.onBlur}
+                          ref={field.ref}
                         />
                       </FormControl>
                       <FormMessage />
@@ -419,8 +493,11 @@ export function MenuForm({
                           min="1"
                           max="240"
                           placeholder="15"
-                          {...field}
+                          value={field.value ?? ''}
                           onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
+                          name={field.name}
+                          onBlur={field.onBlur}
+                          ref={field.ref}
                         />
                       </FormControl>
                       <FormMessage />
@@ -441,20 +518,20 @@ export function MenuForm({
                           min="1"
                           max="1000"
                           placeholder="50"
-                          {...field}
+                          value={field.value ?? ''}
                           onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
+                          name={field.name}
+                          onBlur={field.onBlur}
+                          ref={field.ref}
                         />
                       </FormControl>
-                      <FormDescription>
-                        Jumlah porsi per batch produksi
-                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Cooking Method */}
                 <FormField
                   control={form.control}
@@ -464,11 +541,11 @@ export function MenuForm({
                       <FormLabel>Metode Memasak</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value || undefined}>
                         <FormControl>
-                          <SelectTrigger>
+                          <SelectTrigger className="w-full">
                             <SelectValue placeholder="Pilih metode memasak" />
                           </SelectTrigger>
                         </FormControl>
-                        <SelectContent>
+                        <SelectContent className="max-w-[var(--radix-select-trigger-width)]">
                           {COOKING_METHODS.map((method) => (
                             <SelectItem key={method.value} value={method.value}>
                               {method.label}
@@ -490,11 +567,11 @@ export function MenuForm({
                       <FormLabel>Tingkat Kesulitan</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value || undefined}>
                         <FormControl>
-                          <SelectTrigger>
+                          <SelectTrigger className="w-full">
                             <SelectValue placeholder="Pilih tingkat kesulitan" />
                           </SelectTrigger>
                         </FormControl>
-                        <SelectContent>
+                        <SelectContent className="max-w-[var(--radix-select-trigger-width)]">
                           {DIFFICULTY_LEVELS.map((level) => (
                             <SelectItem key={level.value} value={level.value}>
                               <div className="flex flex-col">
@@ -531,20 +608,20 @@ export function MenuForm({
                 name="budgetAllocation"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Alokasi Anggaran (Rupiah)</FormLabel>
+                    <FormLabel>Alokasi Anggaran per Porsi (Rupiah)</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
                         min="0"
                         step="1000"
                         placeholder="25000"
-                        {...field}
+                        value={field.value ?? ''}
                         onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
+                        name={field.name}
+                        onBlur={field.onBlur}
+                        ref={field.ref}
                       />
                     </FormControl>
-                    <FormDescription>
-                      Anggaran maksimal per porsi untuk menu ini
-                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -607,26 +684,21 @@ export function MenuForm({
               />
 
               {/* Dietary Preferences */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name="isHalal"
                   render={({ field }) => (
-                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                    <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4">
                       <FormControl>
                         <Checkbox
                           checked={field.value}
                           onCheckedChange={field.onChange}
                         />
                       </FormControl>
-                      <div className="space-y-1 leading-none">
-                        <FormLabel>
-                          Menu Halal
-                        </FormLabel>
-                        <FormDescription>
-                          Menu ini menggunakan bahan-bahan halal
-                        </FormDescription>
-                      </div>
+                      <FormLabel className="cursor-pointer">
+                        Menu Halal
+                      </FormLabel>
                     </FormItem>
                   )}
                 />
@@ -635,21 +707,16 @@ export function MenuForm({
                   control={form.control}
                   name="isVegetarian"
                   render={({ field }) => (
-                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                    <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4">
                       <FormControl>
                         <Checkbox
                           checked={field.value}
                           onCheckedChange={field.onChange}
                         />
                       </FormControl>
-                      <div className="space-y-1 leading-none">
-                        <FormLabel>
-                          Menu Vegetarian
-                        </FormLabel>
-                        <FormDescription>
-                          Menu ini tidak mengandung daging dan ikan
-                        </FormDescription>
-                      </div>
+                      <FormLabel className="cursor-pointer">
+                        Menu Vegetarian
+                      </FormLabel>
                     </FormItem>
                   )}
                 />
@@ -661,14 +728,9 @@ export function MenuForm({
                 name="isActive"
                 render={({ field }) => (
                   <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                    <div className="space-y-0.5">
-                      <FormLabel className="text-base">
-                        Status Menu
-                      </FormLabel>
-                      <FormDescription>
-                        Menu aktif dapat digunakan dalam perencanaan
-                      </FormDescription>
-                    </div>
+                    <FormLabel className="text-base cursor-pointer">
+                      Status Menu Aktif
+                    </FormLabel>
                     <FormControl>
                       <Checkbox
                         checked={field.value}

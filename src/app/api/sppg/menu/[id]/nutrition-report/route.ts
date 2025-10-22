@@ -131,7 +131,7 @@ export async function GET(
         vitaminB3: menu.nutritionCalc.totalVitaminB3 || 0,
         vitaminB6: menu.nutritionCalc.totalVitaminB6 || 0,
         vitaminB12: menu.nutritionCalc.totalVitaminB12 || 0,
-        folate: menu.nutritionCalc.totalFolat || 0,
+        folate: menu.nutritionCalc.totalFolate || 0,
         calcium: menu.nutritionCalc.totalCalcium || 0,
         iron: menu.nutritionCalc.totalIron || 0,
         magnesium: menu.nutritionCalc.totalMagnesium || 0,
@@ -179,21 +179,41 @@ export async function GET(
       akgCompliant: menu.nutritionCalc.meetsAKG || false,
       complianceScore: calculateComplianceScore(menu.nutritionCalc),
       
-      // Ingredients breakdown
-      ingredients: menu.ingredients.map(ing => ({
-        ingredientName: ing.inventoryItem.itemName,
-        quantity: ing.quantity,
-        unit: ing.inventoryItem.unit,
-        calories: ing.inventoryItem?.calories || 0,
-        protein: ing.inventoryItem?.protein || 0,
-        carbohydrates: ing.inventoryItem?.carbohydrates || 0,
-        fat: ing.inventoryItem?.fat || 0,
-        fiber: ing.inventoryItem?.fiber || 0,
-        inventoryItem: ing.inventoryItem ? {
-          itemName: ing.inventoryItem.itemName,
-          itemCode: ing.inventoryItem.id // Using id as code fallback
-        } : undefined
-      })),
+      // Ingredients breakdown - calculate actual contribution based on quantity
+      ingredients: menu.ingredients.map(ing => {
+        const item = ing.inventoryItem
+        
+        // Convert quantity to grams for calculation
+        let quantityInGrams = ing.quantity
+        const unit = item.unit?.toLowerCase() || 'kg'
+        
+        if (unit === 'kg' || unit === 'kilogram') {
+          quantityInGrams = ing.quantity * 1000
+        } else if (unit === 'liter' || unit === 'l') {
+          quantityInGrams = ing.quantity * 1000
+        } else if (unit === 'lembar' || unit === 'pcs' || unit === 'piece') {
+          quantityInGrams = ing.quantity * 100
+        }
+        
+        // Calculate nutrition contribution (per 100g × quantity factor)
+        const factor = quantityInGrams / 100
+        
+        return {
+          ingredientName: item.itemName,
+          quantity: ing.quantity,
+          unit: item.unit,
+          // Actual contribution to menu (not per 100g!)
+          calories: (item.calories || 0) * factor,
+          protein: (item.protein || 0) * factor,
+          carbohydrates: (item.carbohydrates || 0) * factor,
+          fat: (item.fat || 0) * factor,
+          fiber: (item.fiber || 0) * factor,
+          inventoryItem: {
+            itemName: item.itemName,
+            itemCode: item.id
+          }
+        }
+      }),
       
       // Metadata
       calculatedAt: menu.nutritionCalc.calculatedAt.toISOString()
