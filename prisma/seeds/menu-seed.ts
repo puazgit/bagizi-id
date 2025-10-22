@@ -94,12 +94,12 @@ async function seedNutritionPrograms(
   const programs = await Promise.all([
     // Program 1: Program Makan Siang Anak Sekolah
     prisma.nutritionProgram.upsert({
-      where: { programCode: 'PWK-PMAS-2024' },
+      where: { programCode: 'PWK-PMAS-2025' },
       update: {},
       create: {
         sppgId: sppg.id,
-        programCode: 'PWK-PMAS-2024',
-        name: 'Program Makan Siang Anak Sekolah Purwakarta 2024',
+        programCode: 'PWK-PMAS-2025',
+        name: 'Program Makan Siang Anak Sekolah Purwakarta 2025',
         description: 'Program penyediaan makan siang bergizi untuk siswa SD/MI di wilayah Purwakarta',
         programType: 'SUPPLEMENTARY_FEEDING',
         targetGroup: 'SCHOOL_CHILDREN',
@@ -112,8 +112,8 @@ async function seedNutritionPrograms(
         fiberTarget: 8, // 8 gram serat
 
         // Schedule
-        startDate: new Date('2024-01-15'),
-        endDate: new Date('2024-12-20'),
+        startDate: new Date('2025-01-15'),
+        endDate: new Date('2025-12-20'),
         feedingDays: [1, 2, 3, 4, 5], // Senin-Jumat
         mealsPerDay: 1, // 1 kali makan siang
 
@@ -144,12 +144,12 @@ async function seedNutritionPrograms(
 
     // Program 2: Program Makanan Tambahan Anak (PMT)
     prisma.nutritionProgram.upsert({
-      where: { programCode: 'PWK-PMT-2024' },
+      where: { programCode: 'PWK-PMT-2025' },
       update: {},
       create: {
         sppgId: sppg.id,
-        programCode: 'PWK-PMT-2024',
-        name: 'Program Makanan Tambahan Anak Purwakarta 2024',
+        programCode: 'PWK-PMT-2025',
+        name: 'Program Makanan Tambahan Anak Purwakarta 2025',
         description: 'Program penyediaan snack sehat bergizi untuk anak-anak prasekolah (PAUD/TK)',
         programType: 'SUPPLEMENTARY_FEEDING',
         targetGroup: 'TODDLER',
@@ -162,8 +162,8 @@ async function seedNutritionPrograms(
         fiberTarget: 5, // 5 gram serat
 
         // Schedule
-        startDate: new Date('2024-02-01'),
-        endDate: new Date('2024-12-31'),
+        startDate: new Date('2025-02-01'),
+        endDate: new Date('2025-12-31'),
         feedingDays: [1, 2, 3, 4, 5, 6], // Senin-Sabtu
         mealsPerDay: 2, // 2 kali snack (pagi dan sore)
 
@@ -199,8 +199,8 @@ async function seedNutritionMenus(
   prisma: PrismaClient,
   programs: NutritionProgram[]
 ): Promise<NutritionMenu[]> {
-  const schoolLunchProgram = programs.find(p => p.programCode === 'PWK-PMAS-2024')!
-  const snackProgram = programs.find(p => p.programCode === 'PWK-PMT-2024')!
+  const schoolLunchProgram = programs.find(p => p.programCode === 'PWK-PMAS-2025')!
+  const snackProgram = programs.find(p => p.programCode === 'PWK-PMT-2025')!
 
   const menus = await Promise.all([
     // === MENU MAKAN SIANG (5 menus) ===

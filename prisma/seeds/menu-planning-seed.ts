@@ -11,7 +11,7 @@
  * IMPORTANT: This seed works with existing SPPG Demo 2025 data:
  * - SPPG Code: DEMO-2025 (SPPG Demo 2025)
  * - Admin User: ahligizi@demo.sppg.id (Ahli Gizi Demo)
- * - Program: PWK-PMAS-2024 (Program Makan Siang Anak Sekolah)
+ * - Program: PWK-PMAS-2025 (Program Makan Siang Anak Sekolah)
  */
 
 import { PrismaClient, SPPG, User, MenuPlanStatus, AssignmentStatus, MealType } from '@prisma/client'
@@ -49,7 +49,7 @@ export async function seedMenuPlanning(
     return
   }
 
-  const program = programs[0] // Use first program (PWK-PMAS-2024)
+  const program = programs[0] // Use first program (PWK-PMAS-2025)
 
   // Get Menus for this program with their nutrition and cost calculations
   const menus = await prisma.nutritionMenu.findMany({
