@@ -14,7 +14,7 @@ export async function seedProduction(
 
   try {
     // Get SPPG Purwakarta from passed data
-    const sppg = sppgs.find(s => s.code === 'DEMO-SPPG-001')
+    const sppg = sppgs.find(s => s.code === 'DEMO-2025')
     if (!sppg) {
       console.warn('  ⚠️  SPPG Purwakarta not found, skipping production seed')
       return []

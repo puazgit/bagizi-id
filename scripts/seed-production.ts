@@ -23,37 +23,45 @@ async function main() {
 
   // Import and run seed modules
   const { seedSppg } = await import('../prisma/seeds/sppg-seed')
-  const { seedUsers } = await import('../prisma/seeds/user-seed')
+  const { seedDemoUsers2025 } = await import('../prisma/seeds/user-seed')
+  const { seedRegional } = await import('../prisma/seeds/regional-seed')
   const { seedNutrition } = await import('../prisma/seeds/nutrition-seed')
   const { seedInventory } = await import('../prisma/seeds/inventory-seed')
   const { seedMenu } = await import('../prisma/seeds/menu-seed')
 
   try {
-    console.log('1️⃣ Seeding SPPG entities...')
+    console.log('1️⃣ Seeding SPPG Demo 2025...')
     const sppgResult = await seedSppg(prisma)
-    console.log(`   ✅ Created ${sppgResult.sppgs.length} SPPG entities`)
+    const demoSppg = sppgResult.sppgs[0]
+    console.log(`   ✅ Created Demo SPPG: ${demoSppg.code}`)
 
-    console.log('2️⃣ Seeding users and roles...')
-    const users = await seedUsers(prisma, sppgResult.sppgs)
-    console.log(`   ✅ Created ${users.length} users`)
+    console.log('2️⃣ Seeding regional data (Purwakarta)...')
+    await seedRegional(prisma)
+    console.log('   ✅ Regional data seeded')
 
-    console.log('3️⃣ Seeding nutrition standards...')
+    console.log('3️⃣ Seeding comprehensive demo users (all roles)...')
+    const users = await seedDemoUsers2025(prisma, sppgResult.sppgs)
+    console.log(`   ✅ Created ${users.length} demo users`)
+
+    console.log('4️⃣ Seeding nutrition standards...')
     await seedNutrition(prisma)
-    console.log('   ✅ Nutrition data seeded')
+    console.log('   ✅ Nutrition standards seeded')
 
-    console.log('4️⃣ Seeding inventory items...')
+    console.log('5️⃣ Seeding inventory items...')
     await seedInventory()
-    console.log('   ✅ Inventory seeded')
+    console.log('   ✅ Inventory items seeded')
 
-    console.log('5️⃣ Seeding menu items...')
-    await seedMenu(prisma, sppgResult.sppgs, users)
-    console.log('   ✅ Menu seeded')
+    console.log('6️⃣ Seeding menu data (programs, menus, ingredients, nutrition & cost)...')
+    const menuPrograms = await seedMenu(prisma, sppgResult.sppgs, users)
+    console.log(`   ✅ Menu data seeded (${menuPrograms.length} programs)`)
 
-    console.log('🎉 Production database seeding completed successfully!')
+    console.log('\n🎉 Demo 2025 database seeding completed!')
     console.log('\n📝 Summary:')
-    console.log(`   - SPPG Entities: ${sppgResult.sppgs.length}`)
-    console.log(`   - Users: ${users.length}`)
-    console.log(`   - Ready for production use`)
+    console.log(`   - Demo SPPG: ${demoSppg.code} (${demoSppg.name})`)
+    console.log(`   - Demo Users: ${users.length} (All roles)`)
+    console.log(`   - Menu Programs: ${menuPrograms.length} (with complete ingredients)`)
+    console.log(`   - Password: demo2025`)
+    console.log(`   - Ready for comprehensive testing`)
 
   } catch (error) {
     console.error('❌ Error during seeding:', error)

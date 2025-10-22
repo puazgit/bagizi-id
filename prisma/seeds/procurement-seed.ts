@@ -35,7 +35,7 @@ export async function seedProcurement(
   console.log('  → Creating Procurement domain data for SPPG Purwakarta...')
 
   // Step 1: Find SPPG Purwakarta from passed data
-  const sppg = sppgs.find(s => s.code === 'DEMO-SPPG-001')
+  const sppg = sppgs.find(s => s.code === 'DEMO-2025')
   if (!sppg) {
     console.warn('  ⚠️  SPPG Purwakarta not found, skipping procurement seed')
     return

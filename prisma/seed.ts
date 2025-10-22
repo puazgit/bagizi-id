@@ -7,7 +7,8 @@
 
 import { PrismaClient } from '@prisma/client'
 import { seedSppg } from './seeds/sppg-seed'
-import { seedUsers } from './seeds/user-seed'
+import { seedDemoUsers2025 } from './seeds/user-seed'
+import { seedRegional } from './seeds/regional-seed'
 import { seedNutrition } from './seeds/nutrition-seed'
 import { seedInventory } from './seeds/inventory-seed'
 import { seedMenu } from './seeds/menu-seed'
@@ -17,7 +18,7 @@ import { seedMenuPlanning } from './seeds/menu-planning-seed'
 import { seedProcurement } from './seeds/procurement-seed'
 import { seedProduction } from './seeds/production-seed'
 import { seedVehicles } from './seeds/vehicle-seed'
-import { seedDistributionComprehensive } from './seeds/distribution-comprehensive-seed'
+import { seedDistributionComprehensive } from './seeds/distribution-seed'
 
 const prisma = new PrismaClient()
 
@@ -84,38 +85,47 @@ async function resetDatabase() {
 }
 
 async function main() {
-  console.log('🌱 Starting database seeding...')
+  console.log('🌱 Starting Bagizi-ID Demo 2025 Database Seeding...')
+  console.log('📅 Date: October 22, 2025')
   console.log('')
 
   try {
-    // Step 0: Reset database first
+    // Step 0: Reset database first (cleans all existing data)
     await resetDatabase()
     console.log('')
 
-    // 1. Core Platform Data
-    console.log('📊 Seeding SPPG entities...')
-    const { sppgs, nagriTengahVillageId } = await seedSppg(prisma)
+    // 1. Core Platform Data (Following Copilot Instruction Pattern)
+    console.log('🗺️  Step 1: Seeding regional data (Purwakarta, Jawa Barat)...')
+    const { jawaBarat, purwakarta, purwakartaDistrict, nagriTengah } = await seedRegional(prisma)
+    
+    console.log('📊 Step 2: Seeding SPPG Demo 2025 entity...')
+    const sppgs = await seedSppg(prisma, {
+      provinceId: jawaBarat.id,
+      regencyId: purwakarta.id,
+      districtId: purwakartaDistrict.id,
+      villageId: nagriTengah.id
+    })
 
-    console.log('👥 Seeding users and roles...')
-    const users = await seedUsers(prisma, sppgs)
+    console.log('👥 Step 3: Seeding demo users 2025 (16 users with all roles)...')
+    const users = await seedDemoUsers2025(prisma, sppgs)
 
     // 2. Master Data
-    console.log('🥗 Seeding nutrition data...')
+    console.log('🥗 Step 4: Seeding nutrition standards...')
     await seedNutrition(prisma)
 
-    console.log('🏷️  Seeding allergen data...')
+    console.log('🏷️  Step 5: Seeding allergen data...')
     await seedAllergens(prisma)
 
-    console.log('📦 Seeding inventory items...')
+    console.log('📦 Step 6: Seeding inventory items...')
     await seedInventory()
 
     // 3. Menu Domain Data
-    console.log('🍽️  Seeding menu domain (programs, menus, ingredients, recipes, calculations)...')
+    console.log('🍽️  Step 7: Seeding menu domain (programs, menus, ingredients, calculations)...')
     const programs = await seedMenu(prisma, sppgs, users)
 
     // 4. School Beneficiaries (needs programs)
-    console.log('🏫 Seeding school beneficiaries...')
-    await seedSchools(prisma, sppgs, programs, nagriTengahVillageId)
+    console.log('🏫 Step 8: Seeding school beneficiaries...')
+    await seedSchools(prisma, sppgs, programs, nagriTengah.id)
 
     // 5. Menu Planning Domain Data
     console.log('📅 Seeding menu planning domain (plans, assignments, templates)...')
@@ -138,13 +148,18 @@ async function main() {
     await seedDistributionComprehensive(prisma, sppgs, programs)
 
     console.log('')
-    console.log('✅ Database seeding completed successfully!')
+    console.log('✅ Bagizi-ID Demo 2025 Database Seeding Completed!')
     console.log('')
-    console.log('� Quick Start Guide:')
-    console.log('  1. npm run dev - Start development server')
-    console.log('  2. Visit http://localhost:3000/login')
-    console.log('  3. Use credentials displayed above to login')
-    console.log('  4. Explore SPPG dashboard and admin panel')
+    console.log('📋 Summary (October 22, 2025):')
+    console.log(`   - SPPG Demo: ${sppgs.length} entity (DEMO-2025)`)
+    console.log(`   - Demo Users: ${users.length} accounts (all 16 roles)`)
+    console.log(`   - Default Password: demo2025`)
+    console.log(`   - Demo Period: January 1 - December 31, 2025`)
+    console.log('')
+    console.log('🚀 Quick Start:')
+    console.log('   1. npm run dev')
+    console.log('   2. http://localhost:3000/login')
+    console.log('   3. See DEMO_CREDENTIALS.md for login info')
     console.log('')
   } catch (error) {
     console.error('❌ Error during seeding:', error)

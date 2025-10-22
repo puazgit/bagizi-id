@@ -20,7 +20,6 @@ const seedFiles = [
   'user-seed.ts',
   'distribution-seed.ts',
   'menu-planning-seed.ts',
-  'distribution-comprehensive-seed.ts',
   'production-seed.ts',
   'procurement-seed.ts'
 ]

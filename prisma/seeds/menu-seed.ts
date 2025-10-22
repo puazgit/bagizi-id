@@ -30,16 +30,16 @@ export async function seedMenu(
 ): Promise<{ id: string; name: string; sppgId: string }[]> {
   console.log('  → Creating Menu domain data...')
 
-  // Get Demo SPPG (has inventory items)
-  // Fix #1: Menu seed uses DEMO SPPG because it has complete inventory items
-  const purwakartaSppg = sppgs.find(s => s.code === 'DEMO-SPPG-001')
+  // Get Demo SPPG 2025 (has inventory items)
+  // Updated for DEMO-2025 compatibility
+  const purwakartaSppg = sppgs.find(s => s.code === 'DEMO-2025')
   if (!purwakartaSppg) {
-    console.log('  ⚠️  Demo SPPG not found, skipping menu seed')
+    console.log('  ⚠️  Demo SPPG 2025 not found, skipping menu seed')
     return []
   }
 
-  // Get admin user for createdBy (use demo user)
-  const adminUser = users.find(u => u.email === 'demo@sppg-purwakarta.com') || users.find(u => u.email === 'admin@sppg-purwakarta.com')
+  // Get Ahli Gizi user for createdBy (nutritionist creates menus)
+  const adminUser = users.find(u => u.email === 'ahligizi@demo.sppg.id') || users.find(u => u.userRole === 'SPPG_AHLI_GIZI')
   if (!adminUser) {
     console.log('  ⚠️  Admin user not found, skipping menu seed')
     return []
@@ -68,17 +68,13 @@ export async function seedMenu(
   console.log('  → Creating Recipe Steps...')
   await seedRecipeSteps(prisma, menus)
 
-  console.log('  → Creating Nutrition Calculations...')
-  // ⚠️  DISABLED: Depends on menu ingredients
-  console.log('  ⚠️  Nutrition calculations temporarily disabled - depends on ingredients')
-  // await seedNutritionCalculations(prisma, menus, adminUser)
+  console.log('  → Creating Nutrition Calculations (with real vitamin/mineral values)...')
+  await seedNutritionCalculations(prisma, menus, adminUser)
 
-  console.log('  → Creating Cost Calculations...')
-  // ⚠️  DISABLED: Depends on menu ingredients  
-  console.log('  ⚠️  Cost calculations temporarily disabled - depends on ingredients')
-  // await seedCostCalculations(prisma, menus, adminUser)
+  console.log('  → Creating Cost Calculations (with realistic operational costs)...')
+  await seedCostCalculations(prisma, menus, adminUser)
 
-  console.log('  ✓ Menu domain data created successfully')
+  console.log('  ✓ Menu domain data created successfully with complete calculations')
   
   // Return programs for school seeding
   return programs.map(p => ({
@@ -1771,6 +1767,22 @@ async function seedNutritionCalculations(
   // Delete existing nutrition calculations to ensure fresh data
   await prisma.menuNutritionCalculation.deleteMany({})
 
+  // Validate all required menus exist before proceeding
+  const requiredMenuCodes = [
+    'LUNCH-001', 'LUNCH-002', 'LUNCH-003', 'LUNCH-004', 'LUNCH-005',
+    'SNACK-001', 'SNACK-002', 'SNACK-003', 'SNACK-004', 'SNACK-005'
+  ]
+  
+  const missingMenus = requiredMenuCodes.filter(
+    code => !menus.find(m => m.menuCode === code)
+  )
+  
+  if (missingMenus.length > 0) {
+    console.warn(`  ⚠️  Missing menus for nutrition calculations: ${missingMenus.join(', ')}`)
+    console.warn('  ⚠️  Skipping nutrition calculations')
+    return
+  }
+
   // Nutrition Calculation for Menu 1: Nasi Gudeg Ayam
   const menu1 = menus.find(m => m.menuCode === 'LUNCH-001')!
   await prisma.menuNutritionCalculation.create({
@@ -2373,13 +2385,29 @@ async function seedCostCalculations(
   menus: NutritionMenu[],
   adminUser: User
 ): Promise<void> {
+  // Validate all required menus exist before proceeding
+  const requiredMenuCodes = [
+    'LUNCH-001', 'LUNCH-002', 'LUNCH-003', 'LUNCH-004', 'LUNCH-005',
+    'SNACK-001', 'SNACK-002', 'SNACK-003', 'SNACK-004', 'SNACK-005'
+  ]
+  
+  const missingMenus = requiredMenuCodes.filter(
+    code => !menus.find(m => m.menuCode === code)
+  )
+  
+  if (missingMenus.length > 0) {
+    console.warn(`  ⚠️  Missing menus for cost calculations: ${missingMenus.join(', ')}`)
+    console.warn('  ⚠️  Skipping cost calculations')
+    return
+  }
+
   // Cost Calculation for Menu 1: Nasi Gudeg Ayam
   const menu1 = menus.find(m => m.menuCode === 'LUNCH-001')!
   await prisma.menuCostCalculation.upsert({
     where: { menuId: menu1.id },
-    update: {},
-    create: {
-      menuId: menu1.id,
+      update: {},
+      create: {
+        menuId: menu1.id,
 
       // Ingredient Costs
       totalIngredientCost: 6620, // Sum of all ingredients
@@ -3127,7 +3155,7 @@ async function seedCostCalculations(
       calculationMethod: 'AUTO',
       isActive: true
     }
-  })
+    })
 
   console.log('  ✓ Created Cost Calculations for all 10 menus')
 }

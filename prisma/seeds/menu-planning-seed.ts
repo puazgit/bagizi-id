@@ -8,9 +8,9 @@
  * Models: MenuPlan, MenuAssignment, MenuPlanTemplate
  * Dependencies: NutritionProgram, NutritionMenu, SPPG, User
  * 
- * IMPORTANT: This seed works with existing SPPG Purwakarta data:
- * - SPPG Code: DEMO-SPPG-001 (SPPG Purwakarta Utara)
- * - Admin User: admin@sppg-purwakarta.com (Ahmad Fauzi)
+ * IMPORTANT: This seed works with existing SPPG Demo 2025 data:
+ * - SPPG Code: DEMO-2025 (SPPG Demo 2025)
+ * - Admin User: ahligizi@demo.sppg.id (Ahli Gizi Demo)
  * - Program: PWK-PMAS-2024 (Program Makan Siang Anak Sekolah)
  */
 
@@ -33,7 +33,7 @@ export async function seedMenuPlanning(
   console.log('  → Creating Menu Planning data for SPPG Purwakarta...')
 
   // Get Purwakarta SPPG
-  const purwakartaSppg = sppgs.find(s => s.code === 'DEMO-SPPG-001')
+  const purwakartaSppg = sppgs.find(s => s.code === 'DEMO-2025')
   if (!purwakartaSppg) {
     console.log('  ⚠️  SPPG Purwakarta not found. Skipping menu planning seed.')
     return
