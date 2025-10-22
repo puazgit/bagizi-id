@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "prisma migrate deploy && prisma generate && next build",
+    "build": "prisma generate && next build",
+    "build:with-migrate": "prisma migrate deploy && prisma generate && next build",
     "build:turbo": "prisma generate && next build --turbopack",
     "start": "next start",
     "lint": "eslint",
@@ -13,6 +14,7 @@
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
     "db:migrate:deploy": "prisma migrate deploy",
+    "db:migrate:resolve": "prisma migrate resolve --applied 20251021040145_fix01_menu_ingredient_required_inventory_link",
     "db:reset": "prisma migrate reset --force",
     "db:seed": "tsx prisma/seed.ts",
     "db:seed:demo": "SEED_DEMO_DATA=true tsx prisma/seed.ts",
