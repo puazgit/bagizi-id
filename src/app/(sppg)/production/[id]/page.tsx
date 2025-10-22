@@ -29,12 +29,12 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb'
-import { ArrowLeft, Edit, Trash2, Calendar, Users, DollarSign, Thermometer } from 'lucide-react'
+import { ArrowLeft, Edit, Trash2, Calendar, Users, Thermometer } from 'lucide-react'
 import { 
   ProductionStatus,
   QualityControl,
 } from '@/features/sppg/production/components'
-import { formatDate, formatCurrency } from '@/features/sppg/production/lib'
+import { formatDate } from '@/features/sppg/production/lib'
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params
@@ -225,20 +225,8 @@ export default async function ProductionDetailPage({ params }: { params: Promise
               </div>
 
               <div className="grid gap-4 md:grid-cols-2">
-                <div className="flex items-start gap-3">
-                  <DollarSign className="h-5 w-5 text-muted-foreground mt-0.5" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">Biaya</p>
-                    <p className="font-semibold">
-                      {formatCurrency(production.actualCost || production.estimatedCost)}
-                      {production.actualCost && production.actualCost !== production.estimatedCost && (
-                        <span className="text-xs text-muted-foreground ml-1">
-                          (Estimasi: {formatCurrency(production.estimatedCost)})
-                        </span>
-                      )}
-                    </p>
-                  </div>
-                </div>
+                {/* Cost display temporarily removed - actualCost/estimatedCost fields not yet implemented in schema */}
+                {/* TODO: Add cost calculation based on usageRecords or menu.budgetAllocation */}
                 <div className="flex items-start gap-3">
                   <Thermometer className="h-5 w-5 text-muted-foreground mt-0.5" />
                   <div>

@@ -342,7 +342,8 @@ export class ProductionCostCalculator {
           include: {
             inventoryItem: {
               select: {
-                costPerUnit: true
+                costPerUnit: true,
+                unit: true
               }
             }
           }
@@ -363,10 +364,10 @@ export class ProductionCostCalculator {
       
       const currentCost = ingredient.inventoryItem.costPerUnit || 0
       
-      // Convert ingredient quantity to base unit
+      // Convert ingredient quantity to base unit  
       const baseQuantity = convertToBaseUnit(
         ingredient.quantity,
-        ingredient.unit
+        ingredient.inventoryItem.unit
       )
       
       // Calculate cost for all portions

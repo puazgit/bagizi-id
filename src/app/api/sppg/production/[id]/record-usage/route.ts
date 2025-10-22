@@ -113,14 +113,14 @@ export async function POST(
 
     // 7. Check if stock usage already recorded
     const existingUsage = await db.productionStockUsage.findFirst({
-      where: { productionId: params.id }
+      where: { productionId: id }
     })
 
     if (existingUsage) {
       return Response.json({ 
         error: 'Stock usage already recorded for this production',
         details: { 
-          recordedAt: existingUsage.recordedAt,
+          recordedAt: existingUsage.createdAt,
           recordedBy: existingUsage.recordedBy
         }
       }, { status: 409 })
@@ -144,11 +144,12 @@ export async function POST(
         productionId: production.id,
         inventoryItemId: ingredient.inventoryItemId,
         quantityUsed: actualQuantity,
-        unit: ingredient.unit,
+        unit: ingredient.inventoryItem.unit,
         unitCostAtUse: ingredient.inventoryItem.costPerUnit || 0,
         totalCost: actualQuantity * (ingredient.inventoryItem.costPerUnit || 0),
         recordedBy: recordedBy || session.user.id,
-        recordedAt: new Date(),
+        usedAt: new Date(), // Changed from recordedAt to match schema
+        notes: null,
       }
     })
 
@@ -162,7 +163,7 @@ export async function POST(
     )
 
     // 11. Calculate total cost using ProductionCostCalculator
-    const costSummary = await productionCostCalculator.calculateProductionCost(params.id)
+    const costSummary = await productionCostCalculator.calculateProductionCost(id)
 
     return Response.json({ 
       success: true, 

@@ -49,10 +49,14 @@ export async function GET(
       include: {
         production: {
           select: {
-            estimatedCost: true,
-            actualCost: true,
-            costPerPortion: true,
+            // Cost fields not yet implemented in FoodProduction schema
+            // estimatedCost: true,
+            // actualCost: true,
+            // costPerPortion: true,
             plannedPortions: true,
+            actualPortions: true,
+            id: true,
+            batchNumber: true,
           },
         },
         schedule: {

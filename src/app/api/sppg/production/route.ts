@@ -184,7 +184,7 @@ export async function POST(request: NextRequest) {
         headCook: body.headCook,
         assistantCooks: body.assistantCooks || [],
         supervisorId: body.supervisorId,
-        estimatedCost: body.estimatedCost,
+        // estimatedCost field not in schema - calculate from menu ingredients
         targetTemperature: body.targetTemperature,
         notes: body.notes,
         status: 'PLANNED',

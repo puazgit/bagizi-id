@@ -155,7 +155,7 @@ export async function PATCH(
         headCook: body.headCook,
         assistantCooks: body.assistantCooks,
         supervisorId: body.supervisorId,
-        estimatedCost: body.estimatedCost,
+        // estimatedCost field not in schema - calculate from usageRecords
         targetTemperature: body.targetTemperature,
         notes: body.notes,
       },

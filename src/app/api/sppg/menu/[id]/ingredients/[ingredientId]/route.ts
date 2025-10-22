@@ -11,12 +11,8 @@ import { z } from 'zod'
 // ================================ VALIDATION SCHEMAS ================================
 
 const ingredientUpdateSchema = z.object({
-  inventoryItemId: z.string().cuid().optional().nullable(),
-  ingredientName: z.string().min(1).optional(),
+  inventoryItemId: z.string().cuid().optional(),
   quantity: z.number().positive().optional(),
-  unit: z.string().min(1).optional(),
-  costPerUnit: z.number().min(0).optional(),
-  totalCost: z.number().min(0).optional(),
   preparationNotes: z.string().optional().nullable(),
   isOptional: z.boolean().optional(),
   substitutes: z.array(z.string()).optional()
