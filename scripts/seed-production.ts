@@ -11,7 +11,7 @@ async function main() {
   console.log('🌱 Checking if production database needs seeding...')
 
   // Check if data already exists
-  const existingSppg = await prisma.sppg.count()
+  const existingSppg = await prisma.sPPG.count()
   
   if (existingSppg > 0) {
     console.log('✅ Database already has data. Skipping seed.')
@@ -30,11 +30,11 @@ async function main() {
 
   try {
     console.log('1️⃣ Seeding SPPG entities...')
-    const sppgs = await seedSppg(prisma)
-    console.log(`   ✅ Created ${sppgs.length} SPPG entities`)
+    const sppgResult = await seedSppg(prisma)
+    console.log(`   ✅ Created ${sppgResult.sppgs.length} SPPG entities`)
 
     console.log('2️⃣ Seeding users and roles...')
-    const users = await seedUsers(prisma, sppgs)
+    const users = await seedUsers(prisma, sppgResult.sppgs)
     console.log(`   ✅ Created ${users.length} users`)
 
     console.log('3️⃣ Seeding nutrition standards...')
@@ -42,16 +42,16 @@ async function main() {
     console.log('   ✅ Nutrition data seeded')
 
     console.log('4️⃣ Seeding inventory items...')
-    await seedInventory(prisma, sppgs)
+    await seedInventory()
     console.log('   ✅ Inventory seeded')
 
     console.log('5️⃣ Seeding menu items...')
-    await seedMenu(prisma, sppgs)
+    await seedMenu(prisma, sppgResult.sppgs, users)
     console.log('   ✅ Menu seeded')
 
     console.log('🎉 Production database seeding completed successfully!')
     console.log('\n📝 Summary:')
-    console.log(`   - SPPG Entities: ${sppgs.length}`)
+    console.log(`   - SPPG Entities: ${sppgResult.sppgs.length}`)
     console.log(`   - Users: ${users.length}`)
     console.log(`   - Ready for production use`)
 
