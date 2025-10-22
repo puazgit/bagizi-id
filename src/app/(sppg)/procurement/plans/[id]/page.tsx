@@ -32,7 +32,8 @@ import {
   ApprovalWorkflow,
 } from '@/features/sppg/procurement/components'
 
-export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params
   const session = await auth()
   if (!session?.user?.sppgId) {
     return { title: 'Rencana Pengadaan | Bagizi-ID' }
@@ -40,7 +41,7 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
 
   const plan = await db.procurementPlan.findFirst({
     where: {
-      id: params.id,
+      id,
       sppgId: session.user.sppgId,
     },
     select: {
@@ -57,7 +58,9 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
 /**
  * Procurement Plan Detail Page
  */
-export default async function ProcurementPlanDetailPage({ params }: { params: { id: string } }) {
+export default async function ProcurementPlanDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  
   // Auth check
   const session = await auth()
   if (!session?.user) {
@@ -77,7 +80,7 @@ export default async function ProcurementPlanDetailPage({ params }: { params: { 
   // Fetch plan with multi-tenant isolation
   const plan = await db.procurementPlan.findFirst({
     where: {
-      id: params.id,
+      id,
       sppgId: session.user.sppgId,
     },
     include: {

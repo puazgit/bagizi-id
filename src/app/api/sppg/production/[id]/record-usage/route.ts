@@ -6,9 +6,9 @@
  */
 
 import { NextRequest } from 'next/server'
-import { auth } from '@/lib/auth'
+import { auth } from '@/auth'
 import { checkSppgAccess } from '@/lib/permissions'
-import { db } from '@/lib/db'
+import { db } from '@/lib/prisma'
 import { productionCostCalculator } from '@/services/production/ProductionCostCalculator'
 
 // ============================================================================
@@ -32,8 +32,10 @@ import { productionCostCalculator } from '@/services/production/ProductionCostCa
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params
+  
   try {
     // 1. Authentication Check
     const session = await auth()
@@ -64,7 +66,7 @@ export async function POST(
     // 4. Get Production with Menu & Ingredients
     const production = await db.foodProduction.findUnique({
       where: { 
-        id: params.id,
+        id,
         // Multi-tenant safety: ensure production belongs to user's SPPG
         program: {
           sppgId: session.user.sppgId

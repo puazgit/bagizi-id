@@ -51,9 +51,9 @@ import { id as localeId } from 'date-fns/locale'
 // ================================ TYPES ================================
 
 interface ProcurementDetailPageProps {
-  params: {
+  params: Promise<{
     id: string
-  }
+  }>
 }
 
 // ================================ HELPER FUNCTIONS ================================
@@ -165,6 +165,7 @@ function getMethodLabel(method: string): string {
 // ================================ METADATA ================================
 
 export async function generateMetadata({ params }: ProcurementDetailPageProps): Promise<Metadata> {
+  const { id } = await params
   const session = await auth()
   
   if (!session?.user?.sppgId) {
@@ -173,7 +174,7 @@ export async function generateMetadata({ params }: ProcurementDetailPageProps): 
     }
   }
 
-  const procurement = await getProcurementById(params.id, session.user.sppgId)
+  const procurement = await getProcurementById(id, session.user.sppgId)
 
   if (!procurement) {
     return {
@@ -190,12 +191,14 @@ export async function generateMetadata({ params }: ProcurementDetailPageProps): 
 // ================================ MAIN COMPONENT ================================
 
 export default async function ProcurementDetailPage({ params }: ProcurementDetailPageProps) {
+  const { id } = await params
+  
   // ================================ AUTHENTICATION ================================
   
   const session = await auth()
   
   if (!session?.user) {
-    redirect('/login?callbackUrl=/procurement/' + params.id)
+    redirect('/login?callbackUrl=/procurement/' + id)
   }
 
   // ================================ AUTHORIZATION ================================
@@ -223,7 +226,7 @@ export default async function ProcurementDetailPage({ params }: ProcurementDetai
 
   // ================================ DATA FETCHING ================================
   
-  const procurement = await getProcurementById(params.id, sppgId)
+  const procurement = await getProcurementById(id, sppgId)
 
   if (!procurement) {
     notFound()

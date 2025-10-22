@@ -66,8 +66,9 @@ import {
 export async function generateMetadata({
   params,
 }: {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }): Promise<Metadata> {
+  const { id } = await params
   const session = await auth()
   if (!session?.user?.sppgId) {
     return { title: 'Access Denied' }
@@ -76,7 +77,7 @@ export async function generateMetadata({
   try {
     const supplier = await db.supplier.findFirst({
       where: {
-        id: params.id,
+        id,
         sppgId: session.user.sppgId, // Multi-tenant security
       },
       select: {
@@ -119,8 +120,10 @@ export async function generateMetadata({
 export default async function SupplierDetailPage({
   params,
 }: {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }) {
+  const { id } = await params
+  
   // ============================================
   // AUTHENTICATION & AUTHORIZATION
   // ============================================
@@ -129,7 +132,7 @@ export default async function SupplierDetailPage({
   
   // Check if user is authenticated
   if (!session?.user) {
-    redirect('/login?callbackUrl=/suppliers/' + params.id)
+    redirect('/login?callbackUrl=/suppliers/' + id)
   }
 
   // Check if user has sppgId (multi-tenant requirement)
@@ -157,7 +160,7 @@ export default async function SupplierDetailPage({
   // Fetch supplier with all relations
   const supplier = await db.supplier.findFirst({
     where: {
-      id: params.id,
+      id,
       sppgId, // Multi-tenant security: CRITICAL!
     },
     include: {

@@ -1795,7 +1795,7 @@ async function seedNutritionCalculations(
       totalVitaminD: 1.2,
       totalVitaminE: 3.5,
       totalVitaminK: 25,
-      totalFolat: 85,
+      totalFolate: 85,
 
       // Minerals
       totalCalcium: 180,
@@ -1854,7 +1854,7 @@ async function seedNutritionCalculations(
       totalVitaminD: 0.8,
       totalVitaminE: 2.8,
       totalVitaminK: 20,
-      totalFolat: 68,
+      totalFolate: 68,
 
       totalCalcium: 95,
       totalPhosphorus: 280,
@@ -1908,7 +1908,7 @@ async function seedNutritionCalculations(
       totalVitaminD: 0.5,
       totalVitaminE: 1.8,
       totalVitaminK: 5,
-      totalFolat: 42,
+      totalFolate: 42,
 
       totalCalcium: 125,
       totalPhosphorus: 110,
@@ -1964,7 +1964,7 @@ async function seedNutritionCalculations(
       totalVitaminD: 4.5,   // Fish is excellent vitamin D source
       totalVitaminE: 2.2,
       totalVitaminK: 18,
-      totalFolat: 95,
+      totalFolate: 95,
 
       // Minerals - Fish rich in phosphorus, iodine, selenium
       totalCalcium: 145,
@@ -2024,7 +2024,7 @@ async function seedNutritionCalculations(
       totalVitaminD: 0.5,
       totalVitaminE: 3.8,
       totalVitaminK: 42,   // High from green vegetables
-      totalFolat: 125,     // Very high from vegetables
+      totalFolate: 125,     // Very high from vegetables
 
       // Minerals - Diverse from vegetables and iga ayam
       totalCalcium: 165,
@@ -2084,7 +2084,7 @@ async function seedNutritionCalculations(
       totalVitaminD: 0.8,
       totalVitaminE: 2.5,
       totalVitaminK: 15,
-      totalFolat: 72,
+      totalFolate: 72,
 
       // Minerals - Beef excellent source of iron, zinc, phosphorus
       totalCalcium: 95,
@@ -2144,7 +2144,7 @@ async function seedNutritionCalculations(
       totalVitaminD: 0,     // Plant-based
       totalVitaminE: 1.5,
       totalVitaminK: 12,
-      totalFolat: 168,      // Extremely high from kacang hijau (excellent source)
+      totalFolate: 168,      // Extremely high from kacang hijau (excellent source)
 
       // Minerals - Kacang hijau rich in magnesium, potassium, iron
       totalCalcium: 85,
@@ -2204,7 +2204,7 @@ async function seedNutritionCalculations(
       totalVitaminD: 0,      // Plant-based
       totalVitaminE: 1.2,
       totalVitaminK: 5,
-      totalFolat: 42,
+      totalFolate: 42,
 
       // Minerals - Pisang adds potassium, magnesium
       totalCalcium: 65,
@@ -2264,7 +2264,7 @@ async function seedNutritionCalculations(
       totalVitaminD: 0.8,    // From cheese
       totalVitaminE: 2.2,
       totalVitaminK: 8,
-      totalFolat: 38,
+      totalFolate: 38,
 
       // Minerals - Cheese adds calcium
       totalCalcium: 185,     // High from cheese (excellent source)
@@ -2324,7 +2324,7 @@ async function seedNutritionCalculations(
       totalVitaminD: 0,      // Plant-based (unless fortified)
       totalVitaminE: 2.5,    // From soy
       totalVitaminK: 18,     // From soy
-      totalFolat: 88,        // High from soy
+      totalFolate: 88,        // High from soy
 
       // Minerals - Soy rich in calcium, iron, magnesium
       totalCalcium: 145,     // Good from soy (natural calcium)

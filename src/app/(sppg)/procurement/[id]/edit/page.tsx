@@ -40,16 +40,15 @@ import {
 import { ChevronLeft, FileEdit, InfoIcon } from 'lucide-react'
 
 /**
- * Generate dynamic metadata for edit page
- * 
- * @param {Object} params - Dynamic route parameters
- * @param {string} params.id - Procurement ID
- * @returns {Promise<Metadata>} SEO metadata
+ * Generate metadata for the page
+ * @param {object} props - Page props with params
+ * @returns {Promise<Metadata>} Page metadata
  */
 export async function generateMetadata(
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ): Promise<Metadata> {
   try {
+    const { id } = await params
     const session = await auth()
     if (!session?.user?.sppgId) {
       return { title: 'Edit Pengadaan' }
@@ -57,7 +56,7 @@ export async function generateMetadata(
 
     const procurement = await db.procurement.findFirst({
       where: {
-        id: params.id,
+        id,
         sppgId: session.user.sppgId
       },
       select: {
@@ -124,17 +123,18 @@ async function getProcurementById(id: string, sppgId: string) {
 export default async function EditProcurementPage({
   params
 }: {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }) {
   // ============================================
   // AUTHENTICATION & AUTHORIZATION
   // ============================================
   
+  const { id } = await params
   const session = await auth()
   
   // Check if user is authenticated
   if (!session?.user) {
-    redirect(`/login?callbackUrl=/procurement/${params.id}/edit`)
+    redirect(`/login?callbackUrl=/procurement/${id}/edit`)
   }
 
   // Check if user has sppgId (multi-tenant requirement)
@@ -159,7 +159,7 @@ export default async function EditProcurementPage({
   // DATA FETCHING
   // ============================================
 
-  const procurement = await getProcurementById(params.id, sppgId)
+  const procurement = await getProcurementById(id, sppgId)
 
   // If procurement not found, show 404
   if (!procurement) {
@@ -178,7 +178,7 @@ export default async function EditProcurementPage({
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" asChild>
-              <Link href={`/procurement/${params.id}`}>
+              <Link href={`/procurement/${id}`}>
                 <ChevronLeft className="h-4 w-4 mr-1" />
                 Kembali ke Detail
               </Link>
@@ -204,7 +204,7 @@ export default async function EditProcurementPage({
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbLink href={`/procurement/${params.id}`}>
+            <BreadcrumbLink href={`/procurement/${id}`}>
               {procurement.procurementCode}
             </BreadcrumbLink>
           </BreadcrumbItem>
@@ -254,7 +254,7 @@ export default async function EditProcurementPage({
           */}
           <EditProcurementFormWrapper 
             procurement={procurement}
-            procurementId={params.id}
+            procurementId={id}
           />
         </CardContent>
       </Card>

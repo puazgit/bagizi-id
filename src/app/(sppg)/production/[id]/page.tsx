@@ -36,7 +36,8 @@ import {
 } from '@/features/sppg/production/components'
 import { formatDate, formatCurrency } from '@/features/sppg/production/lib'
 
-export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params
   const session = await auth()
   if (!session?.user?.sppgId) {
     return { title: 'Detail Produksi | Bagizi-ID' }
@@ -44,7 +45,7 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
 
   const production = await db.foodProduction.findFirst({
     where: {
-      id: params.id,
+      id,
       sppgId: session.user.sppgId,
     },
     select: {
@@ -61,7 +62,9 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
 /**
  * Production Detail Page
  */
-export default async function ProductionDetailPage({ params }: { params: { id: string } }) {
+export default async function ProductionDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  
   // Auth check
   const session = await auth()
   if (!session?.user) {
@@ -81,7 +84,7 @@ export default async function ProductionDetailPage({ params }: { params: { id: s
     // 4. Fetch production with relations
     const production = await db.foodProduction.findFirst({
       where: {
-        id: params.id,
+        id,
         program: {
           sppgId: session.user.sppgId,
         },

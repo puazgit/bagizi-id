@@ -138,10 +138,12 @@ async function getSupplierStatistics(sppgId: string) {
 /**
  * Supplier List Page Component
  * 
- * Server Component that handles:
- * - Authentication & Authorization
- * - Data fetching for statistics
- * - Multi-tenant security
+ * Server component with authentication, authorization, and data fetching.
+ * - Checks authentication and redirects to login if needed
+ * - Verifies SPPG access (multi-tenant)
+ * - Checks user permissions (RBAC)
+ * - Fetches supplier statistics
+ * - Extracts URL search params for filtering
  * - Renders SupplierList component (747 lines)
  * 
  * @async
@@ -151,11 +153,13 @@ async function getSupplierStatistics(sppgId: string) {
 export default async function SupplierListPage({
   searchParams,
 }: {
-  searchParams: { 
+  searchParams: Promise<{ 
     type?: string
     search?: string
-  }
+  }>
 }) {
+  const resolvedSearchParams = await searchParams
+  
   // ============================================
   // AUTHENTICATION & AUTHORIZATION
   // ============================================
@@ -195,8 +199,8 @@ export default async function SupplierListPage({
   // Note: SupplierList component only accepts type and category props
   // Other filters (status, rating) are managed internally by the component
   const activeFilters = {
-    type: searchParams.type,
-    category: searchParams.search, // Using search as category filter
+    type: resolvedSearchParams.type,
+    category: resolvedSearchParams.search, // Using search as category filter
   }
 
   const hasActiveFilters = Object.values(activeFilters).some(value => value)

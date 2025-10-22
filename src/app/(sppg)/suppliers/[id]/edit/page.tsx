@@ -43,8 +43,9 @@ import { ChevronLeft, FileEdit, AlertTriangle } from 'lucide-react'
  * Generate dynamic metadata for edit page
  */
 export async function generateMetadata(
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ): Promise<Metadata> {
+  const { id } = await params
   try {
     const session = await auth()
     if (!session?.user?.sppgId) {
@@ -53,7 +54,7 @@ export async function generateMetadata(
 
     const supplier = await db.supplier.findFirst({
       where: {
-        id: params.id,
+        id,
         sppgId: session.user.sppgId
       },
       select: {
@@ -95,8 +96,8 @@ async function getSupplierById(id: string, sppgId: string) {
 /**
  * Edit Supplier Page Component
  * 
- * Server Component that:
- * - Authenticates user
+ * Features:
+ * - Checks authentication and redirects to login if needed
  * - Checks RBAC permissions
  * - Fetches supplier data with multi-tenant filtering
  * - Renders edit form with warning alert
@@ -105,8 +106,10 @@ async function getSupplierById(id: string, sppgId: string) {
 export default async function EditSupplierPage({ 
   params 
 }: { 
-  params: { id: string } 
+  params: Promise<{ id: string }> 
 }) {
+  const { id } = await params
+  
   // ============================================
   // AUTHENTICATION & AUTHORIZATION
   // ============================================
@@ -115,7 +118,7 @@ export default async function EditSupplierPage({
   
   // Check authentication
   if (!session?.user) {
-    redirect(`/login?callbackUrl=/suppliers/${params.id}/edit`)
+    redirect(`/login?callbackUrl=/suppliers/${id}/edit`)
   }
 
   // Check SPPG access
@@ -134,7 +137,7 @@ export default async function EditSupplierPage({
   // DATA FETCHING
   // ============================================
 
-  const supplier = await getSupplierById(params.id, sppgId)
+  const supplier = await getSupplierById(id, sppgId)
 
   // Handle not found
   if (!supplier) {

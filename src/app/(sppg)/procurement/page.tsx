@@ -59,12 +59,12 @@ export const metadata: Metadata = {
 // ================================ TYPES ================================
 
 interface ProcurementPageProps {
-  searchParams?: {
+  searchParams?: Promise<{
     supplier?: string
     plan?: string
     status?: string
     method?: string
-  }
+  }>
 }
 
 // ================================ HELPER FUNCTIONS ================================
@@ -108,6 +108,8 @@ async function getProcurementStats(sppgId: string) {
  * - Responsive layout
  */
 export default async function ProcurementPage({ searchParams }: ProcurementPageProps) {
+  const resolvedSearchParams = await searchParams
+  
   // ================================ AUTHENTICATION ================================
   
   const session = await auth()
@@ -144,10 +146,10 @@ export default async function ProcurementPage({ searchParams }: ProcurementPageP
 
   // Extract URL search params for filtering
   const filters = {
-    supplierId: searchParams?.supplier,
-    planId: searchParams?.plan,
-    status: searchParams?.status,
-    method: searchParams?.method,
+    supplierId: resolvedSearchParams?.supplier,
+    planId: resolvedSearchParams?.plan,
+    status: resolvedSearchParams?.status,
+    method: resolvedSearchParams?.method,
   }
 
   // ================================ RENDER ================================
