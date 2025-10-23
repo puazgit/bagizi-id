@@ -212,6 +212,31 @@ export function SchoolDetail({ schoolId, onEdit, onDelete }: SchoolDetailProps) 
   return (
     <>
       <div className="space-y-4 md:space-y-6">
+        {/* Back Button */}
+        <div className="print:hidden">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => router.push('/schools')}
+            className="gap-2"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="m15 18-6-6 6-6" />
+            </svg>
+            Kembali ke Daftar Sekolah
+          </Button>
+        </div>
+
         {/* Header Card with Quick Actions */}
         <Card>
           <CardHeader>
@@ -255,7 +280,13 @@ export function SchoolDetail({ schoolId, onEdit, onDelete }: SchoolDetailProps) 
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => onEdit && onEdit(school)}
+                      onClick={() => {
+                        if (onEdit) {
+                          onEdit(school)
+                        } else {
+                          router.push(`/schools/${school.id}/edit`)
+                        }
+                      }}
                     >
                       <Edit className="h-4 w-4 mr-2" />
                       Ubah
@@ -374,7 +405,7 @@ export function SchoolDetail({ schoolId, onEdit, onDelete }: SchoolDetailProps) 
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                   <div>
                     <div className="text-sm font-medium text-muted-foreground">Jenis Sekolah</div>
                     <div className="text-sm">{schoolTypeLabel}</div>
@@ -386,7 +417,7 @@ export function SchoolDetail({ schoolId, onEdit, onDelete }: SchoolDetailProps) 
                   {school.accreditationGrade && (
                     <div>
                       <div className="text-sm font-medium text-muted-foreground">Akreditasi</div>
-                      <div className="text-sm">{school.accreditationGrade}</div>
+                      <div className="text-sm">{school.accreditationGrade} {school.accreditationYear && `(${school.accreditationYear})`}</div>
                     </div>
                   )}
                   {school.urbanRural && (
@@ -395,7 +426,21 @@ export function SchoolDetail({ schoolId, onEdit, onDelete }: SchoolDetailProps) 
                       <div className="text-sm">{school.urbanRural === 'URBAN' ? 'Perkotaan' : 'Pedesaan'}</div>
                     </div>
                   )}
+                  {school.enrollmentDate && (
+                    <div>
+                      <div className="text-sm font-medium text-muted-foreground">Tanggal Bergabung</div>
+                      <div className="text-sm">{new Date(school.enrollmentDate).toLocaleDateString('id-ID')}</div>
+                    </div>
+                  )}
+                  {school.program && (
+                    <div>
+                      <div className="text-sm font-medium text-muted-foreground">Program</div>
+                      <div className="text-sm">{school.program.name}</div>
+                    </div>
+                  )}
                 </div>
+
+
               </CardContent>
             </Card>
 
@@ -407,11 +452,50 @@ export function SchoolDetail({ schoolId, onEdit, onDelete }: SchoolDetailProps) 
                   Lokasi
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <p className="text-sm">{school.schoolAddress}</p>
-                {school.postalCode && (
-                  <p className="text-sm text-muted-foreground mt-2">Kode Pos: {school.postalCode}</p>
-                )}
+              <CardContent className="space-y-3">
+                <div>
+                  <div className="text-sm font-medium text-muted-foreground mb-1">Alamat</div>
+                  <p className="text-sm">{school.schoolAddress}</p>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  {school.province && (
+                    <div>
+                      <div className="text-sm font-medium text-muted-foreground">Provinsi</div>
+                      <div className="text-sm">{school.province.name}</div>
+                    </div>
+                  )}
+                  {school.regency && (
+                    <div>
+                      <div className="text-sm font-medium text-muted-foreground">Kabupaten/Kota</div>
+                      <div className="text-sm">{school.regency.name}</div>
+                    </div>
+                  )}
+                  {school.district && (
+                    <div>
+                      <div className="text-sm font-medium text-muted-foreground">Kecamatan</div>
+                      <div className="text-sm">{school.district.name}</div>
+                    </div>
+                  )}
+                  {school.village && (
+                    <div>
+                      <div className="text-sm font-medium text-muted-foreground">Kelurahan/Desa</div>
+                      <div className="text-sm">{school.village.name}</div>
+                    </div>
+                  )}
+                  {school.postalCode && (
+                    <div>
+                      <div className="text-sm font-medium text-muted-foreground">Kode Pos</div>
+                      <div className="text-sm">{school.postalCode}</div>
+                    </div>
+                  )}
+                  {school.coordinates && (
+                    <div>
+                      <div className="text-sm font-medium text-muted-foreground">Koordinat</div>
+                      <div className="text-xs font-mono">{school.coordinates}</div>
+                    </div>
+                  )}
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
