@@ -15,6 +15,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Badge } from '@/components/ui/badge'
 import {
   Form,
   FormControl,
@@ -167,6 +168,17 @@ export function SchoolForm({
     { id: 'facilities', title: 'Fasilitas', icon: Utensils },
     { id: 'contract', title: 'Kontrak & Anggaran', icon: FileText },
     { id: 'performance', title: 'Metrik Kinerja', icon: TrendingUp },
+  ]
+
+  // Days of week for feeding schedule
+  const daysOfWeek = [
+    { value: 1, label: 'Senin' },
+    { value: 2, label: 'Selasa' },
+    { value: 3, label: 'Rabu' },
+    { value: 4, label: 'Kamis' },
+    { value: 5, label: 'Jumat' },
+    { value: 6, label: 'Sabtu' },
+    { value: 7, label: 'Minggu' },
   ]
 
   // Auto-calculate activeStudents from totalStudents
@@ -1319,22 +1331,31 @@ export function SchoolForm({
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Hari Pemberian Makanan *</FormLabel>
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {daysOfWeek.map((day) => {
+                          const isSelected = field.value?.includes(day.value)
+                          return (
+                            <Badge
+                              key={day.value}
+                              variant={isSelected ? 'default' : 'outline'}
+                              className="cursor-pointer hover:opacity-80 transition-opacity"
+                              onClick={() => {
+                                const current = field.value || []
+                                if (isSelected) {
+                                  field.onChange(current.filter((d) => d !== day.value))
+                                } else {
+                                  field.onChange([...current, day.value].sort())
+                                }
+                              }}
+                            >
+                              {day.label}
+                            </Badge>
+                          )
+                        })}
+                      </div>
                       <FormDescription>
-                        Pilih hari-hari pemberian makanan (1=Senin, 7=Minggu)
+                        Klik untuk memilih/membatalkan hari pemberian makanan
                       </FormDescription>
-                      <FormControl>
-                        <Input
-                          placeholder="1,2,3,4,5"
-                          value={field.value?.join(',') || ''}
-                          onChange={(e) => {
-                            const days = e.target.value
-                              .split(',')
-                              .map(d => Number(d.trim()))
-                              .filter(d => !isNaN(d) && d >= 1 && d <= 7)
-                            field.onChange(days)
-                          }}
-                        />
-                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
