@@ -35,6 +35,31 @@ import type { SchoolMaster } from '../types'
 import { SCHOOL_TYPES, SCHOOL_STATUSES, SERVING_METHODS } from '../types'
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+
+/**
+ * Convert day number/string to Indonesian day name
+ */
+const getDayName = (day: string | number): string => {
+  const dayMap: Record<string, string> = {
+    '1': 'Senin',
+    '2': 'Selasa',
+    '3': 'Rabu',
+    '4': 'Kamis',
+    '5': 'Jumat',
+    '6': 'Sabtu',
+    '7': 'Minggu',
+    'MONDAY': 'Senin',
+    'TUESDAY': 'Selasa',
+    'WEDNESDAY': 'Rabu',
+    'THURSDAY': 'Kamis',
+    'FRIDAY': 'Jumat',
+    'SATURDAY': 'Sabtu',
+    'SUNDAY': 'Minggu',
+  }
+  
+  const dayStr = String(day).toUpperCase()
+  return dayMap[dayStr] || String(day)
+}
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
@@ -579,7 +604,7 @@ export function SchoolDetail({ schoolId, onEdit, onDelete }: SchoolDetailProps) 
                   <div className="flex flex-wrap gap-2 mt-2">
                     {school.feedingDays && school.feedingDays.length > 0 ? (
                       school.feedingDays.map((day) => (
-                        <Badge key={day} variant="outline">{day}</Badge>
+                        <Badge key={day} variant="outline">{getDayName(day)}</Badge>
                       ))
                     ) : (
                       <span className="text-sm text-muted-foreground">Belum diatur</span>
