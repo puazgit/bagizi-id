@@ -32,15 +32,17 @@ export const metadata: Metadata = {
  */
 export default function CreateSchoolPage() {
   return (
-    <div className="flex-1 space-y-6 p-6 md:p-8">
+    <div className="flex-1 space-y-4 md:space-y-6">
       {/* Page Header */}
-      <div className="space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight">
-          Tambah Sekolah Baru
-        </h1>
-        <p className="text-muted-foreground">
-          Daftarkan sekolah atau institusi pendidikan baru sebagai penerima manfaat
-        </p>
+      <div className="space-y-3 md:space-y-4">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
+            Tambah Sekolah Baru
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1 md:mt-2">
+            Daftarkan sekolah atau institusi pendidikan baru sebagai penerima manfaat
+          </p>
+        </div>
       </div>
 
       {/* Form */}

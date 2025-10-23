@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   Form,
   FormControl,
@@ -81,7 +82,7 @@ export function SchoolForm({
   isSubmitting = false,
   mode = 'create'
 }: SchoolFormProps) {
-  const [activeSection, setActiveSection] = useState(0)
+  const [activeSection, setActiveSection] = useState('basic')
 
   // Fetch programs for dropdown
   const { data: programs = [], isLoading: isLoadingPrograms } = usePrograms()
@@ -158,14 +159,14 @@ export function SchoolForm({
   })
 
   const sections = [
-    { id: 0, title: 'Informasi Dasar', icon: School },
-    { id: 1, title: 'Lokasi & Kontak', icon: MapPin },
-    { id: 2, title: 'Data Siswa', icon: Users },
-    { id: 3, title: 'Jadwal Makan', icon: Calendar },
-    { id: 4, title: 'Pengiriman', icon: Truck },
-    { id: 5, title: 'Fasilitas', icon: Utensils },
-    { id: 6, title: 'Kontrak & Anggaran', icon: FileText },
-    { id: 7, title: 'Metrik Kinerja', icon: TrendingUp },
+    { id: 'basic', title: 'Informasi Dasar', icon: School },
+    { id: 'contact', title: 'Lokasi & Kontak', icon: MapPin },
+    { id: 'students', title: 'Data Siswa', icon: Users },
+    { id: 'schedule', title: 'Jadwal Makan', icon: Calendar },
+    { id: 'delivery', title: 'Pengiriman', icon: Truck },
+    { id: 'facilities', title: 'Fasilitas', icon: Utensils },
+    { id: 'contract', title: 'Kontrak & Anggaran', icon: FileText },
+    { id: 'performance', title: 'Metrik Kinerja', icon: TrendingUp },
   ]
 
   // Auto-calculate activeStudents from totalStudents
@@ -203,32 +204,20 @@ export function SchoolForm({
       <form onSubmit={form.handleSubmit(handleSubmit, (errors) => {
         console.log('❌ Form validation errors:', errors)
         console.log('📋 Current form values:', form.getValues())
-      })} className="space-y-6">
-        {/* Section Navigation */}
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex flex-wrap gap-2">
-              {sections.map((section) => {
-                const Icon = section.icon
-                return (
-                  <Button
-                    key={section.id}
-                    type="button"
-                    variant={activeSection === section.id ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setActiveSection(section.id)}
-                  >
-                    <Icon className="mr-2 h-4 w-4" />
-                    {section.title}
-                  </Button>
-                )
-              })}
-            </div>
-          </CardContent>
-        </Card>
+      })} className="space-y-4 md:space-y-6">
+        
+        {/* Tabbed Navigation - 8 Tabs */}
+        <Tabs value={activeSection} onValueChange={setActiveSection}>
+          <TabsList className="grid w-full grid-cols-4 md:grid-cols-8 gap-1">
+            {sections.map((section) => (
+              <TabsTrigger key={section.id} value={section.id} className="text-xs md:text-sm">
+                {section.title}
+              </TabsTrigger>
+            ))}
+          </TabsList>
 
-        {/* Section 0: Basic Information */}
-        {activeSection === 0 && (
+          {/* Tab 1: Basic Information */}
+          <TabsContent value="basic" className="space-y-4 md:space-y-6">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -849,10 +838,10 @@ export function SchoolForm({
               </div>
             </CardContent>
           </Card>
-        )}
+          </TabsContent>
 
-        {/* Section 1: Location & Contact */}
-        {activeSection === 1 && (
+          {/* Tab 2: Location */}
+          <TabsContent value="location" className="space-y-4 md:space-y-6">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -908,10 +897,10 @@ export function SchoolForm({
               </div>
             </CardContent>
           </Card>
-        )}
+          </TabsContent>
 
-        {/* Section 1: Location & Contact */}
-        {activeSection === 1 && (
+          {/* Tab 2: Location & Contact */}
+          <TabsContent value="contact" className="space-y-4 md:space-y-6">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -1083,10 +1072,10 @@ export function SchoolForm({
               </div>
             </CardContent>
           </Card>
-        )}
+          </TabsContent>
 
-        {/* Section 2: Student Information - Continue in next message due to length */}
-        {activeSection === 2 && (
+          {/* Tab 3: Student Information */}
+          <TabsContent value="students" className="space-y-4 md:space-y-6">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -1307,10 +1296,10 @@ export function SchoolForm({
               </div>
             </CardContent>
           </Card>
-        )}
+          </TabsContent>
 
-        {/* Section 3: Feeding Schedule */}
-        {activeSection === 3 && (
+          {/* Tab 4: Feeding Schedule */}
+          <TabsContent value="schedule" className="space-y-4 md:space-y-6">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -1513,10 +1502,10 @@ export function SchoolForm({
               </div>
             </CardContent>
           </Card>
-        )}
+          </TabsContent>
 
-        {/* Section 4: Delivery Information */}
-        {activeSection === 4 && (
+          {/* Tab 5: Delivery Information */}
+          <TabsContent value="delivery" className="space-y-4 md:space-y-6">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -1738,10 +1727,10 @@ export function SchoolForm({
               </div>
             </CardContent>
           </Card>
-        )}
+          </TabsContent>
 
-        {/* Section 5: Facilities */}
-        {activeSection === 5 && (
+          {/* Tab 6: Facilities */}
+          <TabsContent value="facilities" className="space-y-4 md:space-y-6">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -1997,10 +1986,10 @@ export function SchoolForm({
               </div>
             </CardContent>
           </Card>
-        )}
-        
-        {/* Section 6: Budget & Contracts */}
-        {activeSection === 6 && (
+          </TabsContent>
+          
+          {/* Tab 7: Budget & Contracts */}
+          <TabsContent value="contract" className="space-y-4 md:space-y-6">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -2181,10 +2170,10 @@ export function SchoolForm({
               </div>
             </CardContent>
           </Card>
-        )}
+          </TabsContent>
 
-        {/* Section 7: Performance Metrics */}
-        {activeSection === 7 && (
+          {/* Tab 8: Performance Metrics */}
+          <TabsContent value="performance" className="space-y-4 md:space-y-6">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -2413,7 +2402,9 @@ export function SchoolForm({
               </div>
             </CardContent>
           </Card>
-        )}
+          </TabsContent>
+
+        </Tabs>
 
         {/* Form Actions */}
         <Card>

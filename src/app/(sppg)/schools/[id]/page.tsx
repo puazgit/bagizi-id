@@ -57,9 +57,9 @@ export async function generateMetadata(
  */
 function DetailLoading() {
   return (
-    <div className="flex-1 space-y-6 p-6 md:p-8">
+    <div className="flex-1 space-y-4 md:space-y-6">
       {/* Header Skeleton */}
-      <div className="space-y-2">
+      <div className="space-y-3 md:space-y-4">
         <Skeleton className="h-8 w-[300px]" />
         <Skeleton className="h-4 w-[400px]" />
       </div>
@@ -110,7 +110,7 @@ export default async function SchoolDetailPage({
   const { id } = await params
   
   return (
-    <div className="flex-1 space-y-6 p-6 md:p-8">
+    <div className="flex-1 space-y-4 md:space-y-6">
       {/* Detail Component with Tabs */}
       <Suspense fallback={<DetailLoading />}>
         <SchoolDetail schoolId={id} />

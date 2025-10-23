@@ -9,7 +9,6 @@
 import { useSchools } from '../hooks'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { School, Users, Target, CheckCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface SchoolStatsProps {
@@ -50,16 +49,15 @@ export function SchoolStats({ programId, className }: SchoolStatsProps) {
 
   if (isLoading) {
     return (
-      <div className={cn('grid gap-4 md:grid-cols-2 lg:grid-cols-4', className)}>
+      <div className={cn('grid gap-3 md:gap-4 grid-cols-2 md:grid-cols-4', className)}>
         {[1, 2, 3, 4].map(i => (
           <Card key={i}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardHeader className="pb-2 md:pb-3">
               <Skeleton className="h-4 w-24" />
-              <Skeleton className="h-4 w-4" />
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-0">
               <Skeleton className="h-8 w-16" />
-              <Skeleton className="h-3 w-32 mt-2" />
+              <Skeleton className="h-3 w-32 mt-1" />
             </CardContent>
           </Card>
         ))}
@@ -68,14 +66,12 @@ export function SchoolStats({ programId, className }: SchoolStatsProps) {
   }
 
   return (
-    <div className={cn('grid gap-4 md:grid-cols-2 lg:grid-cols-4', className)}>
+    <div className={cn('grid gap-3 md:gap-4 grid-cols-2 md:grid-cols-4', className)}>
       {/* Total Schools */}
       <StatCard
         title="Total Sekolah"
         value={stats?.total || 0}
         description="Total sekolah terdaftar"
-        icon={School}
-        iconColor="text-blue-600 dark:text-blue-400"
       />
 
       {/* Active Schools */}
@@ -83,8 +79,6 @@ export function SchoolStats({ programId, className }: SchoolStatsProps) {
         title="Sekolah Aktif"
         value={stats?.active || 0}
         description="Sekolah yang aktif"
-        icon={CheckCircle}
-        iconColor="text-green-600 dark:text-green-400"
       />
 
       {/* Total Students */}
@@ -92,8 +86,6 @@ export function SchoolStats({ programId, className }: SchoolStatsProps) {
         title="Total Siswa"
         value={stats?.totalStudents || 0}
         description="Siswa di semua sekolah"
-        icon={Users}
-        iconColor="text-purple-600 dark:text-purple-400"
       />
 
       {/* Target Beneficiaries */}
@@ -101,8 +93,6 @@ export function SchoolStats({ programId, className }: SchoolStatsProps) {
         title="Target Penerima"
         value={stats?.targetStudents || 0}
         description="Siswa penerima manfaat"
-        icon={Target}
-        iconColor="text-orange-600 dark:text-orange-400"
       />
     </div>
   )
@@ -115,21 +105,18 @@ interface StatCardProps {
   title: string
   value: number
   description: string
-  icon: React.ElementType
-  iconColor: string
 }
 
-function StatCard({ title, value, description, icon: Icon, iconColor }: StatCardProps) {
+function StatCard({ title, value, description }: StatCardProps) {
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">
+      <CardHeader className="pb-2 md:pb-3">
+        <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">
           {title}
         </CardTitle>
-        <Icon className={cn('h-4 w-4', iconColor)} />
       </CardHeader>
-      <CardContent>
-        <div className="text-2xl font-bold">
+      <CardContent className="pt-0">
+        <div className="text-xl md:text-2xl font-bold">
           {value.toLocaleString('id-ID')}
         </div>
         <p className="text-xs text-muted-foreground mt-1">

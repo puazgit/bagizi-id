@@ -11,7 +11,7 @@ import { useState } from 'react'
 import { useSchools, useDeleteSchool } from '../hooks'
 import type { SchoolMaster } from '../types'
 import { SchoolType } from '@prisma/client'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
@@ -42,7 +42,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Skeleton } from '@/components/ui/skeleton'
 import { 
-  School, 
+  School,
   MoreHorizontal, 
   Edit, 
   Trash2, 
@@ -125,78 +125,62 @@ export function SchoolList({
   })
 
   return (
-    <div className="space-y-4">
-      {/* Header */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-          <div>
-            <CardTitle className="flex items-center gap-2">
-              <School className="h-5 w-5 text-primary" />
-              Daftar Sekolah Mitra
-            </CardTitle>
-            <CardDescription>
-              Kelola data sekolah penerima manfaat program gizi
-            </CardDescription>
-          </div>
-          {onCreate && (
-            <Button onClick={onCreate} size="sm">
-              <Plus className="mr-2 h-4 w-4" />
-              Tambah Sekolah
-            </Button>
-          )}
-        </CardHeader>
-      </Card>
-
-      {/* Filters */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            {/* Search */}
-            <div className="md:col-span-2">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Cari nama sekolah, kode, atau alamat..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="pl-9"
-                />
-              </div>
+    <>
+      {/* Filters - Simplified without Card wrapper */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 flex-1">
+          {/* Search */}
+          <div className="md:col-span-1">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Cari nama sekolah, kode, atau alamat..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-9"
+              />
             </div>
-
-            {/* School Type Filter */}
-            <Select value={schoolType} onValueChange={setSchoolType}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Jenis Sekolah" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Semua Jenis</SelectItem>
-                {SCHOOL_TYPES.map(type => (
-                  <SelectItem key={type.value} value={type.value}>
-                    {type.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            {/* Status Filter */}
-            <Select value={isActive} onValueChange={setIsActive}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Semua Status</SelectItem>
-                <SelectItem value="active">Aktif</SelectItem>
-                <SelectItem value="inactive">Tidak Aktif</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
-        </CardContent>
-      </Card>
 
-      {/* Schools List */}
+          {/* School Type Filter */}
+          <Select value={schoolType} onValueChange={setSchoolType}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Jenis Sekolah" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Semua Jenis</SelectItem>
+              {SCHOOL_TYPES.map(type => (
+                <SelectItem key={type.value} value={type.value}>
+                  {type.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {/* Status Filter */}
+          <Select value={isActive} onValueChange={setIsActive}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Semua Status</SelectItem>
+              <SelectItem value="active">Aktif</SelectItem>
+              <SelectItem value="inactive">Tidak Aktif</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {onCreate && (
+          <Button onClick={onCreate} size="default">
+            <Plus className="mr-2 h-4 w-4" />
+            Tambah Sekolah
+          </Button>
+        )}
+      </div>
+
+      {/* Schools List - Single Card wrapper */}
       <Card>
-        <CardContent className="pt-6">
+        <CardContent className="p-0">
           {isLoading ? (
             <div className="space-y-4">
               {[1, 2, 3].map(i => (
@@ -264,7 +248,7 @@ export function SchoolList({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </>
   )
 }
 

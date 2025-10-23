@@ -81,16 +81,18 @@ function ListLoading() {
  */
 export default function SchoolsPage() {
   return (
-    <div className="flex-1 space-y-6 p-6 md:p-8">
+    <div className="flex-1 space-y-4 md:space-y-6">
       {/* Page Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">
-            Sekolah Penerima Manfaat
-          </h1>
-          <p className="text-muted-foreground mt-2">
-            Kelola data sekolah dan institusi pendidikan penerima program pangan
-          </p>
+      <div className="space-y-3 md:space-y-4">
+        <div className="flex flex-col gap-3 md:gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
+              Sekolah Penerima Manfaat
+            </h1>
+            <p className="text-sm text-muted-foreground mt-1 md:mt-2">
+              Kelola data sekolah dan institusi pendidikan penerima program pangan
+            </p>
+          </div>
         </div>
       </div>
 

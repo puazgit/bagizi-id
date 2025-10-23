@@ -137,7 +137,7 @@ export function SchoolDetail({ schoolId, onEdit, onDelete }: SchoolDetailProps) 
   // Loading state
   if (isLoading) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-4 md:space-y-6">
         <Card>
           <CardHeader>
             <Skeleton className="h-8 w-[300px]" />
@@ -162,15 +162,15 @@ export function SchoolDetail({ schoolId, onEdit, onDelete }: SchoolDetailProps) 
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-destructive">
             <XCircle className="h-5 w-5" />
-            Error Loading School
+            Error Memuat Data Sekolah
           </CardTitle>
           <CardDescription>
-            {error ? error.message : 'School not found'}
+            {error ? error.message : 'Sekolah tidak ditemukan'}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Button onClick={() => router.push('/schools')}>
-            Back to Schools List
+            Kembali ke Daftar Sekolah
           </Button>
         </CardContent>
       </Card>
@@ -182,11 +182,11 @@ export function SchoolDetail({ schoolId, onEdit, onDelete }: SchoolDetailProps) 
   const schoolStatusLabel = SCHOOL_STATUSES.find(s => s.value === school.schoolStatus)?.label || school.schoolStatus
   const servingMethodLabel = school.servingMethod 
     ? SERVING_METHODS.find(m => m.value === school.servingMethod)?.label || school.servingMethod
-    : 'Not set'
+    : 'Belum diatur'
 
   return (
     <>
-      <div className="space-y-6">
+      <div className="space-y-4 md:space-y-6">
         {/* Header Card with Quick Actions */}
         <Card>
           <CardHeader>
@@ -197,9 +197,9 @@ export function SchoolDetail({ schoolId, onEdit, onDelete }: SchoolDetailProps) 
                   <CardTitle className="text-3xl">{school.schoolName}</CardTitle>
                   <Badge variant={school.isActive ? 'default' : 'secondary'}>
                     {school.isActive ? (
-                      <><CheckCircle className="h-3 w-3 mr-1" /> Active</>
+                      <><CheckCircle className="h-3 w-3 mr-1" /> Aktif</>
                     ) : (
-                      <><XCircle className="h-3 w-3 mr-1" /> Inactive</>
+                      <><XCircle className="h-3 w-3 mr-1" /> Tidak Aktif</>
                     )}
                   </Badge>
                 </div>
@@ -211,7 +211,7 @@ export function SchoolDetail({ schoolId, onEdit, onDelete }: SchoolDetailProps) 
                   {school.schoolCode && (
                     <>
                       <Separator orientation="vertical" className="h-4" />
-                      <span>Code: {school.schoolCode}</span>
+                      <span>Kode: {school.schoolCode}</span>
                     </>
                   )}
                   {school.npsn && (
@@ -233,7 +233,7 @@ export function SchoolDetail({ schoolId, onEdit, onDelete }: SchoolDetailProps) 
                       onClick={() => onEdit && onEdit(school)}
                     >
                       <Edit className="h-4 w-4 mr-2" />
-                      Edit
+                      Ubah
                     </Button>
                     <Button
                       variant="outline"
@@ -241,7 +241,7 @@ export function SchoolDetail({ schoolId, onEdit, onDelete }: SchoolDetailProps) 
                       onClick={() => setShowDeleteDialog(true)}
                     >
                       <Trash2 className="h-4 w-4 mr-2" />
-                      Delete
+                      Hapus
                     </Button>
                   </>
                 ) : (
@@ -252,7 +252,7 @@ export function SchoolDetail({ schoolId, onEdit, onDelete }: SchoolDetailProps) 
                     disabled={isReactivating}
                   >
                     <RotateCcw className="h-4 w-4 mr-2" />
-                    {isReactivating ? 'Reactivating...' : 'Reactivate'}
+                    {isReactivating ? 'Mengaktifkan...' : 'Aktifkan Kembali'}
                   </Button>
                 )}
                 <Button
@@ -261,7 +261,7 @@ export function SchoolDetail({ schoolId, onEdit, onDelete }: SchoolDetailProps) 
                   onClick={handleExport}
                 >
                   <Download className="h-4 w-4 mr-2" />
-                  Export
+                  Ekspor
                 </Button>
                 <Button
                   variant="outline"
@@ -269,7 +269,7 @@ export function SchoolDetail({ schoolId, onEdit, onDelete }: SchoolDetailProps) 
                   onClick={handlePrint}
                 >
                   <Printer className="h-4 w-4 mr-2" />
-                  Print
+                  Cetak
                 </Button>
               </div>
             </div>
@@ -279,12 +279,12 @@ export function SchoolDetail({ schoolId, onEdit, onDelete }: SchoolDetailProps) 
         {/* Tabbed Content */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid w-full grid-cols-6">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="contact">Contact</TabsTrigger>
-            <TabsTrigger value="students">Students</TabsTrigger>
-            <TabsTrigger value="feeding">Feeding</TabsTrigger>
-            <TabsTrigger value="facilities">Facilities</TabsTrigger>
-            <TabsTrigger value="history">History</TabsTrigger>
+            <TabsTrigger value="overview">Ringkasan</TabsTrigger>
+            <TabsTrigger value="contact">Kontak</TabsTrigger>
+            <TabsTrigger value="students">Siswa</TabsTrigger>
+            <TabsTrigger value="feeding">Pemberian Makan</TabsTrigger>
+            <TabsTrigger value="facilities">Fasilitas</TabsTrigger>
+            <TabsTrigger value="history">Riwayat</TabsTrigger>
           </TabsList>
 
           {/* Tab 1: Overview */}
@@ -294,7 +294,7 @@ export function SchoolDetail({ schoolId, onEdit, onDelete }: SchoolDetailProps) 
               <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Total Students
+                    Total Siswa
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -305,7 +305,7 @@ export function SchoolDetail({ schoolId, onEdit, onDelete }: SchoolDetailProps) 
               <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Target Students
+                    Target Siswa
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -316,7 +316,7 @@ export function SchoolDetail({ schoolId, onEdit, onDelete }: SchoolDetailProps) 
               <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Attendance Rate
+                    Tingkat Kehadiran
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -329,7 +329,7 @@ export function SchoolDetail({ schoolId, onEdit, onDelete }: SchoolDetailProps) 
               <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Satisfaction Score
+                    Skor Kepuasan
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -345,13 +345,13 @@ export function SchoolDetail({ schoolId, onEdit, onDelete }: SchoolDetailProps) 
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <School className="h-5 w-5" />
-                  Basic Information
+                  Informasi Dasar
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <div className="text-sm font-medium text-muted-foreground">School Type</div>
+                    <div className="text-sm font-medium text-muted-foreground">Jenis Sekolah</div>
                     <div className="text-sm">{schoolTypeLabel}</div>
                   </div>
                   <div>
@@ -360,14 +360,14 @@ export function SchoolDetail({ schoolId, onEdit, onDelete }: SchoolDetailProps) 
                   </div>
                   {school.accreditationGrade && (
                     <div>
-                      <div className="text-sm font-medium text-muted-foreground">Accreditation</div>
+                      <div className="text-sm font-medium text-muted-foreground">Akreditasi</div>
                       <div className="text-sm">{school.accreditationGrade}</div>
                     </div>
                   )}
                   {school.urbanRural && (
                     <div>
-                      <div className="text-sm font-medium text-muted-foreground">Location Type</div>
-                      <div className="text-sm">{school.urbanRural === 'URBAN' ? 'Urban' : 'Rural'}</div>
+                      <div className="text-sm font-medium text-muted-foreground">Tipe Lokasi</div>
+                      <div className="text-sm">{school.urbanRural === 'URBAN' ? 'Perkotaan' : 'Pedesaan'}</div>
                     </div>
                   )}
                 </div>
@@ -379,13 +379,13 @@ export function SchoolDetail({ schoolId, onEdit, onDelete }: SchoolDetailProps) 
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <MapPin className="h-5 w-5" />
-                  Location
+                  Lokasi
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-sm">{school.schoolAddress}</p>
                 {school.postalCode && (
-                  <p className="text-sm text-muted-foreground mt-2">Postal Code: {school.postalCode}</p>
+                  <p className="text-sm text-muted-foreground mt-2">Kode Pos: {school.postalCode}</p>
                 )}
               </CardContent>
             </Card>
@@ -397,18 +397,18 @@ export function SchoolDetail({ schoolId, onEdit, onDelete }: SchoolDetailProps) 
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <User className="h-5 w-5" />
-                  Contact Information
+                  Informasi Kontak
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <div className="text-sm font-medium text-muted-foreground">Principal Name</div>
+                  <div className="text-sm font-medium text-muted-foreground">Nama Kepala Sekolah</div>
                   <div className="text-sm">{school.principalName}</div>
                 </div>
 
                 {school.principalNip && (
                   <div>
-                    <div className="text-sm font-medium text-muted-foreground">Principal NIP</div>
+                    <div className="text-sm font-medium text-muted-foreground">NIP Kepala Sekolah</div>
                     <div className="text-sm">{school.principalNip}</div>
                   </div>
                 )}
@@ -418,7 +418,7 @@ export function SchoolDetail({ schoolId, onEdit, onDelete }: SchoolDetailProps) 
                 <div className="flex items-center gap-2">
                   <Phone className="h-4 w-4 text-muted-foreground" />
                   <div>
-                    <div className="text-sm font-medium">Phone</div>
+                    <div className="text-sm font-medium">Telepon</div>
                     <div className="text-sm text-muted-foreground">{school.contactPhone}</div>
                   </div>
                 </div>
@@ -437,7 +437,7 @@ export function SchoolDetail({ schoolId, onEdit, onDelete }: SchoolDetailProps) 
                   <div className="flex items-center gap-2">
                     <Phone className="h-4 w-4 text-muted-foreground" />
                     <div>
-                      <div className="text-sm font-medium">Alternate Phone</div>
+                      <div className="text-sm font-medium">Telepon Alternatif</div>
                       <div className="text-sm text-muted-foreground">{school.alternatePhone}</div>
                     </div>
                   </div>
@@ -485,31 +485,31 @@ export function SchoolDetail({ schoolId, onEdit, onDelete }: SchoolDetailProps) 
             </Card>
           </TabsContent>
 
-          {/* Tab 3: Students & Demographics */}
+          {/* Tab 3: Siswa & Demografi */}
           <TabsContent value="students" className="space-y-4">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Users className="h-5 w-5" />
-                  Student Statistics
+                  Statistik Siswa
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div>
-                    <div className="text-sm font-medium text-muted-foreground">Total Students</div>
+                    <div className="text-sm font-medium text-muted-foreground">Total Siswa</div>
                     <div className="text-2xl font-bold">{school.totalStudents}</div>
                   </div>
                   <div>
-                    <div className="text-sm font-medium text-muted-foreground">Target Students</div>
+                    <div className="text-sm font-medium text-muted-foreground">Target Siswa</div>
                     <div className="text-2xl font-bold">{school.targetStudents}</div>
                   </div>
                   <div>
-                    <div className="text-sm font-medium text-muted-foreground">Active Students</div>
+                    <div className="text-sm font-medium text-muted-foreground">Siswa Aktif</div>
                     <div className="text-2xl font-bold">{school.activeStudents || 'N/A'}</div>
                   </div>
                   <div>
-                    <div className="text-sm font-medium text-muted-foreground">Attendance Rate</div>
+                    <div className="text-sm font-medium text-muted-foreground">Tingkat Kehadiran</div>
                     <div className="text-2xl font-bold">{school.attendanceRate?.toFixed(1) || 'N/A'}%</div>
                   </div>
                 </div>
@@ -517,23 +517,23 @@ export function SchoolDetail({ schoolId, onEdit, onDelete }: SchoolDetailProps) 
                 <Separator />
 
                 <div className="space-y-2">
-                  <div className="text-sm font-medium">Age Group Distribution</div>
+                  <div className="text-sm font-medium">Distribusi Kelompok Usia</div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <div className="text-sm text-muted-foreground">4-6 years (PAUD)</div>
-                      <div className="text-sm font-medium">{school.students4to6Years} students</div>
+                      <div className="text-sm text-muted-foreground">4-6 tahun (PAUD)</div>
+                      <div className="text-sm font-medium">{school.students4to6Years} siswa</div>
                     </div>
                     <div>
-                      <div className="text-sm text-muted-foreground">7-12 years (SD)</div>
-                      <div className="text-sm font-medium">{school.students7to12Years} students</div>
+                      <div className="text-sm text-muted-foreground">7-12 tahun (SD)</div>
+                      <div className="text-sm font-medium">{school.students7to12Years} siswa</div>
                     </div>
                     <div>
-                      <div className="text-sm text-muted-foreground">13-15 years (SMP)</div>
-                      <div className="text-sm font-medium">{school.students13to15Years} students</div>
+                      <div className="text-sm text-muted-foreground">13-15 tahun (SMP)</div>
+                      <div className="text-sm font-medium">{school.students13to15Years} siswa</div>
                     </div>
                     <div>
-                      <div className="text-sm text-muted-foreground">16-18 years (SMA/SMK)</div>
-                      <div className="text-sm font-medium">{school.students16to18Years} students</div>
+                      <div className="text-sm text-muted-foreground">16-18 tahun (SMA/SMK)</div>
+                      <div className="text-sm font-medium">{school.students16to18Years} siswa</div>
                     </div>
                   </div>
                 </div>
@@ -542,12 +542,12 @@ export function SchoolDetail({ schoolId, onEdit, onDelete }: SchoolDetailProps) 
                   <>
                     <Separator />
                     <div className="space-y-2">
-                      <div className="text-sm font-medium">Gender Distribution</div>
+                      <div className="text-sm font-medium">Distribusi Gender</div>
                       <div className="grid grid-cols-2 gap-4">
                         {school.maleStudents !== null && (
                           <div>
-                            <div className="text-sm text-muted-foreground">Male</div>
-                            <div className="text-sm font-medium">{school.maleStudents} students</div>
+                            <div className="text-sm text-muted-foreground">Laki-laki</div>
+                            <div className="text-sm font-medium">{school.maleStudents} siswa</div>
                           </div>
                         )}
                         {school.femaleStudents !== null && (
