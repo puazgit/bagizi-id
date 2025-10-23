@@ -7,7 +7,6 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { toast } from 'sonner'
 
 import { SchoolForm } from '@/features/sppg/school/components/SchoolForm'
 import { useCreateSchool } from '@/features/sppg/school/hooks'
@@ -27,7 +26,7 @@ export function CreateSchoolForm() {
       const result = await createSchool(data)
       
       if (result.id) {
-        toast.success('Sekolah berhasil ditambahkan!')
+        // Toast already shown by mutation hook
         router.push(`/schools/${result.id}`)
       }
     } catch (error) {

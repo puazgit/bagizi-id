@@ -7,7 +7,6 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { toast } from 'sonner'
 
 import { SchoolForm } from '@/features/sppg/school/components/SchoolForm'
 import { useSchool, useUpdateSchool } from '@/features/sppg/school/hooks'
@@ -59,7 +58,7 @@ export function EditSchoolForm({ schoolId }: EditSchoolFormProps) {
       const result = await updateSchool({ id: schoolId, data })
       
       if (result.id) {
-        toast.success('Sekolah berhasil diperbarui!')
+        // Toast already shown by mutation hook
         router.push(`/schools/${result.id}`)
       }
     } catch (error) {
