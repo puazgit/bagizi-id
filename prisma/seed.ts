@@ -30,11 +30,6 @@ async function resetDatabase() {
   console.log('🔄 Resetting database (deleting all data)...')
   
   try {
-    // Skip reset if tables don't exist yet (fresh database)
-    // This happens after `prisma migrate reset` which already clears all data
-    console.log('  ℹ️  Skipping manual reset (already done by migrate reset)')
-    return
-    
     // Delete in reverse order of dependencies to avoid foreign key constraints
     
     // Domain data (depends on everything)
@@ -53,19 +48,19 @@ async function resetDatabase() {
     await prisma.menuPlan.deleteMany()
     await prisma.menuPlanTemplate.deleteMany()
     
-    // Menu domain
+    // Menu domain - delete ingredients FIRST before inventory
     await prisma.menuNutritionCalculation.deleteMany()
     await prisma.menuCostCalculation.deleteMany()
     await prisma.recipeStep.deleteMany()
-    await prisma.menuIngredient.deleteMany()
+    await prisma.menuIngredient.deleteMany() // ✅ CRITICAL: Delete before inventory
     await prisma.nutritionMenu.deleteMany()
     
-    // Inventory
+    // Inventory - now safe to delete
     await prisma.stockMovement.deleteMany()
     await prisma.inventoryItem.deleteMany()
     
     // Schools and Programs
-    await prisma.schoolBeneficiary.deleteMany() // ✅ NEW: Delete schools before programs
+    await prisma.schoolBeneficiary.deleteMany()
     await prisma.nutritionProgram.deleteMany()
     
     // Master data
@@ -125,7 +120,12 @@ async function main() {
 
     // 4. School Beneficiaries (needs programs)
     console.log('🏫 Step 8: Seeding school beneficiaries...')
-    await seedSchools(prisma, sppgs, programs, nagriTengah.id)
+    await seedSchools(prisma, sppgs, programs, {
+      villageId: nagriTengah.id,
+      districtId: purwakartaDistrict.id,
+      regencyId: purwakarta.id,
+      provinceId: jawaBarat.id
+    })
 
     // 5. Menu Planning Domain Data
     console.log('📅 Seeding menu planning domain (plans, assignments, templates)...')

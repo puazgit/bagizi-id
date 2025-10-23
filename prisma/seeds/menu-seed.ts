@@ -7,7 +7,7 @@
  * @see {@link /docs/copilot-instructions.md} Development Guidelines
  */
 
-import { PrismaClient, SPPG, User, NutritionProgram, NutritionMenu } from '@prisma/client'
+import { PrismaClient, SPPG, User, NutritionProgram, NutritionMenu, ProgramStatus } from '@prisma/client'
 
 /**
  * Seed complete menu domain data including:
@@ -101,7 +101,7 @@ async function seedNutritionPrograms(
         programCode: 'PWK-PMAS-2025',
         name: 'Program Makan Siang Anak Sekolah Purwakarta 2025',
         description: 'Program penyediaan makan siang bergizi untuk siswa SD/MI di wilayah Purwakarta',
-        programType: 'SUPPLEMENTARY_FEEDING',
+        programType: 'FREE_NUTRITIOUS_MEAL',
         targetGroup: 'SCHOOL_CHILDREN',
 
         // Nutrition Goals
@@ -138,7 +138,7 @@ async function seedNutritionPrograms(
           'SDN Bungursari'
         ],
 
-        status: 'ACTIVE'
+        status: ProgramStatus.ACTIVE
       }
     }),
 
@@ -151,7 +151,7 @@ async function seedNutritionPrograms(
         programCode: 'PWK-PMT-2025',
         name: 'Program Makanan Tambahan Anak Purwakarta 2025',
         description: 'Program penyediaan snack sehat bergizi untuk anak-anak prasekolah (PAUD/TK)',
-        programType: 'SUPPLEMENTARY_FEEDING',
+        programType: 'FREE_NUTRITIOUS_MEAL',
         targetGroup: 'TODDLER',
 
         // Nutrition Goals
@@ -183,7 +183,7 @@ async function seedNutritionPrograms(
           'PAUD Ceria Mandiri'
         ],
 
-        status: 'ACTIVE'
+        status: ProgramStatus.ACTIVE
       }
     })
   ])

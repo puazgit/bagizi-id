@@ -97,11 +97,11 @@ const sppgNavigation: NavigationGroup[] = [
         resource: 'program'
       },
       {
-        title: 'School',
-        href: '/school',
+        title: 'Schools',
+        href: '/schools',
         icon: School,
         badge: null,
-        resource: 'school'
+        resource: 'schools'
       }
     ]
   },

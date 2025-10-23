@@ -32,13 +32,16 @@ interface SchoolStatsProps {
  * ```
  */
 export function SchoolStats({ programId, className }: SchoolStatsProps) {
-  const { data: schools, isLoading } = useSchools({
+  const { data, isLoading } = useSchools({
     mode: 'standard',
     programId,
   })
 
+  // Extract schools from response data
+  const schools = data?.schools || []
+
   // Calculate statistics
-  const stats = schools ? {
+  const stats = schools.length > 0 ? {
     total: schools.length,
     active: schools.filter(s => s.isActive).length,
     totalStudents: schools.reduce((sum, s) => sum + s.totalStudents, 0),

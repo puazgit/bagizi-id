@@ -12,7 +12,7 @@ import { NextRequest } from 'next/server'
 import { auth } from '@/auth'
 import { db } from '@/lib/prisma'
 import { createProgramSchema } from '@/features/sppg/program/schemas'
-import { UserRole, ProgramType, TargetGroup, Prisma } from '@prisma/client'
+import { UserRole, ProgramType, TargetGroup, ProgramStatus, Prisma } from '@prisma/client'
 
 /**
  * GET /api/sppg/program
@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
 
     // 3. Parse query parameters for filtering
     const { searchParams } = new URL(request.url)
-    const status = searchParams.get('status')
+    const status = searchParams.get('status') as ProgramStatus | null
     const programType = searchParams.get('programType') as ProgramType | null
     const targetGroup = searchParams.get('targetGroup') as TargetGroup | null
     const search = searchParams.get('search')

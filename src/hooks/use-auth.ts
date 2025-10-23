@@ -196,13 +196,11 @@ export function useAuth(): UseAuthReturn {
    */
   const canAccess = useCallback((resource: string): boolean => {
     if (!user) {
-      console.log('[canAccess] No user, denying access to:', resource)
       return false
     }
     
     // Platform admin can access everything
     if (isAdminUser()) {
-      console.log('[canAccess] Platform admin, granting access to:', resource)
       return true
     }
     
@@ -219,6 +217,7 @@ export function useAuth(): UseAuthReturn {
         hasAccess = hasRole(['SPPG_KEPALA', 'SPPG_ADMIN', 'SPPG_AHLI_GIZI'])
         break
       case 'school':
+      case 'schools': // Support both singular and plural
         hasAccess = hasRole(['SPPG_KEPALA', 'SPPG_ADMIN', 'SPPG_AHLI_GIZI'])
         break
       case 'menu':
@@ -235,12 +234,6 @@ export function useAuth(): UseAuthReturn {
         break
       case 'production':
         hasAccess = hasRole(['SPPG_KEPALA', 'SPPG_ADMIN', 'SPPG_PRODUKSI_MANAGER', 'SPPG_STAFF_DAPUR', 'SPPG_STAFF_QC', 'SPPG_AHLI_GIZI'])
-        console.log('[canAccess] Production check:', {
-          resource,
-          userRole: user.userRole,
-          hasAccess,
-          allowedRoles: ['SPPG_KEPALA', 'SPPG_ADMIN', 'SPPG_PRODUKSI_MANAGER', 'SPPG_STAFF_DAPUR', 'SPPG_STAFF_QC', 'SPPG_AHLI_GIZI']
-        })
         break
       case 'distribution':
         hasAccess = hasRole(['SPPG_KEPALA', 'SPPG_ADMIN', 'SPPG_DISTRIBUSI_MANAGER', 'SPPG_STAFF_DISTRIBUSI'])
@@ -261,7 +254,6 @@ export function useAuth(): UseAuthReturn {
         hasAccess = false
     }
     
-    console.log('[canAccess] Access check:', { resource, userRole: user.userRole, hasAccess })
     return hasAccess
   }, [user, isAdminUser, isSppgUser, hasRole])
   

@@ -215,6 +215,7 @@ model SPPG {
   procurementPlans         ProcurementPlan[]
   procurements             Procurement[]
   productionOptimizations  ProductionOptimization[]
+  schoolBeneficiaries      SchoolBeneficiary[] // ✅ NEW: Schools served by this SPPG
   district                 District                  @relation("SppgDistrict", fields: [districtId], references: [id])
   province                 Province                  @relation("SppgProvince", fields: [provinceId], references: [id])
   regency                  Regency                   @relation("SppgRegency", fields: [regencyId], references: [id])
@@ -1317,59 +1318,144 @@ model NutritionRequirement {
 }
 
 model SchoolBeneficiary {
-  id                   String                 @id @default(cuid())
-  programId            String
-  schoolName           String
-  schoolCode           String?
-  schoolType           String
-  schoolStatus         String
-  principalName        String
-  contactPhone         String
-  contactEmail         String?
-  schoolAddress        String
-  villageId            String
-  postalCode           String?
-  coordinates          String?
-  totalStudents        Int
-  targetStudents       Int
-  activeStudents       Int                    @default(0)
-  students4to6Years    Int                    @default(0)
-  students7to12Years   Int                    @default(0)
-  students13to15Years  Int                    @default(0)
-  students16to18Years  Int                    @default(0)
-  feedingDays          Int[]
-  mealsPerDay          Int                    @default(1)
-  feedingTime          String?
-  deliveryAddress      String
-  deliveryContact      String
-  deliveryInstructions String?
-  storageCapacity      String?
-  servingMethod        String                 @default("CAFETERIA")
-  hasKitchen           Boolean                @default(false)
-  hasStorage           Boolean                @default(false)
-  hasCleanWater        Boolean                @default(true)
-  hasElectricity       Boolean                @default(true)
-  enrollmentDate       DateTime               @default(now())
-  isActive             Boolean                @default(true)
-  suspendedAt          DateTime?
-  suspensionReason     String?
-  beneficiaryType      BeneficiaryType        @default(CHILD)
-  specialDietary       String[]
-  allergyAlerts        String[]
-  culturalReqs         String[]
-  createdAt            DateTime               @default(now())
-  updatedAt            DateTime               @updatedAt
-  foodDistributions    FoodDistribution[]
-  program              NutritionProgram       @relation(fields: [programId], references: [id], onDelete: Cascade)
-  village              Village                @relation("SchoolVillage", fields: [villageId], references: [id])
-  distributions        SchoolDistribution[]
-  reports              SchoolFeedingReport[]
-  deliveries           DistributionDelivery[] // ✅ PHASE 3: Individual delivery tracking
+  id                 String       @id @default(cuid())
+  sppgId             String // ✅ CRITICAL FIX: Multi-tenancy isolation
+  programId          String
+  schoolName         String       @db.VarChar(255)
+  schoolCode         String?      @unique @db.VarChar(50) // ✅ Unique constraint
+  npsn               String?      @unique @db.VarChar(20) // ✅ Nomor Pokok Sekolah Nasional
+  schoolType         SchoolType // ✅ ENUM instead of String
+  schoolStatus       SchoolStatus // ✅ ENUM instead of String
+  accreditationGrade String?      @db.VarChar(1) // A, B, C
+  accreditationYear  Int?
+  principalName      String       @db.VarChar(255)
+  principalNip       String?      @db.VarChar(30) // Nomor Induk Pegawai
+  contactPhone       String       @db.VarChar(20)
+  contactEmail       String?      @db.VarChar(255)
+  alternatePhone     String?      @db.VarChar(20)
+  whatsappNumber     String?      @db.VarChar(20)
 
+  // ✅ Complete Regional Data for reporting
+  schoolAddress String
+  villageId     String
+  districtId    String // ✅ NEW: Kecamatan
+  regencyId     String // ✅ NEW: Kabupaten/Kota
+  provinceId    String // ✅ NEW: Provinsi
+  postalCode    String? @db.VarChar(10)
+  coordinates   String? @db.VarChar(50)
+  urbanRural    String? @default("URBAN") @db.VarChar(20) // URBAN/RURAL
+
+  // Student Demographics
+  totalStudents       Int
+  targetStudents      Int
+  activeStudents      Int  @default(0)
+  students4to6Years   Int  @default(0)
+  students7to12Years  Int  @default(0)
+  students13to15Years Int  @default(0)
+  students16to18Years Int  @default(0)
+  maleStudents        Int? @default(0) // ✅ NEW: Gender breakdown
+  femaleStudents      Int? @default(0) // ✅ NEW: Gender breakdown
+
+  // Feeding Configuration
+  feedingDays   Int[]
+  mealsPerDay   Int     @default(1)
+  feedingTime   String? @db.VarChar(50)
+  breakfastTime String? @db.VarChar(10) // HH:MM format
+  lunchTime     String? @db.VarChar(10)
+  snackTime     String? @db.VarChar(10)
+
+  // Delivery & Logistics
+  deliveryAddress       String
+  deliveryContact       String  @db.VarChar(255)
+  deliveryPhone         String? @db.VarChar(20)
+  deliveryInstructions  String?
+  preferredDeliveryTime String? @db.VarChar(50)
+  accessRoadCondition   String? @db.VarChar(50) // GOOD/FAIR/POOR
+  distanceFromSppg      Float? // ✅ NEW: Distance in KM
+  estimatedTravelTime   Int? // ✅ NEW: Minutes
+
+  // Facilities & Infrastructure
+  storageCapacity String?             @db.VarChar(100)
+  servingMethod   SchoolServingMethod @default(CAFETERIA) // ✅ ENUM
+  hasKitchen      Boolean             @default(false)
+  hasStorage      Boolean             @default(false)
+  hasRefrigerator Boolean             @default(false) // ✅ NEW
+  hasCleanWater   Boolean             @default(true)
+  hasElectricity  Boolean             @default(true)
+  hasHandwashing  Boolean             @default(true) // ✅ NEW
+  hasDiningArea   Boolean             @default(false) // ✅ NEW
+  diningCapacity  Int? // ✅ NEW: Number of students that can eat at once
+
+  // Budget & Financial
+  monthlyBudgetAllocation Float?    @default(0) // ✅ NEW: Budget per month
+  budgetPerStudent        Float?    @default(0) // ✅ NEW: Budget per student
+  contractStartDate       DateTime? // ✅ NEW: Contract tracking
+  contractEndDate         DateTime? // ✅ NEW
+  contractValue           Float? // ✅ NEW: Total contract value
+  contractNumber          String?   @db.VarChar(100) // ✅ NEW
+
+  // Performance Metrics
+  attendanceRate       Float?    @default(0) // ✅ NEW: % kehadiran
+  participationRate    Float?    @default(0) // ✅ NEW: % partisipasi makan
+  satisfactionScore    Float?    @default(0) // ✅ NEW: Skor kepuasan (0-5)
+  lastDistributionDate DateTime? // ✅ NEW: Tracking terakhir distribusi
+  lastReportDate       DateTime? // ✅ NEW: Tracking terakhir laporan
+  totalDistributions   Int       @default(0) // ✅ NEW: Total kali distribusi
+  totalMealsServed     Int       @default(0) // ✅ NEW: Total makanan disajikan
+
+  // Status & Enrollment
+  enrollmentDate   DateTime  @default(now())
+  isActive         Boolean   @default(true)
+  suspendedAt      DateTime?
+  suspensionReason String?
+  reactivationDate DateTime? // ✅ NEW: Tanggal reaktivasi
+
+  // Special Requirements
+  beneficiaryType BeneficiaryType @default(CHILD)
+  specialDietary  String[]
+  allergyAlerts   String[]
+  culturalReqs    String[]
+  religiousReqs   String[] // ✅ NEW: Kebutuhan keagamaan
+
+  // Integration & External Systems
+  dapodikId        String?   @unique @db.VarChar(50) // ✅ NEW: Dapodik ID
+  kemendikbudId    String?   @db.VarChar(50) // ✅ NEW: Kemendikbud ID
+  externalSystemId String?   @db.VarChar(100) // ✅ NEW: Other external system
+  syncedAt         DateTime? // ✅ NEW: Last sync with external system
+
+  // Notes & Documentation
+  notes               String? // ✅ NEW: Internal notes
+  specialInstructions String? // ✅ NEW: Special handling
+  documents           Json? // ✅ NEW: Document references
+
+  // Audit Trail
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  createdBy String?  @db.VarChar(100) // ✅ NEW: User who created
+  updatedBy String?  @db.VarChar(100) // ✅ NEW: User who updated
+
+  // Relations
+  foodDistributions FoodDistribution[]
+  sppg              SPPG                   @relation(fields: [sppgId], references: [id], onDelete: Cascade) // ✅ NEW: Direct SPPG relation
+  program           NutritionProgram       @relation(fields: [programId], references: [id], onDelete: Cascade)
+  province          Province               @relation("SchoolProvince", fields: [provinceId], references: [id]) // ✅ NEW
+  regency           Regency                @relation("SchoolRegency", fields: [regencyId], references: [id]) // ✅ NEW
+  district          District               @relation("SchoolDistrict", fields: [districtId], references: [id]) // ✅ NEW
+  village           Village                @relation("SchoolVillage", fields: [villageId], references: [id])
+  distributions     SchoolDistribution[]
+  reports           SchoolFeedingReport[]
+  deliveries        DistributionDelivery[]
+
+  @@unique([sppgId, schoolCode]) // ✅ NEW: Unique per SPPG
+  @@index([sppgId, isActive]) // ✅ CRITICAL: Multi-tenancy index
   @@index([programId, isActive])
   @@index([schoolType, isActive])
+  @@index([provinceId, regencyId, districtId]) // ✅ NEW: Regional reporting
   @@index([villageId])
   @@index([targetStudents])
+  @@index([npsn]) // ✅ NEW: NPSN lookup
+  @@index([enrollmentDate])
+  @@index([contractEndDate]) // ✅ NEW: Contract expiry monitoring
   @@map("school_beneficiaries")
 }
 
@@ -2199,7 +2285,7 @@ model NutritionProgram {
   currentRecipients   Int                  @default(0)
   implementationArea  String
   partnerSchools      String[]
-  status              String               @default("ACTIVE")
+  status              ProgramStatus        @default(ACTIVE)
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
   feedback            Feedback[]
@@ -2261,8 +2347,8 @@ model NutritionMenu {
 model MenuIngredient {
   id               String        @id @default(cuid())
   menuId           String
-  inventoryItemId  String        // ✅ REQUIRED - Must link to inventory
-  quantity         Float         // Quantity per 100g serving
+  inventoryItemId  String // ✅ REQUIRED - Must link to inventory
+  quantity         Float // Quantity per 100g serving
   preparationNotes String?
   isOptional       Boolean       @default(false)
   substitutes      String[]
@@ -3981,27 +4067,29 @@ model UserOnboarding {
 }
 
 model Province {
-  id        String          @id @default(cuid())
-  code      String          @unique @db.VarChar(2)
-  name      String          @db.VarChar(50)
-  region    IndonesiaRegion
-  timezone  Timezone
-  regencies Regency[]
-  sppgs     SPPG[]          @relation("SppgProvince")
+  id                String              @id @default(cuid())
+  code              String              @unique @db.VarChar(2)
+  name              String              @db.VarChar(50)
+  region            IndonesiaRegion
+  timezone          Timezone
+  regencies         Regency[]
+  sppgs             SPPG[]              @relation("SppgProvince")
+  schoolBeneficiary SchoolBeneficiary[] @relation("SchoolProvince") // ✅ NEW
 
   @@index([region])
   @@map("provinces")
 }
 
 model Regency {
-  id         String      @id @default(cuid())
-  provinceId String      @db.VarChar(50)
-  code       String      @db.VarChar(4)
-  name       String      @db.VarChar(100)
-  type       RegencyType
-  districts  District[]
-  province   Province    @relation(fields: [provinceId], references: [id], onDelete: Cascade)
-  sppgs      SPPG[]      @relation("SppgRegency")
+  id                String              @id @default(cuid())
+  provinceId        String              @db.VarChar(50)
+  code              String              @db.VarChar(4)
+  name              String              @db.VarChar(100)
+  type              RegencyType
+  districts         District[]
+  province          Province            @relation(fields: [provinceId], references: [id], onDelete: Cascade)
+  sppgs             SPPG[]              @relation("SppgRegency")
+  schoolBeneficiary SchoolBeneficiary[] @relation("SchoolRegency") // ✅ NEW
 
   @@unique([provinceId, code])
   @@index([provinceId, type])
@@ -4009,13 +4097,14 @@ model Regency {
 }
 
 model District {
-  id        String    @id @default(cuid())
-  regencyId String    @db.VarChar(50)
-  code      String    @db.VarChar(6)
-  name      String    @db.VarChar(100)
-  regency   Regency   @relation(fields: [regencyId], references: [id], onDelete: Cascade)
-  sppgs     SPPG[]    @relation("SppgDistrict")
-  villages  Village[]
+  id                String              @id @default(cuid())
+  regencyId         String              @db.VarChar(50)
+  code              String              @db.VarChar(6)
+  name              String              @db.VarChar(100)
+  regency           Regency             @relation(fields: [regencyId], references: [id], onDelete: Cascade)
+  sppgs             SPPG[]              @relation("SppgDistrict")
+  villages          Village[]
+  schoolBeneficiary SchoolBeneficiary[] @relation("SchoolDistrict") // ✅ NEW
 
   @@unique([regencyId, code])
   @@index([regencyId])
@@ -5699,6 +5788,38 @@ enum OrganizationType {
   LAINNYA
 }
 
+enum SchoolType {
+  SD
+  SMP
+  SMA
+  SMK
+  MI
+  MTS
+  MA
+  PAUD
+  TK
+  SLB
+  PONDOK_PESANTREN
+  LAINNYA
+}
+
+enum SchoolStatus {
+  NEGERI
+  SWASTA
+  TERAKREDITASI_A
+  TERAKREDITASI_B
+  TERAKREDITASI_C
+  BELUM_TERAKREDITASI
+}
+
+enum SchoolServingMethod {
+  CAFETERIA
+  CLASSROOM
+  OUTDOOR
+  TAKEAWAY
+  HYBRID
+}
+
 enum UserType {
   SUPERADMIN
   SPPG_ADMIN
@@ -5894,9 +6015,18 @@ enum DemoType {
 enum ProgramType {
   NUTRITIONAL_RECOVERY
   NUTRITIONAL_EDUCATION
-  SUPPLEMENTARY_FEEDING
+  FREE_NUTRITIOUS_MEAL
   EMERGENCY_NUTRITION
   STUNTING_INTERVENTION
+}
+
+enum ProgramStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  COMPLETED
+  CANCELLED
+  ARCHIVED
 }
 
 enum TargetGroup {

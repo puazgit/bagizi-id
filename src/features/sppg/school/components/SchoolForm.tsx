@@ -6,7 +6,7 @@
 
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -33,7 +33,15 @@ import {
 import { Separator } from '@/components/ui/separator'
 import { schoolMasterSchema, type SchoolMasterInput } from '@/features/sppg/school/schemas'
 import { SCHOOL_TYPES } from '@/features/sppg/school/types'
-import { School, Users, MapPin, Truck, Utensils, Calendar } from 'lucide-react'
+// Import hooks
+import { 
+  usePrograms,
+  useProvinces,
+  useRegencies,
+  useDistricts,
+  useVillagesByDistrict
+} from '../hooks'
+import { School, Users, MapPin, Truck, Utensils, Calendar, FileText, TrendingUp } from 'lucide-react'
 
 interface SchoolFormProps {
   defaultValues?: Partial<SchoolMasterInput>
@@ -75,19 +83,31 @@ export function SchoolForm({
 }: SchoolFormProps) {
   const [activeSection, setActiveSection] = useState(0)
 
+  // Fetch programs for dropdown
+  const { data: programs = [], isLoading: isLoadingPrograms } = usePrograms()
+
+  // Regional cascade data - provinces loaded immediately
+  const { data: provinces = [], isLoading: isLoadingProvinces } = useProvinces()
+
+  // Initialize form first
   const form = useForm<SchoolMasterInput>({
-    resolver: zodResolver(schoolMasterSchema),
+    // Type incompatibility between react-hook-form versions in node_modules
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    resolver: zodResolver(schoolMasterSchema) as any,
     defaultValues: {
       programId: defaultValues?.programId || '',
       schoolName: defaultValues?.schoolName || '',
       schoolCode: defaultValues?.schoolCode || null,
       schoolType: defaultValues?.schoolType || 'SD',
-      schoolStatus: defaultValues?.schoolStatus || 'ACTIVE',
+      schoolStatus: defaultValues?.schoolStatus || 'NEGERI', // Fixed: Match SchoolStatus enum
       principalName: defaultValues?.principalName || '',
       contactPhone: defaultValues?.contactPhone || '',
       contactEmail: defaultValues?.contactEmail || null,
       schoolAddress: defaultValues?.schoolAddress || '',
       villageId: defaultValues?.villageId || '',
+      provinceId: defaultValues?.provinceId || '',
+      regencyId: defaultValues?.regencyId || '',
+      districtId: defaultValues?.districtId || '',
       postalCode: defaultValues?.postalCode || null,
       coordinates: defaultValues?.coordinates || null,
       totalStudents: defaultValues?.totalStudents ?? 0,
@@ -118,6 +138,24 @@ export function SchoolForm({
       culturalReqs: defaultValues?.culturalReqs ?? [],
     }
   })
+  
+  // Watch form values for conditional regional data loading
+  const selectedProvinceId = form.watch('provinceId')
+  const selectedRegencyId = form.watch('regencyId')
+  const selectedDistrictId = form.watch('districtId')
+
+  // Conditional regional data loading based on selected values
+  const { data: regencies = [], isLoading: isLoadingRegencies } = useRegencies(selectedProvinceId, {
+    enabled: !!selectedProvinceId
+  })
+
+  const { data: districts = [], isLoading: isLoadingDistricts } = useDistricts(selectedRegencyId, {
+    enabled: !!selectedRegencyId
+  })
+
+  const { data: villages = [], isLoading: isLoadingVillages } = useVillagesByDistrict(selectedDistrictId, {
+    enabled: !!selectedDistrictId
+  })
 
   const sections = [
     { id: 0, title: 'Informasi Dasar', icon: School },
@@ -126,15 +164,46 @@ export function SchoolForm({
     { id: 3, title: 'Jadwal Makan', icon: Calendar },
     { id: 4, title: 'Pengiriman', icon: Truck },
     { id: 5, title: 'Fasilitas', icon: Utensils },
+    { id: 6, title: 'Kontrak & Anggaran', icon: FileText },
+    { id: 7, title: 'Metrik Kinerja', icon: TrendingUp },
   ]
 
+  // Auto-calculate activeStudents from totalStudents
+  useEffect(() => {
+    const subscription = form.watch((value, { name }) => {
+      // Only auto-fill if totalStudents changes and activeStudents is 0
+      if (name === 'totalStudents' && value.totalStudents) {
+        const currentActive = form.getValues('activeStudents')
+        
+        // Auto-fill activeStudents if it's 0 (not manually set)
+        if (currentActive === 0 && value.totalStudents > 0) {
+          form.setValue('activeStudents', value.totalStudents)
+        }
+      }
+    })
+    
+    return () => subscription.unsubscribe()
+  }, [form])
+
   const handleSubmit = async (data: SchoolMasterInput) => {
+    console.log('🔍 Form submitted with data:', data)
+    console.log('📊 Age breakdown:', {
+      total: data.totalStudents,
+      age4to6: data.students4to6Years,
+      age7to12: data.students7to12Years,
+      age13to15: data.students13to15Years,
+      age16to18: data.students16to18Years,
+      sum: data.students4to6Years + data.students7to12Years + data.students13to15Years + data.students16to18Years
+    })
     await onSubmit(data)
   }
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+      <form onSubmit={form.handleSubmit(handleSubmit, (errors) => {
+        console.log('❌ Form validation errors:', errors)
+        console.log('📋 Current form values:', form.getValues())
+      })} className="space-y-6">
         {/* Section Navigation */}
         <Card>
           <CardContent className="pt-6">
@@ -172,6 +241,204 @@ export function SchoolForm({
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Program Selection */}
+                <FormField
+                  control={form.control}
+                  name="programId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Program Gizi *</FormLabel>
+                      <Select 
+                        onValueChange={field.onChange} 
+                        defaultValue={field.value}
+                        disabled={isLoadingPrograms}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder={isLoadingPrograms ? "Memuat program..." : "Pilih program gizi"} />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {programs.map(program => (
+                            <SelectItem key={program.id} value={program.id}>
+                              {program.name} ({program.programCode})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>
+                        Program gizi tempat sekolah ini terdaftar
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Province Selection */}
+                <FormField
+                  control={form.control}
+                  name="provinceId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Provinsi *</FormLabel>
+                      <Select 
+                        onValueChange={(value) => {
+                          field.onChange(value)
+                          // Reset dependent fields when province changes
+                          form.setValue('regencyId', '')
+                          form.setValue('districtId', '')
+                          form.setValue('villageId', '')
+                        }}
+                        value={field.value}
+                        disabled={isLoadingProvinces}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder={isLoadingProvinces ? "Memuat provinsi..." : "Pilih provinsi"} />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent className="max-h-[300px]">
+                          {provinces.map(province => (
+                            <SelectItem key={province.id} value={province.id}>
+                              {province.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>
+                        Pilih provinsi lokasi sekolah
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Regency Selection */}
+                <FormField
+                  control={form.control}
+                  name="regencyId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Kabupaten/Kota *</FormLabel>
+                      <Select 
+                        onValueChange={(value) => {
+                          field.onChange(value)
+                          // Reset dependent fields when regency changes
+                          form.setValue('districtId', '')
+                          form.setValue('villageId', '')
+                        }}
+                        value={field.value}
+                        disabled={!selectedProvinceId || isLoadingRegencies}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder={
+                              !selectedProvinceId 
+                                ? "Pilih provinsi terlebih dahulu" 
+                                : isLoadingRegencies 
+                                ? "Memuat kabupaten/kota..." 
+                                : "Pilih kabupaten/kota"
+                            } />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent className="max-h-[300px]">
+                          {regencies.map(regency => (
+                            <SelectItem key={regency.id} value={regency.id}>
+                              {regency.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>
+                        Pilih kabupaten/kota lokasi sekolah
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* District Selection */}
+                <FormField
+                  control={form.control}
+                  name="districtId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Kecamatan *</FormLabel>
+                      <Select 
+                        onValueChange={(value) => {
+                          field.onChange(value)
+                          // Reset village when district changes
+                          form.setValue('villageId', '')
+                        }}
+                        value={field.value}
+                        disabled={!selectedRegencyId || isLoadingDistricts}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder={
+                              !selectedRegencyId 
+                                ? "Pilih kabupaten/kota terlebih dahulu" 
+                                : isLoadingDistricts 
+                                ? "Memuat kecamatan..." 
+                                : "Pilih kecamatan"
+                            } />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent className="max-h-[300px]">
+                          {districts.map(district => (
+                            <SelectItem key={district.id} value={district.id}>
+                              {district.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>
+                        Pilih kecamatan lokasi sekolah
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Village Selection */}
+                <FormField
+                  control={form.control}
+                  name="villageId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Desa/Kelurahan *</FormLabel>
+                      <Select 
+                        onValueChange={field.onChange}
+                        value={field.value}
+                        disabled={!selectedDistrictId || isLoadingVillages}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder={
+                              !selectedDistrictId 
+                                ? "Pilih kecamatan terlebih dahulu" 
+                                : isLoadingVillages 
+                                ? "Memuat desa/kelurahan..." 
+                                : "Pilih desa/kelurahan"
+                            } />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent className="max-h-[300px]">
+                          {villages.map(village => (
+                            <SelectItem key={village.id} value={village.id}>
+                              {village.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>
+                        Lokasi administratif sekolah (desa/kelurahan)
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
                 {/* School Name */}
                 <FormField
                   control={form.control}
@@ -230,6 +497,374 @@ export function SchoolForm({
                     </FormItem>
                   )}
                 />
+
+                {/* NPSN - Nomor Pokok Sekolah Nasional */}
+                <FormField
+                  control={form.control}
+                  name="npsn"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>NPSN</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="12345678" 
+                          {...field} 
+                          value={field.value || ''} 
+                          maxLength={8}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Nomor Pokok Sekolah Nasional (8 digit)
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Dapodik ID */}
+                <FormField
+                  control={form.control}
+                  name="dapodikId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>ID Dapodik</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="A1B2C3D4-E5F6-7890" 
+                          {...field} 
+                          value={field.value || ''} 
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        ID dari sistem Dapodik Kemendikbud
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Kemendikbud ID */}
+                <FormField
+                  control={form.control}
+                  name="kemendikbudId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>ID Kemendikbud</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="KMD-12345678" 
+                          {...field} 
+                          value={field.value || ''} 
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        ID integrasi dengan sistem Kemendikbud
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Accreditation Grade */}
+                <FormField
+                  control={form.control}
+                  name="accreditationGrade"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nilai Akreditasi</FormLabel>
+                      <Select 
+                        onValueChange={field.onChange} 
+                        value={field.value || undefined}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Pilih nilai akreditasi" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="A">A - Sangat Baik</SelectItem>
+                          <SelectItem value="B">B - Baik</SelectItem>
+                          <SelectItem value="C">C - Cukup</SelectItem>
+                          <SelectItem value="D">D - Kurang</SelectItem>
+                          <SelectItem value="BELUM_TERAKREDITASI">Belum Terakreditasi</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>
+                        Nilai akreditasi dari BAN-S/M
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Accreditation Year */}
+                <FormField
+                  control={form.control}
+                  name="accreditationYear"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Tahun Akreditasi</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number"
+                          placeholder="2024" 
+                          {...field} 
+                          value={field.value || ''} 
+                          min={2000}
+                          max={new Date().getFullYear()}
+                          onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : null)}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Tahun terakhir akreditasi diberikan
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Urban/Rural Classification */}
+                <FormField
+                  control={form.control}
+                  name="urbanRural"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Klasifikasi Lokasi</FormLabel>
+                      <Select 
+                        onValueChange={field.onChange} 
+                        value={field.value || undefined}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Pilih klasifikasi" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="URBAN">Perkotaan (Urban)</SelectItem>
+                          <SelectItem value="RURAL">Pedesaan (Rural)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>
+                        Klasifikasi lokasi sekolah
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <Separator />
+
+              {/* Lifecycle Dates */}
+              <div className="space-y-4">
+                <h4 className="text-sm font-medium text-muted-foreground">Tanggal Penting</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Enrollment Date */}
+                  <FormField
+                    control={form.control}
+                    name="enrollmentDate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Tanggal Pendaftaran</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="date"
+                            {...field}
+                            value={field.value ? new Date(field.value).toISOString().split('T')[0] : ''}
+                            onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value) : null)}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Tanggal sekolah terdaftar di program
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Reactivation Date */}
+                  <FormField
+                    control={form.control}
+                    name="reactivationDate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Tanggal Reaktivasi</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="date"
+                            {...field}
+                            value={field.value ? new Date(field.value).toISOString().split('T')[0] : ''}
+                            onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value) : null)}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Tanggal reaktivasi jika pernah ditangguhkan
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Documentation & Notes */}
+              <div className="space-y-4">
+                <h4 className="text-sm font-medium text-muted-foreground">Catatan & Dokumentasi</h4>
+                
+                {/* Notes */}
+                <FormField
+                  control={form.control}
+                  name="notes"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Catatan Internal</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Catatan tambahan tentang sekolah..."
+                          className="min-h-[100px]"
+                          {...field}
+                          value={field.value || ''}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Catatan internal untuk tim (tidak terlihat oleh sekolah)
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Special Instructions */}
+                <FormField
+                  control={form.control}
+                  name="specialInstructions"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Instruksi Khusus</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Instruksi khusus untuk operasional..."
+                          className="min-h-[80px]"
+                          {...field}
+                          value={field.value || ''}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Instruksi khusus yang perlu diperhatikan tim
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Documents (JSON field for file metadata) */}
+                <FormField
+                  control={form.control}
+                  name="documents"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Dokumen Pendukung</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder='{"files": [{"name": "surat_kontrak.pdf", "url": "https://..."}]}'
+                          className="min-h-[80px] font-mono text-xs"
+                          {...field}
+                          value={field.value ? JSON.stringify(field.value, null, 2) : ''}
+                          onChange={(e) => {
+                            try {
+                              const parsed = e.target.value ? JSON.parse(e.target.value) : null
+                              field.onChange(parsed)
+                            } catch {
+                              // Keep as string if invalid JSON, will be validated by schema
+                              field.onChange(e.target.value || null)
+                            }
+                          }}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        JSON metadata untuk file uploads (opsional, untuk advanced use)
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <Separator />
+
+              {/* Integration Fields */}
+              <div className="space-y-4">
+                <h4 className="text-sm font-medium text-muted-foreground">Integrasi Sistem</h4>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* External System ID */}
+                  <FormField
+                    control={form.control}
+                    name="externalSystemId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>ID Sistem Eksternal</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="EXT-12345"
+                            {...field}
+                            value={field.value || ''}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          ID untuk integrasi dengan sistem eksternal
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Last Sync Date */}
+                  <FormField
+                    control={form.control}
+                    name="syncedAt"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Terakhir Sinkronisasi</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="datetime-local"
+                            {...field}
+                            value={field.value ? new Date(field.value).toISOString().slice(0, 16) : ''}
+                            onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value) : null)}
+                            disabled
+                            className="bg-muted"
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Waktu terakhir data disinkronkan (otomatis)
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Section 1: Location & Contact */}
+        {activeSection === 1 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MapPin className="h-5 w-5 text-primary" />
+                Lokasi & Kontak
+              </CardTitle>
+              <CardDescription>
+                Informasi lokasi dan cara menghubungi sekolah
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
                 {/* Principal Name */}
                 <FormField
@@ -319,6 +954,72 @@ export function SchoolForm({
                           value={field.value || ''}
                         />
                       </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Principal NIP */}
+                <FormField
+                  control={form.control}
+                  name="principalNip"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>NIP Kepala Sekolah</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="19850515 201403 1 002" 
+                          {...field}
+                          value={field.value || ''}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Nomor Induk Pegawai Kepala Sekolah
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Alternate Phone */}
+                <FormField
+                  control={form.control}
+                  name="alternatePhone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nomor Telepon Alternatif</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="0812-3456-7890" 
+                          {...field}
+                          value={field.value || ''}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Nomor kontak cadangan (opsional)
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* WhatsApp Number */}
+                <FormField
+                  control={form.control}
+                  name="whatsappNumber"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nomor WhatsApp</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="0812-3456-7890" 
+                          {...field}
+                          value={field.value || ''}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Nomor WhatsApp untuk komunikasi cepat
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -434,7 +1135,7 @@ export function SchoolForm({
                         />
                       </FormControl>
                       <FormDescription>
-                        Jumlah siswa yang menerima manfaat
+                        Target siswa untuk perencanaan ke depan (boleh lebih besar dari total siswa saat ini)
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -460,6 +1161,62 @@ export function SchoolForm({
                     </FormItem>
                   )}
                 />
+              </div>
+
+              <Separator />
+
+              {/* Gender Breakdown */}
+              <div className="space-y-3">
+                <h4 className="text-sm font-medium text-muted-foreground">Distribusi Siswa Berdasarkan Jenis Kelamin</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Male Students */}
+                  <FormField
+                    control={form.control}
+                    name="maleStudents"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Siswa Laki-laki</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            placeholder="250"
+                            {...field}
+                            value={field.value || ''}
+                            onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : null)}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Jumlah siswa laki-laki aktif
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Female Students */}
+                  <FormField
+                    control={form.control}
+                    name="femaleStudents"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Siswa Perempuan</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            placeholder="230"
+                            {...field}
+                            value={field.value || ''}
+                            onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : null)}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Jumlah siswa perempuan aktif
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
               </div>
 
               <Separator />
@@ -646,6 +1403,113 @@ export function SchoolForm({
                     )}
                   />
                 </div>
+
+                {/* Specific Feeding Times */}
+                <div className="border-t pt-4">
+                  <h4 className="text-sm font-medium mb-3 text-muted-foreground">Jadwal Waktu Makan Spesifik</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {/* Breakfast Time */}
+                    <FormField
+                      control={form.control}
+                      name="breakfastTime"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Waktu Sarapan</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="time"
+                              {...field}
+                              value={field.value || ''}
+                              placeholder="07:00"
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Jam sarapan pagi (opsional)
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* Lunch Time */}
+                    <FormField
+                      control={form.control}
+                      name="lunchTime"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Waktu Makan Siang</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="time"
+                              {...field}
+                              value={field.value || ''}
+                              placeholder="12:00"
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Jam makan siang (opsional)
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* Snack Time */}
+                    <FormField
+                      control={form.control}
+                      name="snackTime"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Waktu Snack</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="time"
+                              {...field}
+                              value={field.value || ''}
+                              placeholder="15:00"
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Jam makanan tambahan (opsional)
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+
+                {/* Dietary Requirements */}
+                <div className="border-t pt-4">
+                  <FormField
+                    control={form.control}
+                    name="religiousReqs"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Kebutuhan Keagamaan</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder="Contoh: Halal, vegetarian, tidak mengandung babi, dll..."
+                            className="min-h-[80px]"
+                            {...field}
+                            value={field.value?.join(', ') || ''}
+                            onChange={(e) => {
+                              const values = e.target.value
+                                .split(',')
+                                .map(v => v.trim())
+                                .filter(v => v.length > 0)
+                              field.onChange(values.length > 0 ? values : null)
+                            }}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Pisahkan dengan koma untuk multiple requirements (contoh: Halal, No Pork)
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -731,6 +1595,146 @@ export function SchoolForm({
                     </FormItem>
                   )}
                 />
+
+                {/* Delivery Extensions */}
+                <div className="border-t pt-6 space-y-4">
+                  <h4 className="text-sm font-medium text-muted-foreground">Informasi Pengiriman Tambahan</h4>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Delivery Phone */}
+                    <FormField
+                      control={form.control}
+                      name="deliveryPhone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Nomor Telepon Pengiriman</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="tel"
+                              placeholder="0812-3456-7890"
+                              {...field}
+                              value={field.value || ''}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Nomor khusus untuk koordinasi pengiriman
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* Preferred Delivery Time */}
+                    <FormField
+                      control={form.control}
+                      name="preferredDeliveryTime"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Waktu Pengiriman Disukai</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="time"
+                              {...field}
+                              value={field.value || ''}
+                              placeholder="08:00"
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Waktu ideal untuk menerima pengiriman
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* Distance from SPPG */}
+                    <FormField
+                      control={form.control}
+                      name="distanceFromSppg"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Jarak dari SPPG</FormLabel>
+                          <FormControl>
+                            <div className="flex items-center gap-2">
+                              <Input
+                                type="number"
+                                placeholder="15"
+                                step="0.1"
+                                {...field}
+                                value={field.value || ''}
+                                onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : null)}
+                                className="flex-1"
+                              />
+                              <span className="text-sm text-muted-foreground whitespace-nowrap">km</span>
+                            </div>
+                          </FormControl>
+                          <FormDescription>
+                            Jarak dalam kilometer (opsional)
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* Estimated Travel Time */}
+                    <FormField
+                      control={form.control}
+                      name="estimatedTravelTime"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Estimasi Waktu Tempuh</FormLabel>
+                          <FormControl>
+                            <div className="flex items-center gap-2">
+                              <Input
+                                type="number"
+                                placeholder="30"
+                                {...field}
+                                value={field.value || ''}
+                                onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : null)}
+                                className="flex-1"
+                              />
+                              <span className="text-sm text-muted-foreground whitespace-nowrap">menit</span>
+                            </div>
+                          </FormControl>
+                          <FormDescription>
+                            Waktu perjalanan dalam menit
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* Access Road Condition */}
+                    <FormField
+                      control={form.control}
+                      name="accessRoadCondition"
+                      render={({ field }) => (
+                        <FormItem className="md:col-span-2">
+                          <FormLabel>Kondisi Jalan Akses</FormLabel>
+                          <Select 
+                            onValueChange={field.onChange} 
+                            value={field.value || undefined}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Pilih kondisi jalan" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="BAIK">Baik - Jalan aspal mulus</SelectItem>
+                              <SelectItem value="SEDANG">Sedang - Jalan aspal rusak/berbatu</SelectItem>
+                              <SelectItem value="BURUK">Buruk - Jalan tanah/sulit dilalui</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormDescription>
+                            Kondisi jalan menuju sekolah untuk perencanaan pengiriman
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -896,13 +1900,521 @@ export function SchoolForm({
                         </FormItem>
                       )}
                     />
+
+                    {/* Has Refrigerator */}
+                    <FormField
+                      control={form.control}
+                      name="hasRefrigerator"
+                      render={({ field }) => (
+                        <FormItem className="flex items-center space-x-3 space-y-0">
+                          <FormControl>
+                            <Switch
+                              checked={field.value || false}
+                              onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
+                          <div className="space-y-1 leading-none">
+                            <FormLabel>Kulkas/Pendingin</FormLabel>
+                            <FormDescription>
+                              Memiliki lemari es untuk penyimpanan
+                            </FormDescription>
+                          </div>
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* Has Dining Area */}
+                    <FormField
+                      control={form.control}
+                      name="hasDiningArea"
+                      render={({ field }) => (
+                        <FormItem className="flex items-center space-x-3 space-y-0">
+                          <FormControl>
+                            <Switch
+                              checked={field.value || false}
+                              onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
+                          <div className="space-y-1 leading-none">
+                            <FormLabel>Ruang Makan</FormLabel>
+                            <FormDescription>
+                              Memiliki ruang makan khusus
+                            </FormDescription>
+                          </div>
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* Has Handwashing */}
+                    <FormField
+                      control={form.control}
+                      name="hasHandwashing"
+                      render={({ field }) => (
+                        <FormItem className="flex items-center space-x-3 space-y-0">
+                          <FormControl>
+                            <Switch
+                              checked={field.value || false}
+                              onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
+                          <div className="space-y-1 leading-none">
+                            <FormLabel>Tempat Cuci Tangan</FormLabel>
+                            <FormDescription>
+                              Fasilitas cuci tangan yang memadai
+                            </FormDescription>
+                          </div>
+                        </FormItem>
+                      )}
+                    />
                   </div>
+                </div>
+
+                {/* Dining Capacity */}
+                <div className="border-t pt-4">
+                  <FormField
+                    control={form.control}
+                    name="diningCapacity"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Kapasitas Ruang Makan</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            placeholder="100"
+                            {...field}
+                            value={field.value || ''}
+                            onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : null)}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Jumlah siswa yang dapat makan bersamaan (opsional)
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </div>
               </div>
             </CardContent>
           </Card>
         )}
         
+        {/* Section 6: Budget & Contracts */}
+        {activeSection === 6 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5 text-primary" />
+                Kontrak & Anggaran
+              </CardTitle>
+              <CardDescription>
+                Informasi kontrak dan alokasi anggaran sekolah
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Contract Number */}
+                  <FormField
+                    control={form.control}
+                    name="contractNumber"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Nomor Kontrak</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="KTR/2024/001"
+                            {...field}
+                            value={field.value || ''}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Nomor kontrak kerjasama (opsional)
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Contract Value */}
+                  <FormField
+                    control={form.control}
+                    name="contractValue"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Nilai Kontrak</FormLabel>
+                        <FormControl>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm text-muted-foreground">Rp</span>
+                            <Input
+                              type="number"
+                              placeholder="50000000"
+                              step="1000"
+                              {...field}
+                              value={field.value || ''}
+                              onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : null)}
+                              className="flex-1"
+                            />
+                          </div>
+                        </FormControl>
+                        <FormDescription>
+                          Total nilai kontrak dalam Rupiah
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Contract Start Date */}
+                  <FormField
+                    control={form.control}
+                    name="contractStartDate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Tanggal Mulai Kontrak</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="date"
+                            {...field}
+                            value={field.value ? new Date(field.value).toISOString().split('T')[0] : ''}
+                            onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value) : null)}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Tanggal mulai berlaku kontrak
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Contract End Date */}
+                  <FormField
+                    control={form.control}
+                    name="contractEndDate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Tanggal Berakhir Kontrak</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="date"
+                            {...field}
+                            value={field.value ? new Date(field.value).toISOString().split('T')[0] : ''}
+                            onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value) : null)}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Tanggal berakhir kontrak
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <Separator />
+
+                {/* Budget Allocation */}
+                <div className="space-y-4">
+                  <h4 className="text-sm font-medium text-muted-foreground">Alokasi Anggaran</h4>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Monthly Budget Allocation */}
+                    <FormField
+                      control={form.control}
+                      name="monthlyBudgetAllocation"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Anggaran Bulanan</FormLabel>
+                          <FormControl>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm text-muted-foreground">Rp</span>
+                              <Input
+                                type="number"
+                                placeholder="5000000"
+                                step="1000"
+                                {...field}
+                                value={field.value || ''}
+                                onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : null)}
+                                className="flex-1"
+                              />
+                            </div>
+                          </FormControl>
+                          <FormDescription>
+                            Alokasi anggaran per bulan
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* Budget Per Student */}
+                    <FormField
+                      control={form.control}
+                      name="budgetPerStudent"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Anggaran per Siswa</FormLabel>
+                          <FormControl>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm text-muted-foreground">Rp</span>
+                              <Input
+                                type="number"
+                                placeholder="10000"
+                                step="100"
+                                {...field}
+                                value={field.value || ''}
+                                onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : null)}
+                                className="flex-1"
+                              />
+                            </div>
+                          </FormControl>
+                          <FormDescription>
+                            Anggaran per siswa per hari/bulan
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Section 7: Performance Metrics */}
+        {activeSection === 7 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <TrendingUp className="h-5 w-5 text-primary" />
+                Metrik Kinerja
+              </CardTitle>
+              <CardDescription>
+                Data kinerja dan statistik operasional sekolah
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                {/* Performance Rates */}
+                <div className="space-y-4">
+                  <h4 className="text-sm font-medium text-muted-foreground">Tingkat Partisipasi</h4>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {/* Attendance Rate */}
+                    <FormField
+                      control={form.control}
+                      name="attendanceRate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Tingkat Kehadiran</FormLabel>
+                          <FormControl>
+                            <div className="flex items-center gap-2">
+                              <Input
+                                type="number"
+                                placeholder="95"
+                                step="0.1"
+                                min="0"
+                                max="100"
+                                {...field}
+                                value={field.value || ''}
+                                onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : null)}
+                                className="flex-1"
+                              />
+                              <span className="text-sm text-muted-foreground">%</span>
+                            </div>
+                          </FormControl>
+                          <FormDescription>
+                            Persentase kehadiran siswa
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* Participation Rate */}
+                    <FormField
+                      control={form.control}
+                      name="participationRate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Tingkat Partisipasi</FormLabel>
+                          <FormControl>
+                            <div className="flex items-center gap-2">
+                              <Input
+                                type="number"
+                                placeholder="90"
+                                step="0.1"
+                                min="0"
+                                max="100"
+                                {...field}
+                                value={field.value || ''}
+                                onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : null)}
+                                className="flex-1"
+                              />
+                              <span className="text-sm text-muted-foreground">%</span>
+                            </div>
+                          </FormControl>
+                          <FormDescription>
+                            Persentase siswa yang makan
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* Satisfaction Score */}
+                    <FormField
+                      control={form.control}
+                      name="satisfactionScore"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Skor Kepuasan</FormLabel>
+                          <FormControl>
+                            <div className="flex items-center gap-2">
+                              <Input
+                                type="number"
+                                placeholder="8.5"
+                                step="0.1"
+                                min="0"
+                                max="10"
+                                {...field}
+                                value={field.value || ''}
+                                onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : null)}
+                                className="flex-1"
+                              />
+                              <span className="text-sm text-muted-foreground">/10</span>
+                            </div>
+                          </FormControl>
+                          <FormDescription>
+                            Skor kepuasan (0-10)
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Activity Dates */}
+                <div className="space-y-4">
+                  <h4 className="text-sm font-medium text-muted-foreground">Aktivitas Terakhir</h4>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Last Distribution Date */}
+                    <FormField
+                      control={form.control}
+                      name="lastDistributionDate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Tanggal Distribusi Terakhir</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="date"
+                              {...field}
+                              value={field.value ? new Date(field.value).toISOString().split('T')[0] : ''}
+                              onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value) : null)}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Tanggal terakhir menerima distribusi
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* Last Report Date */}
+                    <FormField
+                      control={form.control}
+                      name="lastReportDate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Tanggal Laporan Terakhir</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="date"
+                              {...field}
+                              value={field.value ? new Date(field.value).toISOString().split('T')[0] : ''}
+                              onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value) : null)}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Tanggal laporan terakhir dikirim
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Statistics (Read-Only) */}
+                <div className="space-y-4">
+                  <h4 className="text-sm font-medium text-muted-foreground">Statistik (Read-Only)</h4>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Total Distributions */}
+                    <FormField
+                      control={form.control}
+                      name="totalDistributions"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Total Distribusi</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              placeholder="0"
+                              {...field}
+                              value={field.value || 0}
+                              disabled
+                              className="bg-muted"
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Jumlah total distribusi yang diterima (otomatis)
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* Total Meals Served */}
+                    <FormField
+                      control={form.control}
+                      name="totalMealsServed"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Total Makanan Disajikan</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              placeholder="0"
+                              {...field}
+                              value={field.value?.toString() || '0'}
+                              disabled
+                              className="bg-muted"
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Total porsi yang telah disajikan (otomatis)
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Form Actions */}
         <Card>
           <CardContent className="pt-6">

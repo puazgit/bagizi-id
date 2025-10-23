@@ -48,10 +48,14 @@ import {
   MapPin,
   School,
 } from 'lucide-react'
+import { zodResolver } from '@hookform/resolvers/zod'
 import { createProgramSchema, type CreateProgramInput } from '../schemas'
 import type { Program } from '../types'
 import { useSchools } from '../hooks/useSchools'
 import { MultiSelectCombobox } from '@/components/ui/multi-select-combobox'
+import { ProgramStatus, ProgramType, TargetGroup } from '@prisma/client'
+import { toast } from 'sonner'
+import { useEffect } from 'react'
 
 interface ProgramFormProps {
   initialData?: Program
@@ -59,11 +63,6 @@ interface ProgramFormProps {
   onCancel?: () => void
   isSubmitting?: boolean
   mode?: 'create' | 'edit'
-}
-
-type ProgramFormData = Omit<CreateProgramInput, 'startDate' | 'endDate'> & {
-  startDate?: Date
-  endDate?: Date | null
 }
 
 export const ProgramForm: FC<ProgramFormProps> = ({
@@ -76,35 +75,45 @@ export const ProgramForm: FC<ProgramFormProps> = ({
   // Fetch schools for autocomplete
   const { data: schools, isLoading: isLoadingSchools } = useSchools()
   
-  const form = useForm<ProgramFormData>({
+  const form = useForm({
+    resolver: zodResolver(createProgramSchema),
     defaultValues: initialData ? {
       name: initialData.name,
       description: initialData.description ?? '',
+      programCode: initialData.programCode,
       programType: initialData.programType,
       targetGroup: initialData.targetGroup,
       targetRecipients: initialData.targetRecipients,
+      currentRecipients: initialData.currentRecipients ?? 0,
       calorieTarget: initialData.calorieTarget ?? undefined,
       proteinTarget: initialData.proteinTarget ?? undefined,
-      carbTarget: initialData.carbTarget ?? undefined,
       fatTarget: initialData.fatTarget ?? undefined,
+      carbTarget: initialData.carbTarget ?? undefined,
       fiberTarget: initialData.fiberTarget ?? undefined,
-      startDate: initialData.startDate ? new Date(initialData.startDate) : undefined,
-      endDate: initialData.endDate ? new Date(initialData.endDate) : null,
-      feedingDays: initialData.feedingDays.length > 0 ? initialData.feedingDays : [1, 2, 3, 4, 5],
       mealsPerDay: initialData.mealsPerDay,
+      feedingDays: initialData.feedingDays ?? [],
+      startDate: initialData.startDate ? new Date(initialData.startDate) : undefined,
+      endDate: initialData.endDate ? new Date(initialData.endDate) : undefined,
       totalBudget: initialData.totalBudget ?? undefined,
       budgetPerMeal: initialData.budgetPerMeal ?? undefined,
-      implementationArea: initialData.implementationArea,
-      partnerSchools: initialData.partnerSchools,
+      status: initialData.status as ProgramStatus,
+      implementationArea: initialData.implementationArea ?? '',
+      partnerSchools: initialData.partnerSchools ?? [],
     } : {
       name: '',
       description: '',
-      targetRecipients: 100,
-      feedingDays: [1, 2, 3, 4, 5], // Weekdays by default
+      programCode: '',
+      programType: 'FREE_NUTRITIOUS_MEAL' as ProgramType,
+      targetGroup: 'CHILDREN_UNDER_5' as TargetGroup,
+      targetRecipients: 1,
+      currentRecipients: 0,
       mealsPerDay: 1,
+      feedingDays: [],
+      budgetPerMeal: 0,
+      status: ProgramStatus.DRAFT,
       implementationArea: '',
       partnerSchools: [],
-    },
+    }
   })
 
   const handleSubmit = form.handleSubmit(async (data) => {
@@ -116,6 +125,26 @@ export const ProgramForm: FC<ProgramFormProps> = ({
     }
     await onSubmit(validated.data)
   })
+
+  // Watch for form changes (used in Generate button)
+  const watchName = form.watch('name')
+  const watchType = form.watch('programType')
+  const watchPartnerSchools = form.watch('partnerSchools')
+
+  // Auto-calculate currentRecipients based on selected schools
+  useEffect(() => {
+    if (!schools || !watchPartnerSchools || watchPartnerSchools.length === 0) {
+      form.setValue('currentRecipients', 0, { shouldValidate: false })
+      return
+    }
+
+    // Calculate total students from selected schools
+    const totalStudents = schools
+      .filter(school => watchPartnerSchools.includes(school.schoolName))
+      .reduce((sum, school) => sum + (school.totalStudents || 0), 0)
+
+    form.setValue('currentRecipients', totalStudents, { shouldValidate: false })
+  }, [watchPartnerSchools, schools, form])
 
   // Days of week for feeding schedule
   const daysOfWeek = [
@@ -140,25 +169,96 @@ export const ProgramForm: FC<ProgramFormProps> = ({
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nama Program *</FormLabel>
-                  <FormControl>
-                    <Input 
-                      placeholder="Program Gizi Balita 2025" 
-                      {...field} 
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    Nama yang jelas dan deskriptif untuk program
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nama Program *</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="Program Gizi Balita 2025" 
+                        {...field} 
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Nama yang jelas dan deskriptif untuk program
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="programCode"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Kode Program *</FormLabel>
+                    <FormControl>
+                      <div className="flex gap-2">
+                        <Input 
+                          placeholder="PWK-MBG-2025" 
+                          {...field}
+                          className="font-mono"
+                        />
+                        {mode === 'create' && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => {
+                              const name = watchName || ''
+                              const type = watchType || 'FREE_NUTRITIOUS_MEAL'
+                              
+                              if (!name.trim()) {
+                                toast.error('Isi nama program terlebih dahulu')
+                                return
+                              }
+                              
+                              // Generate code from name and type
+                              const typeCodeMap: Record<ProgramType, string> = {
+                                'FREE_NUTRITIOUS_MEAL': 'MBG',
+                                'NUTRITIONAL_RECOVERY': 'PG',
+                                'NUTRITIONAL_EDUCATION': 'EG',
+                                'EMERGENCY_NUTRITION': 'GD',
+                                'STUNTING_INTERVENTION': 'IS'
+                              }
+                              
+                              // Extract location from program name (first word)
+                              const words = name.trim().split(/\s+/)
+                              const location = words[0]?.substring(0, 3).toUpperCase() || 'PWK'
+                              
+                              // Get type code
+                              const typeCode = typeCodeMap[type] || 'MBG'
+                              
+                              // Get current year
+                              const year = new Date().getFullYear()
+                              
+                              // Generate: LOCATION-TYPE-YEAR
+                              const newCode = `${location}-${typeCode}-${year}`
+                              
+                              form.setValue('programCode', newCode)
+                              toast.success('Kode program berhasil dibuat')
+                            }}
+                            className="shrink-0"
+                          >
+                            Generate
+                          </Button>
+                        )}
+                      </div>
+                    </FormControl>
+                    <FormDescription>
+                      {mode === 'create' 
+                        ? 'Klik "Generate" untuk membuat kode otomatis dari nama & jenis program'
+                        : 'Kode unik untuk identifikasi program'
+                      }
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <FormField
               control={form.control}
@@ -179,22 +279,22 @@ export const ProgramForm: FC<ProgramFormProps> = ({
               )}
             />
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <FormField
                 control={form.control}
                 name="programType"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Jenis Program *</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
-                        <SelectTrigger>
+                        <SelectTrigger className="w-full">
                           <SelectValue placeholder="Pilih jenis program" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="SUPPLEMENTARY_FEEDING">
-                          Pemberian Makanan Tambahan
+                        <SelectItem value="FREE_NUTRITIOUS_MEAL">
+                          Makan Bergizi Gratis
                         </SelectItem>
                         <SelectItem value="NUTRITIONAL_RECOVERY">
                           Pemulihan Gizi
@@ -221,9 +321,9 @@ export const ProgramForm: FC<ProgramFormProps> = ({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Target Kelompok *</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
-                        <SelectTrigger>
+                        <SelectTrigger className="w-full">
                           <SelectValue placeholder="Pilih target kelompok" />
                         </SelectTrigger>
                       </FormControl>
@@ -245,6 +345,44 @@ export const ProgramForm: FC<ProgramFormProps> = ({
                         </SelectItem>
                         <SelectItem value="ELDERLY">
                           Lansia
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="status"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Status Program</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Pilih status" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value={ProgramStatus.DRAFT}>
+                          Draft
+                        </SelectItem>
+                        <SelectItem value={ProgramStatus.ACTIVE}>
+                          Aktif
+                        </SelectItem>
+                        <SelectItem value={ProgramStatus.PAUSED}>
+                          Ditunda
+                        </SelectItem>
+                        <SelectItem value={ProgramStatus.COMPLETED}>
+                          Selesai
+                        </SelectItem>
+                        <SelectItem value={ProgramStatus.CANCELLED}>
+                          Dibatalkan
+                        </SelectItem>
+                        <SelectItem value={ProgramStatus.ARCHIVED}>
+                          Arsip
                         </SelectItem>
                       </SelectContent>
                     </Select>
@@ -275,12 +413,60 @@ export const ProgramForm: FC<ProgramFormProps> = ({
                     <Input
                       type="number"
                       placeholder="500"
+                      min={1}
+                      max={100000}
                       {...field}
-                      onChange={(e) => field.onChange(Number(e.target.value))}
+                      value={field.value || ''}
+                      onChange={(e) => {
+                        const value = e.target.value
+                        // Convert to number, default to 1 if empty
+                        const numValue = value === '' || value === '0' ? 1 : Number(value)
+                        field.onChange(numValue)
+                      }}
                     />
                   </FormControl>
                   <FormDescription>
-                    Target jumlah penerima manfaat program (1 - 100,000 orang)
+                    Target jumlah penerima manfaat program (minimal 1 orang)
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Current Recipients (Auto-calculated) */}
+            <FormField
+              control={form.control}
+              name="currentRecipients"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center gap-2">
+                    <Users className="h-4 w-4 text-muted-foreground" />
+                    Jumlah Penerima Saat Ini (Otomatis)
+                  </FormLabel>
+                  <FormControl>
+                    <div className="flex items-center gap-3">
+                      <Input
+                        type="number"
+                        {...field}
+                        value={field.value || 0}
+                        readOnly
+                        disabled
+                        className="bg-muted/50 cursor-not-allowed"
+                      />
+                      {(field.value ?? 0) > 0 && (
+                        <Badge variant="secondary" className="shrink-0">
+                          {watchPartnerSchools?.length || 0} sekolah
+                        </Badge>
+                      )}
+                    </div>
+                  </FormControl>
+                  <FormDescription className="flex items-center gap-2">
+                    Jumlah ini dihitung otomatis dari total siswa di sekolah mitra yang dipilih
+                    {(field.value ?? 0) > 0 && (
+                      <span className="text-primary font-medium">
+                        ({(((field.value ?? 0) / form.watch('targetRecipients')) * 100).toFixed(1)}% dari target)
+                      </span>
+                    )}
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -477,19 +663,19 @@ export const ProgramForm: FC<ProgramFormProps> = ({
                 name="startDate"
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
-                    <FormLabel>Tanggal Mulai</FormLabel>
+                    <FormLabel>Tanggal Mulai *</FormLabel>
                     <Popover>
                       <PopoverTrigger asChild>
                         <FormControl>
                           <Button
                             variant="outline"
                             className={cn(
-                              'pl-3 text-left font-normal',
+                              'w-full pl-3 text-left font-normal',
                               !field.value && 'text-muted-foreground'
                             )}
                           >
                             {field.value ? (
-                              format(field.value, 'PPP', { locale: localeId })
+                              format(field.value as Date, 'PPP', { locale: localeId })
                             ) : (
                               <span>Pilih tanggal</span>
                             )}
@@ -500,7 +686,7 @@ export const ProgramForm: FC<ProgramFormProps> = ({
                       <PopoverContent className="w-auto p-0" align="start">
                         <Calendar
                           mode="single"
-                          selected={field.value || undefined}
+                          selected={(field.value as Date) || undefined}
                           onSelect={field.onChange}
                           disabled={(date) =>
                             date < new Date('1900-01-01')
@@ -526,12 +712,12 @@ export const ProgramForm: FC<ProgramFormProps> = ({
                           <Button
                             variant="outline"
                             className={cn(
-                              'pl-3 text-left font-normal',
+                              'w-full pl-3 text-left font-normal',
                               !field.value && 'text-muted-foreground'
                             )}
                           >
                             {field.value ? (
-                              format(field.value, 'PPP', { locale: localeId })
+                              format(field.value as Date, 'PPP', { locale: localeId })
                             ) : (
                               <span>Pilih tanggal</span>
                             )}
@@ -542,7 +728,7 @@ export const ProgramForm: FC<ProgramFormProps> = ({
                       <PopoverContent className="w-auto p-0" align="start">
                         <Calendar
                           mode="single"
-                          selected={field.value || undefined}
+                          selected={(field.value as Date) || undefined}
                           onSelect={field.onChange}
                           disabled={(date) =>
                             date < new Date('1900-01-01')
@@ -563,13 +749,13 @@ export const ProgramForm: FC<ProgramFormProps> = ({
                 name="mealsPerDay"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Frekuensi Makan per Hari</FormLabel>
+                    <FormLabel>Frekuensi Makan per Hari *</FormLabel>
                     <Select 
                       onValueChange={(value) => field.onChange(Number(value))} 
-                      defaultValue={field.value?.toString()}
+                      value={field.value?.toString()}
                     >
                       <FormControl>
-                        <SelectTrigger>
+                        <SelectTrigger className="w-full">
                           <SelectValue placeholder="Pilih frekuensi" />
                         </SelectTrigger>
                       </FormControl>

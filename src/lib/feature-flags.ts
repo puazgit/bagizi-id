@@ -40,8 +40,8 @@ export function isPhase1FixEnabled(fixName: keyof typeof PHASE1_FEATURE_FLAGS): 
  */
 export function getEnabledPhase1Fixes(): string[] {
   return Object.entries(PHASE1_FEATURE_FLAGS)
-    .filter(([_, enabled]) => enabled)
-    .map(([name, _]) => name)
+    .filter(([, enabled]) => enabled)
+    .map(([name]) => name)
 }
 
 /**

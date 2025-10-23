@@ -10,7 +10,7 @@ import { use } from 'react'
 import { useRouter } from 'next/navigation'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Separator } from '@/components/ui/separator'
-import { useProgram, useDeleteProgram } from '@/features/sppg/program/hooks'
+import { useProgram, useProgramWithStats, useDeleteProgram } from '@/features/sppg/program/hooks'
 import { 
   ProgramDetailHeader,
   ProgramOverviewTab,
@@ -29,6 +29,7 @@ export default function ProgramDetailPage({ params }: ProgramDetailPageProps) {
   const router = useRouter()
   const { id } = use(params)
   const { data: program, isLoading, error } = useProgram(id)
+  const { data: programStats } = useProgramWithStats(id)
   const { mutate: deleteProgram } = useDeleteProgram()
 
   const handleBack = () => {
@@ -123,7 +124,7 @@ export default function ProgramDetailPage({ params }: ProgramDetailPageProps) {
         </TabsContent>
 
         <TabsContent value="monitoring">
-          <ProgramMonitoringTab program={program} />
+          <ProgramMonitoringTab program={program} programStats={programStats} programId={id} />
         </TabsContent>
       </Tabs>
     </div>

@@ -1,0 +1,178 @@
+
+> bagizi-id@0.1.0 db:seed
+> tsx prisma/seed.ts
+
+🌱 Starting Bagizi-ID Demo 2025 Database Seeding...
+📅 Date: October 22, 2025
+
+🔄 Resetting database (deleting all data)...
+  ✅ Database reset completed!
+
+🗺️  Step 1: Seeding regional data (Purwakarta, Jawa Barat)...
+  → Creating regional data...
+  ✓ Created regional data:
+    - 1 province (Jawa Barat)
+    - 1 regency (Purwakarta)
+    - 1 district (Purwakarta)
+    - 1 village (Nagri Tengah)
+📊 Step 2: Seeding SPPG Demo 2025 entity...
+  → Creating SPPG Demo 2025 entity...
+  ✓ Created 1 SPPG Demo 2025 entity
+👥 Step 3: Seeding demo users 2025 (16 users with all roles)...
+  → Creating comprehensive demo users (2025)...
+  ✓ Created 17 comprehensive demo users for 2025
+
+  📋 Demo Accounts Summary:
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  🔐 Password untuk semua akun: demo2025
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  
+  🌐 PLATFORM LEVEL:
+     • superadmin@bagizi.id     - PLATFORM_SUPERADMIN
+     • support@bagizi.id        - PLATFORM_SUPPORT
+     • analyst@bagizi.id        - PLATFORM_ANALYST
+  
+  👑 SPPG MANAGEMENT:
+     • kepala@demo.sppg.id      - SPPG_KEPALA (Full Access)
+     • admin@demo.sppg.id       - SPPG_ADMIN
+  
+  💼 SPPG OPERATIONAL:
+     • ahligizi@demo.sppg.id    - SPPG_AHLI_GIZI
+     • akuntan@demo.sppg.id     - SPPG_AKUNTAN
+     • produksi@demo.sppg.id    - SPPG_PRODUKSI_MANAGER
+     • distribusi@demo.sppg.id  - SPPG_DISTRIBUSI_MANAGER
+     • hrd@demo.sppg.id         - SPPG_HRD_MANAGER
+  
+  👷 SPPG STAFF:
+     • dapur@demo.sppg.id       - SPPG_STAFF_DAPUR
+     • kurir@demo.sppg.id       - SPPG_STAFF_DISTRIBUSI
+     • kurir2@demo.sppg.id      - SPPG_STAFF_DISTRIBUSI
+     • adminstaff@demo.sppg.id  - SPPG_STAFF_ADMIN
+     • qc@demo.sppg.id          - SPPG_STAFF_QC
+  
+  👁️  LIMITED ACCESS:
+     • viewer@demo.sppg.id      - SPPG_VIEWER (Read Only)
+     • demo@demo.sppg.id        - DEMO_USER (Trial)
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🥗 Step 4: Seeding nutrition standards...
+  → Creating nutrition reference data...
+  ✓ Created nutrition reference data:
+    - 10 nutrition standards
+🏷️  Step 5: Seeding allergen data...
+  → Creating platform allergen data...
+  ✓ Created/verified 19 platform allergen records
+📦 Step 6: Seeding inventory items...
+  → Creating inventory items...
+  ✓ Created 64 inventory items for SPPG: SPPG Demo Bagizi 2025
+🍽️  Step 7: Seeding menu domain (programs, menus, ingredients, calculations)...
+  → Creating Menu domain data...
+  → Fetching inventory items...
+  ✓ Found 64 inventory items
+  → Creating Nutrition Programs...
+  ✓ Created 2 Nutrition Programs
+  → Creating Nutrition Menus...
+  ✓ Created 10 Nutrition Menus
+  → Creating Menu Ingredients...
+  → Found 64 inventory items for linking
+  ✓ Created Menu Ingredients for sample menus
+  → Creating Recipe Steps...
+  ✓ Created Recipe Steps for sample menus
+  → Creating Nutrition Calculations (with real vitamin/mineral values)...
+  ✓ Created Nutrition Calculations for all 10 menus
+  → Creating Cost Calculations (with realistic operational costs)...
+  ✓ Created Cost Calculations for all 10 menus
+  ✓ Menu domain data created successfully with complete calculations
+🏫 Step 8: Seeding school beneficiaries...
+  → Creating school beneficiaries...
+  ✓ Created 3 school beneficiaries:
+    - 3 ACTIVE schools
+    - 0 PENDING schools
+    - Total students: 826
+📅 Seeding menu planning domain (plans, assignments, templates)...
+  → Creating Menu Planning data for SPPG Purwakarta...
+  ⚠️  Admin user for Purwakarta not found. Skipping.
+🛒 Seeding procurement domain (suppliers, products, plans, procurements)...
+  → Creating Procurement domain data for SPPG Purwakarta...
+  ✅ Found SPPG: SPPG Demo Bagizi 2025
+  ✅ Found Program: Program Makan Siang Anak Sekolah Purwakarta 2025
+  ✅ Found 20 inventory items
+  → Creating suppliers...
+  ✓ Created 5 suppliers
+  → Creating supplier products...
+  ✓ Created 10 supplier products
+  → Creating procurement plan...
+  ✓ Created procurement plan
+  → Creating procurements...
+  ✓ Created 6 procurements
+  ✓ Procurement scenarios: Completed, In-Delivery, Approved, Draft, Cancelled, Quality-Check
+
+  ✅ Procurement domain seed completed!
+     - Suppliers: 5
+     - Products: 10
+     - Plans: 1
+     - Procurements: 6
+     - Total Items: 12 (avg)
+🏭 Seeding production domain (SPPG Purwakarta productions)...
+  → Creating production data for SPPG Purwakarta...
+  ✅ Found SPPG: SPPG Demo Bagizi 2025
+  ✅ Found Program: Program Makan Siang Anak Sekolah Purwakarta 2025
+  ✅ Found Menu: Nasi Gudeg Ayam Purwakarta
+  ✅ Found Head Cook: Dr. Budi Santoso, S.Gz., M.Si
+  ✅ Created completed production: BATCH-1761139598309-001
+  ✅ Created cooking production: BATCH-1761139598311-002
+  ✅ Created planned production: BATCH-1761139598312-003
+  ✓ Created 3 production records
+  ✓ Production scenarios: Completed, Cooking, Planned
+🚗 Seeding vehicles for distribution operations...
+  → Creating vehicles for SPPG operations...
+  ✅ Created 5 vehicles for SPPG Demo Bagizi 2025
+     - AVAILABLE: 4
+     - MAINTENANCE: 1
+     - Total capacity: 1450 portions
+🚚 Seeding distribution domain (SPPG Purwakarta distributions)...
+  → Creating COMPREHENSIVE distribution data (ALL PHASES)...
+  ✅ Found: 10 menus, 3 schools, 3 vehicles, 1 productions
+  → Cleaning up existing distribution data...
+  ✓ Cleaned up existing distribution data
+  → Creating DistributionSchedule entities...
+  ✅ Created 4 DistributionSchedule entities
+  → Creating FoodDistribution executions...
+  ✅ Created 5 FoodDistribution entities
+  → Creating DistributionDelivery with GPS tracking...
+  ✅ Created 3 DistributionDelivery entities
+  → Creating VehicleAssignment...
+  ✅ Created 2 VehicleAssignment entities
+  → Creating DeliveryPhoto...
+  ✅ Created 3 DeliveryPhoto entities
+  → Creating DeliveryTracking (GPS trail)...
+  ✅ Created 8 DeliveryTracking points
+  → Creating DeliveryIssue...
+  ✅ Created 1 DeliveryIssue entities
+  → Creating BeneficiaryReceipt...
+  ✅ Created 1 BeneficiaryReceipt entities
+
+  📊 COMPREHENSIVE Distribution Seed Summary:
+     - DistributionSchedule (PHASE 1): 4
+     - FoodDistribution (PHASE 2): 5
+     - DistributionDelivery (PHASE 3): 3
+     - VehicleAssignment: 2
+     - DeliveryPhoto: 3
+     - DeliveryTracking (GPS): 8
+     - DeliveryIssue: 1
+     - BeneficiaryReceipt: 1
+  ✅ ALL DISTRIBUTION PHASES SEEDED!
+
+✅ Bagizi-ID Demo 2025 Database Seeding Completed!
+
+📋 Summary (October 22, 2025):
+   - SPPG Demo: 1 entity (DEMO-2025)
+   - Demo Users: 17 accounts (all 16 roles)
+   - Default Password: demo2025
+   - Demo Period: January 1 - December 31, 2025
+
+🚀 Quick Start:
+   1. npm run dev
+   2. http://localhost:3000/login
+   3. See DEMO_CREDENTIALS.md for login info
+

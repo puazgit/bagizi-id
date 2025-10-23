@@ -6,7 +6,7 @@
  */
 
 import { z } from 'zod'
-import { ProgramType, TargetGroup } from '@prisma/client'
+import { ProgramType, TargetGroup, ProgramStatus } from '@prisma/client'
 
 /**
  * Schema untuk create program
@@ -17,6 +17,12 @@ export const createProgramSchema = z.object({
     .min(5, 'Nama program minimal 5 karakter')
     .max(200, 'Nama program maksimal 200 karakter'),
   
+  programCode: z
+    .string()
+    .min(3, 'Kode program minimal 3 karakter')
+    .max(50, 'Kode program maksimal 50 karakter')
+    .regex(/^[A-Z0-9-]+$/, 'Kode program harus huruf besar, angka, dan tanda hubung'),
+  
   description: z
     .string()
     .max(1000, 'Deskripsi maksimal 1000 karakter')
@@ -26,6 +32,8 @@ export const createProgramSchema = z.object({
   programType: z.nativeEnum(ProgramType),
   
   targetGroup: z.nativeEnum(TargetGroup),
+  
+  status: z.nativeEnum(ProgramStatus),
   
   // Nutrition targets (optional)
   calorieTarget: z
@@ -64,27 +72,9 @@ export const createProgramSchema = z.object({
     .nullable(),
   
   // Schedule
-  startDate: z
-    .string()
-    .or(z.date())
-    .transform((val) => {
-      if (typeof val === 'string') {
-        return new Date(val)
-      }
-      return val
-    }),
+  startDate: z.coerce.date(),
   
-  endDate: z
-    .string()
-    .or(z.date())
-    .transform((val) => {
-      if (typeof val === 'string') {
-        return new Date(val)
-      }
-      return val
-    })
-    .optional()
-    .nullable(),
+  endDate: z.coerce.date().optional().nullable(),
   
   feedingDays: z
     .array(z.number().min(0).max(6))
@@ -124,15 +114,19 @@ export const createProgramSchema = z.object({
     .min(1, 'Target penerima minimal 1 orang')
     .max(100000, 'Target penerima maksimal 100.000 orang'),
   
+  currentRecipients: z
+    .number()
+    .int('Jumlah penerima saat ini harus bilangan bulat')
+    .min(0, 'Jumlah penerima tidak boleh negatif')
+    .optional(),
+  
   // Implementation
   implementationArea: z
     .string()
     .min(3, 'Area implementasi minimal 3 karakter')
     .max(200, 'Area implementasi maksimal 200 karakter'),
   
-  partnerSchools: z
-    .array(z.string().min(1))
-    .default([])
+  partnerSchools: z.array(z.string().min(1))
 }).refine(
   (data) => {
     // Validate endDate is after startDate
@@ -157,6 +151,13 @@ export const updateProgramSchema = z.object({
     .max(200, 'Nama program maksimal 200 karakter')
     .optional(),
   
+  programCode: z
+    .string()
+    .min(3, 'Kode program minimal 3 karakter')
+    .max(50, 'Kode program maksimal 50 karakter')
+    .regex(/^[A-Z0-9-]+$/, 'Kode program harus huruf besar, angka, dan tanda hubung')
+    .optional(),
+  
   description: z
     .string()
     .max(1000, 'Deskripsi maksimal 1000 karakter')
@@ -169,6 +170,10 @@ export const updateProgramSchema = z.object({
   
   targetGroup: z
     .nativeEnum(TargetGroup)
+    .optional(),
+  
+  status: z
+    .nativeEnum(ProgramStatus)
     .optional(),
   
   calorieTarget: z
@@ -206,28 +211,9 @@ export const updateProgramSchema = z.object({
     .optional()
     .nullable(),
   
-  startDate: z
-    .string()
-    .or(z.date())
-    .transform((val) => {
-      if (typeof val === 'string') {
-        return new Date(val)
-      }
-      return val
-    })
-    .optional(),
+  startDate: z.coerce.date().optional(),
   
-  endDate: z
-    .string()
-    .or(z.date())
-    .transform((val) => {
-      if (typeof val === 'string') {
-        return new Date(val)
-      }
-      return val
-    })
-    .optional()
-    .nullable(),
+  endDate: z.coerce.date().optional().nullable(),
   
   feedingDays: z
     .array(z.number().min(0).max(6))
@@ -275,10 +261,6 @@ export const updateProgramSchema = z.object({
   
   partnerSchools: z
     .array(z.string().min(1))
-    .optional(),
-  
-  status: z
-    .enum(['ACTIVE', 'INACTIVE', 'COMPLETED', 'DRAFT', 'ARCHIVED'])
     .optional()
 }).refine(
   (data) => {
@@ -298,12 +280,14 @@ export const updateProgramSchema = z.object({
  * Schema untuk filter programs
  */
 export const programFiltersSchema = z.object({
-  status: z.string().optional(),
-  programType: z.nativeEnum(ProgramType).optional(),
-  targetGroup: z.nativeEnum(TargetGroup).optional(),
   search: z.string().optional(),
-  startDate: z.string().or(z.date()).optional(),
-  endDate: z.string().or(z.date()).optional()
+  type: z.nativeEnum(ProgramType).optional(),
+  targetGroup: z.nativeEnum(TargetGroup).optional(),
+  status: z.nativeEnum(ProgramStatus).optional(),
+  startDateFrom: z.string().optional(),
+  startDateTo: z.string().optional(),
+  endDateFrom: z.string().optional(),
+  endDateTo: z.string().optional()
 })
 
 /**

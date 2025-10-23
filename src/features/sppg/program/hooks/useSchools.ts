@@ -11,16 +11,17 @@
 'use client'
 
 import { useQuery } from '@tanstack/react-query'
-import { schoolsApi } from '@/features/sppg/school/api'
+import { schoolApi } from '@/features/sppg/school/api'
 
 /**
- * School data (minimal fields for autocomplete)
+ * School data (with student count for program calculations)
  */
 export interface School {
   id: string
   schoolName: string
   schoolCode: string | null
   schoolType: string
+  totalStudents: number
 }
 
 /**
@@ -60,9 +61,10 @@ export interface School {
  */
 export function useSchools() {
   return useQuery({
-    queryKey: ['schools', 'autocomplete'],
+    queryKey: ['schools', 'program-form'], // Changed key to reflect full data
     queryFn: async () => {
-      const result = await schoolsApi.getAll({ mode: 'autocomplete' })
+      // Fetch with 'standard' mode to get totalStudents field
+      const result = await schoolApi.getAll({ mode: 'standard', isActive: true })
       
       if (!result.success || !result.data) {
         throw new Error(result.error || 'Failed to fetch schools')

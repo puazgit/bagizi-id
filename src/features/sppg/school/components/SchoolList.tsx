@@ -10,6 +10,7 @@
 import { useState } from 'react'
 import { useSchools, useDeleteSchool } from '../hooks'
 import type { SchoolMaster } from '../types'
+import { SchoolType } from '@prisma/client'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -92,25 +93,28 @@ export function SchoolList({
   const [deleteId, setDeleteId] = useState<string | null>(null)
 
   // Fetch schools with filters
-  const { data: schools, isLoading, error } = useSchools({
+  const { data, isLoading, error } = useSchools({
     mode: 'standard',
     programId,
     isActive: isActive === 'all' ? undefined : isActive === 'active',
-    schoolType: schoolType === 'all' ? undefined : schoolType,
+    schoolType: schoolType === 'all' ? undefined : (schoolType as SchoolType),
     search: search || undefined,
   })
+
+  // Extract schools from response data
+  const schools = data?.schools || []
 
   const deleteSchool = useDeleteSchool()
 
   const handleDelete = async () => {
     if (deleteId) {
-      await deleteSchool.mutateAsync(deleteId)
+      await deleteSchool.mutateAsync({ id: deleteId })
       setDeleteId(null)
     }
   }
 
   // Filter schools client-side for search (if API doesn't handle it)
-  const filteredSchools = schools?.filter(school => {
+  const filteredSchools = schools.filter(school => {
     if (!search) return true
     const searchLower = search.toLowerCase()
     return (
@@ -162,7 +166,7 @@ export function SchoolList({
 
             {/* School Type Filter */}
             <Select value={schoolType} onValueChange={setSchoolType}>
-              <SelectTrigger>
+              <SelectTrigger className="w-full">
                 <SelectValue placeholder="Jenis Sekolah" />
               </SelectTrigger>
               <SelectContent>
@@ -177,7 +181,7 @@ export function SchoolList({
 
             {/* Status Filter */}
             <Select value={isActive} onValueChange={setIsActive}>
-              <SelectTrigger>
+              <SelectTrigger className="w-full">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
