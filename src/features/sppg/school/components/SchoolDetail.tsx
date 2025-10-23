@@ -459,25 +459,25 @@ export function SchoolDetail({ schoolId, onEdit, onDelete }: SchoolDetailProps) 
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <MapPin className="h-5 w-5" />
-                  Location Details
+                  Detail Lokasi
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <div className="text-sm font-medium text-muted-foreground">Address</div>
+                  <div className="text-sm font-medium text-muted-foreground">Alamat</div>
                   <div className="text-sm">{school.schoolAddress}</div>
                 </div>
 
                 {school.postalCode && (
                   <div>
-                    <div className="text-sm font-medium text-muted-foreground">Postal Code</div>
+                    <div className="text-sm font-medium text-muted-foreground">Kode Pos</div>
                     <div className="text-sm">{school.postalCode}</div>
                   </div>
                 )}
 
                 {school.coordinates && (
                   <div>
-                    <div className="text-sm font-medium text-muted-foreground">Coordinates</div>
+                    <div className="text-sm font-medium text-muted-foreground">Koordinat</div>
                     <div className="text-sm text-muted-foreground">{school.coordinates}</div>
                   </div>
                 )}
@@ -552,8 +552,8 @@ export function SchoolDetail({ schoolId, onEdit, onDelete }: SchoolDetailProps) 
                         )}
                         {school.femaleStudents !== null && (
                           <div>
-                            <div className="text-sm text-muted-foreground">Female</div>
-                            <div className="text-sm font-medium">{school.femaleStudents} students</div>
+                            <div className="text-sm text-muted-foreground">Perempuan</div>
+                            <div className="text-sm font-medium">{school.femaleStudents} siswa</div>
                           </div>
                         )}
                       </div>
@@ -570,33 +570,33 @@ export function SchoolDetail({ schoolId, onEdit, onDelete }: SchoolDetailProps) 
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Utensils className="h-5 w-5" />
-                  Feeding Schedule
+                  Jadwal Pemberian Makan
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <div className="text-sm font-medium text-muted-foreground">Feeding Days</div>
+                  <div className="text-sm font-medium text-muted-foreground">Hari Pemberian Makan</div>
                   <div className="flex flex-wrap gap-2 mt-2">
                     {school.feedingDays && school.feedingDays.length > 0 ? (
                       school.feedingDays.map((day) => (
                         <Badge key={day} variant="outline">{day}</Badge>
                       ))
                     ) : (
-                      <span className="text-sm text-muted-foreground">Not set</span>
+                      <span className="text-sm text-muted-foreground">Belum diatur</span>
                     )}
                   </div>
                 </div>
 
                 {school.mealsPerDay && (
                   <div>
-                    <div className="text-sm font-medium text-muted-foreground">Meals Per Day</div>
+                    <div className="text-sm font-medium text-muted-foreground">Jumlah Makan per Hari</div>
                     <div className="text-sm">{school.mealsPerDay}</div>
                   </div>
                 )}
 
                 {school.servingMethod && (
                   <div>
-                    <div className="text-sm font-medium text-muted-foreground">Serving Method</div>
+                    <div className="text-sm font-medium text-muted-foreground">Metode Penyajian</div>
                     <div className="text-sm">{servingMethodLabel}</div>
                   </div>
                 )}
@@ -606,25 +606,25 @@ export function SchoolDetail({ schoolId, onEdit, onDelete }: SchoolDetailProps) 
                 <div className="grid grid-cols-2 gap-4">
                   {school.feedingTime && (
                     <div>
-                      <div className="text-sm font-medium text-muted-foreground">Feeding Time</div>
+                      <div className="text-sm font-medium text-muted-foreground">Waktu Pemberian Makan</div>
                       <div className="text-sm">{school.feedingTime}</div>
                     </div>
                   )}
                   {school.breakfastTime && (
                     <div>
-                      <div className="text-sm font-medium text-muted-foreground">Breakfast Time</div>
+                      <div className="text-sm font-medium text-muted-foreground">Waktu Sarapan</div>
                       <div className="text-sm">{school.breakfastTime}</div>
                     </div>
                   )}
                   {school.lunchTime && (
                     <div>
-                      <div className="text-sm font-medium text-muted-foreground">Lunch Time</div>
+                      <div className="text-sm font-medium text-muted-foreground">Waktu Makan Siang</div>
                       <div className="text-sm">{school.lunchTime}</div>
                     </div>
                   )}
                   {school.snackTime && (
                     <div>
-                      <div className="text-sm font-medium text-muted-foreground">Snack Time</div>
+                      <div className="text-sm font-medium text-muted-foreground">Waktu Snack</div>
                       <div className="text-sm">{school.snackTime}</div>
                     </div>
                   )}
@@ -636,37 +636,37 @@ export function SchoolDetail({ schoolId, onEdit, onDelete }: SchoolDetailProps) 
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Truck className="h-5 w-5" />
-                  Delivery Information
+                  Informasi Pengiriman
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <div className="text-sm font-medium text-muted-foreground">Delivery Address</div>
+                  <div className="text-sm font-medium text-muted-foreground">Alamat Pengiriman</div>
                   <div className="text-sm">{school.deliveryAddress}</div>
                 </div>
 
                 <div>
-                  <div className="text-sm font-medium text-muted-foreground">Delivery Contact</div>
+                  <div className="text-sm font-medium text-muted-foreground">Kontak Pengiriman</div>
                   <div className="text-sm">{school.deliveryContact}</div>
                 </div>
 
                 {school.deliveryPhone && (
                   <div>
-                    <div className="text-sm font-medium text-muted-foreground">Delivery Phone</div>
+                    <div className="text-sm font-medium text-muted-foreground">Telepon Pengiriman</div>
                     <div className="text-sm">{school.deliveryPhone}</div>
                   </div>
                 )}
 
                 {school.deliveryInstructions && (
                   <div>
-                    <div className="text-sm font-medium text-muted-foreground">Delivery Instructions</div>
+                    <div className="text-sm font-medium text-muted-foreground">Instruksi Pengiriman</div>
                     <div className="text-sm text-muted-foreground">{school.deliveryInstructions}</div>
                   </div>
                 )}
 
                 {school.preferredDeliveryTime && (
                   <div>
-                    <div className="text-sm font-medium text-muted-foreground">Preferred Delivery Time</div>
+                    <div className="text-sm font-medium text-muted-foreground">Waktu Pengiriman Preferensi</div>
                     <div className="text-sm">{school.preferredDeliveryTime}</div>
                   </div>
                 )}
@@ -680,7 +680,7 @@ export function SchoolDetail({ schoolId, onEdit, onDelete }: SchoolDetailProps) 
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Wrench className="h-5 w-5" />
-                  School Facilities
+                  Fasilitas Sekolah
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -691,7 +691,7 @@ export function SchoolDetail({ schoolId, onEdit, onDelete }: SchoolDetailProps) 
                     ) : (
                       <XCircle className="h-4 w-4 text-muted-foreground" />
                     )}
-                    <span className="text-sm">Kitchen</span>
+                    <span className="text-sm">Dapur</span>
                   </div>
 
                   <div className="flex items-center gap-2">
@@ -700,7 +700,7 @@ export function SchoolDetail({ schoolId, onEdit, onDelete }: SchoolDetailProps) 
                     ) : (
                       <XCircle className="h-4 w-4 text-muted-foreground" />
                     )}
-                    <span className="text-sm">Storage</span>
+                    <span className="text-sm">Gudang</span>
                   </div>
 
                   <div className="flex items-center gap-2">
@@ -709,7 +709,7 @@ export function SchoolDetail({ schoolId, onEdit, onDelete }: SchoolDetailProps) 
                     ) : (
                       <XCircle className="h-4 w-4 text-muted-foreground" />
                     )}
-                    <span className="text-sm">Clean Water</span>
+                    <span className="text-sm">Air Bersih</span>
                   </div>
 
                   <div className="flex items-center gap-2">
@@ -718,7 +718,7 @@ export function SchoolDetail({ schoolId, onEdit, onDelete }: SchoolDetailProps) 
                     ) : (
                       <XCircle className="h-4 w-4 text-muted-foreground" />
                     )}
-                    <span className="text-sm">Electricity</span>
+                    <span className="text-sm">Listrik</span>
                   </div>
 
                   <div className="flex items-center gap-2">
@@ -727,7 +727,7 @@ export function SchoolDetail({ schoolId, onEdit, onDelete }: SchoolDetailProps) 
                     ) : (
                       <XCircle className="h-4 w-4 text-muted-foreground" />
                     )}
-                    <span className="text-sm">Refrigerator</span>
+                    <span className="text-sm">Kulkas</span>
                   </div>
 
                   <div className="flex items-center gap-2">
@@ -736,7 +736,7 @@ export function SchoolDetail({ schoolId, onEdit, onDelete }: SchoolDetailProps) 
                     ) : (
                       <XCircle className="h-4 w-4 text-muted-foreground" />
                     )}
-                    <span className="text-sm">Dining Area</span>
+                    <span className="text-sm">Area Makan</span>
                   </div>
 
                   <div className="flex items-center gap-2">
@@ -745,7 +745,7 @@ export function SchoolDetail({ schoolId, onEdit, onDelete }: SchoolDetailProps) 
                     ) : (
                       <XCircle className="h-4 w-4 text-muted-foreground" />
                     )}
-                    <span className="text-sm">Handwashing</span>
+                    <span className="text-sm">Tempat Cuci Tangan</span>
                   </div>
                 </div>
 
@@ -755,14 +755,14 @@ export function SchoolDetail({ schoolId, onEdit, onDelete }: SchoolDetailProps) 
                     <div className="grid grid-cols-2 gap-4">
                       {school.storageCapacity && (
                         <div>
-                          <div className="text-sm font-medium text-muted-foreground">Storage Capacity</div>
+                          <div className="text-sm font-medium text-muted-foreground">Kapasitas Gudang</div>
                           <div className="text-sm">{school.storageCapacity}</div>
                         </div>
                       )}
                       {school.diningCapacity && (
                         <div>
-                          <div className="text-sm font-medium text-muted-foreground">Dining Capacity</div>
-                          <div className="text-sm">{school.diningCapacity} students</div>
+                          <div className="text-sm font-medium text-muted-foreground">Kapasitas Area Makan</div>
+                          <div className="text-sm">{school.diningCapacity} siswa</div>
                         </div>
                       )}
                     </div>
@@ -775,19 +775,19 @@ export function SchoolDetail({ schoolId, onEdit, onDelete }: SchoolDetailProps) 
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <TrendingUp className="h-5 w-5" />
-                  Performance Metrics
+                  Metrik Kinerja
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <div className="text-sm font-medium text-muted-foreground">Attendance Rate</div>
+                    <div className="text-sm font-medium text-muted-foreground">Tingkat Kehadiran</div>
                     <div className="text-2xl font-bold">
                       {school.attendanceRate ? `${school.attendanceRate.toFixed(1)}%` : 'N/A'}
                     </div>
                   </div>
                   <div>
-                    <div className="text-sm font-medium text-muted-foreground">Satisfaction Score</div>
+                    <div className="text-sm font-medium text-muted-foreground">Skor Kepuasan</div>
                     <div className="text-2xl font-bold">
                       {school.satisfactionScore ? `${school.satisfactionScore.toFixed(1)}/5.0` : 'N/A'}
                     </div>
@@ -800,7 +800,7 @@ export function SchoolDetail({ schoolId, onEdit, onDelete }: SchoolDetailProps) 
                     <div className="grid grid-cols-2 gap-4">
                       {school.contractStartDate && (
                         <div>
-                          <div className="text-sm font-medium text-muted-foreground">Contract Start</div>
+                          <div className="text-sm font-medium text-muted-foreground">Mulai Kontrak</div>
                           <div className="text-sm">
                             {new Date(school.contractStartDate).toLocaleDateString('id-ID')}
                           </div>
@@ -808,7 +808,7 @@ export function SchoolDetail({ schoolId, onEdit, onDelete }: SchoolDetailProps) 
                       )}
                       {school.contractEndDate && (
                         <div>
-                          <div className="text-sm font-medium text-muted-foreground">Contract End</div>
+                          <div className="text-sm font-medium text-muted-foreground">Akhir Kontrak</div>
                           <div className="text-sm">
                             {new Date(school.contractEndDate).toLocaleDateString('id-ID')}
                           </div>
@@ -823,18 +823,18 @@ export function SchoolDetail({ schoolId, onEdit, onDelete }: SchoolDetailProps) 
             {(school.notes || school.specialInstructions) && (
               <Card>
                 <CardHeader>
-                  <CardTitle>Notes & Instructions</CardTitle>
+                  <CardTitle>Catatan & Instruksi</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {school.notes && (
                     <div>
-                      <div className="text-sm font-medium text-muted-foreground">Notes</div>
+                      <div className="text-sm font-medium text-muted-foreground">Catatan</div>
                       <div className="text-sm text-muted-foreground mt-1">{school.notes}</div>
                     </div>
                   )}
                   {school.specialInstructions && (
                     <div>
-                      <div className="text-sm font-medium text-muted-foreground">Special Instructions</div>
+                      <div className="text-sm font-medium text-muted-foreground">Instruksi Khusus</div>
                       <div className="text-sm text-muted-foreground mt-1">{school.specialInstructions}</div>
                     </div>
                   )}
@@ -849,19 +849,19 @@ export function SchoolDetail({ schoolId, onEdit, onDelete }: SchoolDetailProps) 
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Calendar className="h-5 w-5" />
-                  Record History
+                  Riwayat Rekaman
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <div className="text-sm font-medium text-muted-foreground">Created At</div>
+                    <div className="text-sm font-medium text-muted-foreground">Dibuat Pada</div>
                     <div className="text-sm">
                       {new Date(school.createdAt).toLocaleString('id-ID')}
                     </div>
                   </div>
                   <div>
-                    <div className="text-sm font-medium text-muted-foreground">Last Updated</div>
+                    <div className="text-sm font-medium text-muted-foreground">Terakhir Diperbarui</div>
                     <div className="text-sm">
                       {new Date(school.updatedAt).toLocaleString('id-ID')}
                     </div>
@@ -874,7 +874,7 @@ export function SchoolDetail({ schoolId, onEdit, onDelete }: SchoolDetailProps) 
 
             <Card>
               <CardHeader>
-                <CardTitle>Record ID</CardTitle>
+                <CardTitle>ID Rekaman</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="font-mono text-sm text-muted-foreground">{school.id}</div>
@@ -888,19 +888,19 @@ export function SchoolDetail({ schoolId, onEdit, onDelete }: SchoolDetailProps) 
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogTitle>Apakah Anda yakin?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will delete <strong>{school.schoolName}</strong>. The school will be marked as deleted but can be reactivated later.
+              Ini akan menghapus <strong>{school.schoolName}</strong>. Sekolah akan ditandai sebagai dihapus tetapi dapat diaktifkan kembali nanti.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
               disabled={isDeleting}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {isDeleting ? 'Deleting...' : 'Delete School'}
+              {isDeleting ? 'Menghapus...' : 'Hapus Sekolah'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
