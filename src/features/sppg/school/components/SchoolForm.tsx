@@ -243,7 +243,7 @@ export function SchoolForm({
                         disabled={isLoadingPrograms}
                       >
                         <FormControl>
-                          <SelectTrigger>
+                          <SelectTrigger className="w-full">
                             <SelectValue placeholder={isLoadingPrograms ? "Memuat program..." : "Pilih program gizi"} />
                           </SelectTrigger>
                         </FormControl>
@@ -282,7 +282,7 @@ export function SchoolForm({
                         disabled={isLoadingProvinces}
                       >
                         <FormControl>
-                          <SelectTrigger>
+                          <SelectTrigger className="w-full">
                             <SelectValue placeholder={isLoadingProvinces ? "Memuat provinsi..." : "Pilih provinsi"} />
                           </SelectTrigger>
                         </FormControl>
@@ -320,7 +320,7 @@ export function SchoolForm({
                         disabled={!selectedProvinceId || isLoadingRegencies}
                       >
                         <FormControl>
-                          <SelectTrigger>
+                          <SelectTrigger className="w-full">
                             <SelectValue placeholder={
                               !selectedProvinceId 
                                 ? "Pilih provinsi terlebih dahulu" 
@@ -363,7 +363,7 @@ export function SchoolForm({
                         disabled={!selectedRegencyId || isLoadingDistricts}
                       >
                         <FormControl>
-                          <SelectTrigger>
+                          <SelectTrigger className="w-full">
                             <SelectValue placeholder={
                               !selectedRegencyId 
                                 ? "Pilih kabupaten/kota terlebih dahulu" 
@@ -402,7 +402,7 @@ export function SchoolForm({
                         disabled={!selectedDistrictId || isLoadingVillages}
                       >
                         <FormControl>
-                          <SelectTrigger>
+                          <SelectTrigger className="w-full">
                             <SelectValue placeholder={
                               !selectedDistrictId 
                                 ? "Pilih kecamatan terlebih dahulu" 
@@ -470,7 +470,7 @@ export function SchoolForm({
                       <FormLabel>Jenis Sekolah *</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
-                          <SelectTrigger>
+                          <SelectTrigger className="w-full">
                             <SelectValue placeholder="Pilih jenis sekolah" />
                           </SelectTrigger>
                         </FormControl>
@@ -566,7 +566,7 @@ export function SchoolForm({
                         value={field.value || undefined}
                       >
                         <FormControl>
-                          <SelectTrigger>
+                          <SelectTrigger className="w-full">
                             <SelectValue placeholder="Pilih nilai akreditasi" />
                           </SelectTrigger>
                         </FormControl>
@@ -624,7 +624,7 @@ export function SchoolForm({
                         value={field.value || undefined}
                       >
                         <FormControl>
-                          <SelectTrigger>
+                          <SelectTrigger className="w-full">
                             <SelectValue placeholder="Pilih klasifikasi" />
                           </SelectTrigger>
                         </FormControl>
@@ -879,7 +879,7 @@ export function SchoolForm({
                       <FormLabel>Status Sekolah *</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
-                          <SelectTrigger>
+                          <SelectTrigger className="w-full">
                             <SelectValue />
                           </SelectTrigger>
                         </FormControl>
@@ -1353,7 +1353,7 @@ export function SchoolForm({
                           defaultValue={field.value?.toString()}
                         >
                           <FormControl>
-                            <SelectTrigger>
+                            <SelectTrigger className="w-full">
                               <SelectValue placeholder="Pilih jumlah" />
                             </SelectTrigger>
                           </FormControl>
