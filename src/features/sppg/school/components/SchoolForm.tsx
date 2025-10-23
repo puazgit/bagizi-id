@@ -1489,36 +1489,158 @@ export function SchoolForm({
                   </div>
                 </div>
 
-                {/* Dietary Requirements */}
+                {/* Dietary & Cultural Requirements */}
                 <div className="border-t pt-4">
-                  <FormField
-                    control={form.control}
-                    name="religiousReqs"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Kebutuhan Keagamaan</FormLabel>
-                        <FormControl>
-                          <Textarea
-                            placeholder="Contoh: Halal, vegetarian, tidak mengandung babi, dll..."
-                            className="min-h-[80px]"
-                            {...field}
-                            value={field.value?.join(', ') || ''}
-                            onChange={(e) => {
-                              const values = e.target.value
-                                .split(',')
-                                .map(v => v.trim())
-                                .filter(v => v.length > 0)
-                              field.onChange(values.length > 0 ? values : null)
-                            }}
-                          />
-                        </FormControl>
-                        <FormDescription>
-                          Pisahkan dengan koma untuk multiple requirements (contoh: Halal, No Pork)
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  <h4 className="text-sm font-medium mb-4 text-muted-foreground">Kebutuhan Diet & Budaya</h4>
+                  <div className="space-y-4">
+                    {/* Beneficiary Type */}
+                    <FormField
+                      control={form.control}
+                      name="beneficiaryType"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Tipe Penerima Manfaat *</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger className="w-full">
+                                <SelectValue placeholder="Pilih tipe penerima" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="CHILD">Anak-anak (Child)</SelectItem>
+                              <SelectItem value="PREGNANT_WOMAN">Ibu Hamil</SelectItem>
+                              <SelectItem value="NURSING_MOTHER">Ibu Menyusui</SelectItem>
+                              <SelectItem value="ELDERLY">Lansia</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormDescription>
+                            Kategori utama penerima manfaat program
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* Special Dietary */}
+                    <FormField
+                      control={form.control}
+                      name="specialDietary"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Kebutuhan Diet Khusus</FormLabel>
+                          <FormControl>
+                            <Textarea
+                              placeholder="Contoh: Vegetarian, Vegan, Gluten-free, Lactose-free, dll..."
+                              className="min-h-[80px]"
+                              {...field}
+                              value={field.value?.join(', ') || ''}
+                              onChange={(e) => {
+                                const values = e.target.value
+                                  .split(',')
+                                  .map(v => v.trim())
+                                  .filter(v => v.length > 0)
+                                field.onChange(values.length > 0 ? values : [])
+                              }}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Pisahkan dengan koma untuk multiple kebutuhan diet
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* Allergy Alerts */}
+                    <FormField
+                      control={form.control}
+                      name="allergyAlerts"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Peringatan Alergi</FormLabel>
+                          <FormControl>
+                            <Textarea
+                              placeholder="Contoh: Kacang, Telur, Susu, Seafood, Gluten, dll..."
+                              className="min-h-[80px]"
+                              {...field}
+                              value={field.value?.join(', ') || ''}
+                              onChange={(e) => {
+                                const values = e.target.value
+                                  .split(',')
+                                  .map(v => v.trim())
+                                  .filter(v => v.length > 0)
+                                field.onChange(values.length > 0 ? values : [])
+                              }}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Daftar alergen yang harus dihindari (pisahkan dengan koma)
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* Cultural Requirements */}
+                    <FormField
+                      control={form.control}
+                      name="culturalReqs"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Kebutuhan Budaya</FormLabel>
+                          <FormControl>
+                            <Textarea
+                              placeholder="Contoh: Tidak makan daging sapi, Pantangan adat, dll..."
+                              className="min-h-[80px]"
+                              {...field}
+                              value={field.value?.join(', ') || ''}
+                              onChange={(e) => {
+                                const values = e.target.value
+                                  .split(',')
+                                  .map(v => v.trim())
+                                  .filter(v => v.length > 0)
+                                field.onChange(values.length > 0 ? values : [])
+                              }}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Kebutuhan atau pantangan berdasarkan budaya lokal
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* Religious Requirements */}
+                    <FormField
+                      control={form.control}
+                      name="religiousReqs"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Kebutuhan Keagamaan</FormLabel>
+                          <FormControl>
+                            <Textarea
+                              placeholder="Contoh: Halal, Vegetarian (agama), Tidak mengandung babi, dll..."
+                              className="min-h-[80px]"
+                              {...field}
+                              value={field.value?.join(', ') || ''}
+                              onChange={(e) => {
+                                const values = e.target.value
+                                  .split(',')
+                                  .map(v => v.trim())
+                                  .filter(v => v.length > 0)
+                                field.onChange(values.length > 0 ? values : [])
+                              }}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Kebutuhan makanan sesuai ajaran agama (pisahkan dengan koma)
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
                 </div>
               </div>
             </CardContent>
