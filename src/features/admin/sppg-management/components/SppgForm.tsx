@@ -245,20 +245,51 @@ export function SppgForm({ mode, sppgId, initialData, isLoading: dataLoading }: 
   const watchDistrictId = form.watch('districtId')
   const watchIsDemoAccount = form.watch('isDemoAccount')
 
+  // For edit mode, use initialData as fallback to enable hooks immediately
+  const effectiveProvinceId = watchProvinceId || (mode === 'edit' && initialData?.province?.id) || undefined
+  const effectiveRegencyId = watchRegencyId || (mode === 'edit' && initialData?.regency?.id) || undefined
+  const effectiveDistrictId = watchDistrictId || (mode === 'edit' && initialData?.district?.id) || undefined
+
+  // Debug effective IDs
+  console.log('[SppgForm] Effective IDs:', {
+    provinceId: effectiveProvinceId,
+    regencyId: effectiveRegencyId,
+    districtId: effectiveDistrictId,
+    mode,
+    initialData: initialData ? {
+      province: initialData.province?.id,
+      regency: initialData.regency?.id,
+      district: initialData.district?.id,
+      village: initialData.village?.id,
+    } : null
+  })
+
   const { data: regencies, isLoading: isLoadingRegencies } = useRegenciesByProvince(
-    watchProvinceId,
-    !!watchProvinceId
+    effectiveProvinceId,
+    !!effectiveProvinceId
   )
   
   const { data: districts, isLoading: isLoadingDistricts } = useDistrictsByRegency(
-    watchRegencyId,
-    !!watchRegencyId
+    effectiveRegencyId,
+    !!effectiveRegencyId
   )
   
   const { data: villages, isLoading: isLoadingVillages } = useVillagesByDistrict(
-    watchDistrictId,
-    !!watchDistrictId
+    effectiveDistrictId,
+    !!effectiveDistrictId
   )
+
+  // Debug cascading data
+  console.log('[SppgForm] Cascading data:', {
+    regencies: regencies?.length || 0,
+    districts: districts?.length || 0,
+    villages: villages?.length || 0,
+    loading: {
+      regencies: isLoadingRegencies,
+      districts: isLoadingDistricts,
+      villages: isLoadingVillages
+    }
+  })
 
   /**
    * Transform form data to API input format
