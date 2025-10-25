@@ -1029,17 +1029,17 @@ export function SppgForm({ mode, sppgId, initialData, isLoading: dataLoading }: 
                 name="coordinates"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Koordinat</FormLabel>
+                    <FormLabel>Koordinat GPS (Opsional)</FormLabel>
                     <FormControl>
                       <Input 
-                        placeholder="-6.2088, 106.8456"
+                        placeholder="-6.2088,106.8456"
                         {...field}
                         value={field.value ?? ''}
                         aria-label="Koordinat GPS"
                       />
                     </FormControl>
                     <FormDescription>
-                      Format: Latitude, Longitude (contoh: -6.2088, 106.8456)
+                      Format: <strong>latitude,longitude</strong> (tanpa spasi). Contoh: -6.2088,106.8456 untuk Jakarta
                     </FormDescription>
                     <FormMessage />
                   </FormItem>

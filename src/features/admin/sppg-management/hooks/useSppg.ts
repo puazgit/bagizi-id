@@ -57,12 +57,12 @@ export function useSppg(id: string | undefined) {
         throw new Error(result.error || 'Failed to fetch SPPG detail')
       }
       
-      // Access nested data structure: result.data.data
-      if (!result.data?.data) {
-        throw new Error('SPPG data not found')
+      // Direct data access - simplified structure
+      if (!result.data) {
+        throw new Error('SPPG ID tidak ditemukan')
       }
       
-      return result.data.data
+      return result.data
     },
     enabled: !!id,
     staleTime: 5 * 60 * 1000,

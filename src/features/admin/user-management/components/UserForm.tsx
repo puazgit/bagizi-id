@@ -615,14 +615,15 @@ interface SppgSelectorProps {
 }
 
 function SppgSelector({ value, onChange }: SppgSelectorProps) {
-  const [sppgs, setSppgs] = useState<Array<{ id: string; sppgName: string; sppgCode: string }>>([])
+  const [sppgs, setSppgs] = useState<Array<{ id: string; name: string; code: string }>>([])
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
     async function fetchSppgs() {
       try {
         setIsLoading(true)
-        const response = await fetch('/api/admin/sppg')
+        // Fetch with high limit to get all SPPGs
+        const response = await fetch('/api/admin/sppg?limit=100')
         
         if (!response.ok) {
           throw new Error('Failed to fetch SPPGs')
@@ -630,6 +631,7 @@ function SppgSelector({ value, onChange }: SppgSelectorProps) {
 
         const result = await response.json()
         
+        // API returns: { success: true, data: [...], pagination: {...} }
         if (result.success && result.data) {
           setSppgs(result.data)
         }
@@ -654,22 +656,35 @@ function SppgSelector({ value, onChange }: SppgSelectorProps) {
   }
 
   return (
-    <Select value={value || ''} onValueChange={(val) => onChange(val || null)}>
+    <Select 
+      value={value || undefined} 
+      onValueChange={(val) => onChange(val === '__none__' ? null : val)}
+    >
       <SelectTrigger>
-        <SelectValue placeholder="Select SPPG" />
+        <SelectValue placeholder="Select SPPG (Required for SPPG roles)" />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value="">None</SelectItem>
-        {sppgs.map((sppg) => (
-          <SelectItem key={sppg.id} value={sppg.id}>
-            <div className="flex items-center gap-2">
-              <Badge variant="outline" className="font-mono text-xs">
-                {sppg.sppgCode}
-              </Badge>
-              <span>{sppg.sppgName}</span>
-            </div>
-          </SelectItem>
-        ))}
+        {sppgs.length === 0 ? (
+          <div className="p-4 text-center text-sm text-muted-foreground">
+            No SPPG available
+          </div>
+        ) : (
+          <>
+            <SelectItem value="__none__">
+              <span className="text-muted-foreground italic">None (Clear selection)</span>
+            </SelectItem>
+            {sppgs.map((sppg) => (
+              <SelectItem key={sppg.id} value={sppg.id}>
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="font-mono text-xs">
+                    {sppg.code}
+                  </Badge>
+                  <span>{sppg.name}</span>
+                </div>
+              </SelectItem>
+            ))}
+          </>
+        )}
       </SelectContent>
     </Select>
   )

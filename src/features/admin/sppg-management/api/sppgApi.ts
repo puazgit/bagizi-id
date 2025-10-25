@@ -11,7 +11,6 @@ import type {
   SppgDetail,
   SppgFilters,
   SppgListResponse,
-  SppgDetailResponse,
   SppgStatistics,
   CreateSppgInput,
   UpdateSppgInput
@@ -109,7 +108,7 @@ export const sppgApi = {
   async getById(
     id: string,
     headers?: HeadersInit
-  ): Promise<ApiResponse<SppgDetailResponse>> {
+  ): Promise<ApiResponse<SppgDetail>> {
     const baseUrl = getBaseUrl()
     const response = await fetch(`${baseUrl}/api/admin/sppg/${id}`, getFetchOptions(headers))
     

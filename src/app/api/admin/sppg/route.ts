@@ -137,14 +137,12 @@ export async function GET(request: NextRequest) {
     // 9. Return paginated response
     return NextResponse.json({
       success: true,
-      data: {
-        data: sppgs,
-        pagination: {
-          page,
-          limit,
-          total,
-          totalPages: Math.ceil(total / limit)
-        }
+      data: sppgs,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit)
       }
     })
 

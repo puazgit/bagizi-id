@@ -78,17 +78,15 @@ export async function GET(
     // 4. Check if SPPG exists
     if (!sppg) {
       return NextResponse.json(
-        { success: false, error: 'SPPG not found' },
+        { success: false, error: 'SPPG ID tidak ditemukan' },
         { status: 404 }
       )
     }
 
-    // Return SPPG detail with proper nested structure
+    // Return SPPG detail - simplified structure
     return NextResponse.json({
       success: true,
-      data: {
-        data: sppg
-      }
+      data: sppg
     })
 
     } catch (error) {

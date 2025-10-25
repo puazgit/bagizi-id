@@ -62,7 +62,11 @@ export const createSppgSchema = z.object({
     .nullable(),
   
   coordinates: z.string()
-    .regex(/^-?\d+(\.\d+)?,-?\d+(\.\d+)?$/, 'Format koordinat: latitude,longitude')
+    .transform((val) => val?.trim().replace(/\s+/g, '')) // Remove all spaces
+    .refine(
+      (val) => !val || /^-?\d+(\.\d+)?,-?\d+(\.\d+)?$/.test(val),
+      'Format koordinat: latitude,longitude (contoh: -6.2088,106.8456)'
+    )
     .optional()
     .nullable(),
   

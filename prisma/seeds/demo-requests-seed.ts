@@ -29,6 +29,9 @@ export async function seedDemoRequests(
 ): Promise<DemoRequest[]> {
   console.log('  → Creating demo requests from SPPG organizations...')
 
+  // Delete existing demo requests first to avoid unique constraint errors
+  await prisma.demoRequest.deleteMany({})
+
   const demoRequests = await Promise.all([
     // 1. SUBMITTED - SPPG Dinas Pendidikan Kabupaten Purwakarta
     prisma.demoRequest.create({
