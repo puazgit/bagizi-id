@@ -144,12 +144,18 @@ export async function parseApiResponse(response: Response): Promise<unknown> {
 // ============================================
 
 /**
- * Standard API Response Type
+ * Standard API response structure
  * All API endpoints should return this structure
  */
 export interface ApiResponse<T = unknown> {
   success: boolean
   data?: T
+  pagination?: {
+    page: number
+    limit: number
+    total: number
+    totalPages: number
+  }
   error?: string
   message?: string
 }

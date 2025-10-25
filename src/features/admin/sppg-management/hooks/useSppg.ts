@@ -30,11 +30,16 @@ export function useSppgs(filters?: SppgFilters) {
     queryFn: async () => {
       const result = await sppgApi.getAll(filters)
       
-      if (!result.success || !result.data) {
+      if (!result.success) {
         throw new Error(result.error || 'Failed to fetch SPPG list')
       }
       
-      return result.data
+      // Return full result with data and pagination at top level
+      // API now returns: { success: true, data: [...], pagination: {...} }
+      return {
+        data: result.data || [],
+        pagination: result.pagination || { page: 1, limit: 10, total: 0, totalPages: 0 }
+      }
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
   })

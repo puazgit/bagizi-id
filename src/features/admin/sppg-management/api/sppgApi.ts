@@ -9,8 +9,8 @@ import { getBaseUrl, getFetchOptions } from '@/lib/api-utils'
 import type { ApiResponse } from '@/lib/api-utils'
 import type {
   SppgDetail,
+  SppgListItem,
   SppgFilters,
-  SppgListResponse,
   SppgStatistics,
   CreateSppgInput,
   UpdateSppgInput
@@ -31,15 +31,15 @@ import type {
  */
 export const sppgApi = {
   /**
-   * Fetch all SPPG with optional filtering and pagination
+   * Fetch all SPPG with optional filtering
    * @param filters - Optional filter parameters
    * @param headers - Optional headers for SSR
-   * @returns Promise with API response containing SPPG list and pagination
+   * @returns Promise with API response containing SPPG array and pagination
    */
   async getAll(
     filters?: SppgFilters,
     headers?: HeadersInit
-  ): Promise<ApiResponse<SppgListResponse>> {
+  ): Promise<ApiResponse<SppgListItem[]>> {
     try {
       const baseUrl = getBaseUrl()
       
