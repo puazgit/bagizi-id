@@ -5,11 +5,12 @@
  * @author Bagizi-ID Development Team
  */
 
-import { NextRequest } from 'next/server'
-import { auth } from '@/auth'
+import { NextRequest, NextResponse } from 'next/server'
+import { withSppgAuth } from '@/lib/api-middleware'
+import { hasPermission } from '@/lib/permissions'
 import { db } from '@/lib/prisma'
-import { checkSppgAccess } from '@/lib/permissions'
 import { updateScheduleSchema } from '@/features/sppg/distribution/schedule/schemas'
+import { UserRole } from '@prisma/client'
 
 /**
  * GET /api/sppg/distribution/schedule/[id]
@@ -19,36 +20,23 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    const { id } = await params
+  return withSppgAuth(request, async (session) => {
+    try {
+      const { id } = await params
 
-    // 1. Authentication Check
-    const session = await auth()
-    if (!session?.user) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+      // Permission Check
+      if (!hasPermission(session.user.userRole as UserRole, 'DISTRIBUTION_MANAGE')) {
+        return NextResponse.json(
+          { success: false, error: 'Insufficient permissions' },
+          { status: 403 }
+        )
+      }
 
-    // 2. SPPG Access Check
-    if (!session.user.sppgId) {
-      return Response.json(
-        { error: 'SPPG access required' },
-        { status: 403 }
-      )
-    }
-    
-    const sppg = await checkSppgAccess(session.user.sppgId)
-    if (!sppg) {
-      return Response.json(
-        { error: 'SPPG not found or access denied' },
-        { status: 403 }
-      )
-    }
-
-    // 3. Fetch Schedule
+      // Fetch Schedule
     const schedule = await db.distributionSchedule.findUnique({
       where: {
         id,
-        sppgId: session.user.sppgId, // Multi-tenant safety
+        sppgId: session.user.sppgId!, // Multi-tenant safety
       },
       include: {
         sppg: {
@@ -94,7 +82,7 @@ export async function GET(
     })
 
     if (!schedule) {
-      return Response.json(
+      return NextResponse.json(
         { error: 'Schedule not found' },
         { status: 404 }
       )
@@ -117,7 +105,7 @@ export async function GET(
         (schedule.packagingCost || 0) + (schedule.fuelCost || 0),
     }
 
-    return Response.json({
+    return NextResponse.json({
       success: true,
       data: {
         ...schedule,
@@ -126,11 +114,12 @@ export async function GET(
     })
   } catch (error) {
     console.error('GET /api/sppg/distribution/schedule/[id] error:', error)
-    return Response.json(
-      { error: 'Internal server error' },
+    return NextResponse.json(
+      { success: false, error: 'Internal server error' },
       { status: 500 }
     )
   }
+  })
 }
 
 /**
@@ -141,41 +130,28 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    const { id } = await params
+  return withSppgAuth(request, async (session) => {
+    try {
+      const { id } = await params
 
-    // 1. Authentication Check
-    const session = await auth()
-    if (!session?.user) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+      // Permission Check
+      if (!hasPermission(session.user.userRole as UserRole, 'DISTRIBUTION_MANAGE')) {
+        return NextResponse.json(
+          { success: false, error: 'Insufficient permissions' },
+          { status: 403 }
+        )
+      }
 
-    // 2. SPPG Access Check
-    if (!session.user.sppgId) {
-      return Response.json(
-        { error: 'SPPG access required' },
-        { status: 403 }
-      )
-    }
-    
-    const sppg = await checkSppgAccess(session.user.sppgId)
-    if (!sppg) {
-      return Response.json(
-        { error: 'SPPG not found or access denied' },
-        { status: 403 }
-      )
-    }
-
-    // 3. Check if schedule exists and belongs to SPPG
+      // Check if schedule exists and belongs to SPPG
     const existingSchedule = await db.distributionSchedule.findUnique({
       where: {
         id,
-        sppgId: session.user.sppgId,
+        sppgId: session.user.sppgId!,
       },
     })
 
     if (!existingSchedule) {
-      return Response.json(
+      return NextResponse.json(
         { error: 'Schedule not found' },
         { status: 404 }
       )
@@ -183,7 +159,7 @@ export async function PUT(
 
     // 4. Validate update is allowed (cannot edit if IN_PROGRESS or COMPLETED)
     if (['IN_PROGRESS', 'COMPLETED'].includes(existingSchedule.status)) {
-      return Response.json(
+      return NextResponse.json(
         {
           error: 'Cannot edit schedule',
           details: 'Tidak dapat mengubah jadwal yang sedang berjalan atau selesai',
@@ -197,7 +173,7 @@ export async function PUT(
     const validated = updateScheduleSchema.safeParse(body)
 
     if (!validated.success) {
-      return Response.json(
+      return NextResponse.json(
         {
           error: 'Validation failed',
           details: validated.error.issues,
@@ -250,7 +226,7 @@ export async function PUT(
     await db.auditLog.create({
       data: {
         userId: session.user.id,
-        sppgId: session.user.sppgId,
+        sppgId: session.user.sppgId!,
         action: 'UPDATE',
         entityType: 'DistributionSchedule',
         entityId: id,
@@ -260,17 +236,18 @@ export async function PUT(
       },
     })
 
-    return Response.json({
+    return NextResponse.json({
       success: true,
       data: updatedSchedule,
     })
   } catch (error) {
     console.error('PUT /api/sppg/distribution/schedule/[id] error:', error)
-    return Response.json(
-      { error: 'Failed to update schedule' },
+    return NextResponse.json(
+      { success: false, error: 'Failed to update schedule' },
       { status: 500 }
     )
   }
+  })
 }
 
 /**
@@ -281,36 +258,23 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    const { id } = await params
+  return withSppgAuth(request, async (session) => {
+    try {
+      const { id } = await params
 
-    // 1. Authentication Check
-    const session = await auth()
-    if (!session?.user) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+      // Permission Check
+      if (!hasPermission(session.user.userRole as UserRole, 'DISTRIBUTION_MANAGE')) {
+        return NextResponse.json(
+          { success: false, error: 'Insufficient permissions' },
+          { status: 403 }
+        )
+      }
 
-    // 2. SPPG Access Check
-    if (!session.user.sppgId) {
-      return Response.json(
-        { error: 'SPPG access required' },
-        { status: 403 }
-      )
-    }
-    
-    const sppg = await checkSppgAccess(session.user.sppgId)
-    if (!sppg) {
-      return Response.json(
-        { error: 'SPPG not found or access denied' },
-        { status: 403 }
-      )
-    }
-
-    // 3. Check if schedule exists and belongs to SPPG
+      // Check if schedule exists and belongs to SPPG
     const schedule = await db.distributionSchedule.findUnique({
       where: {
         id,
-        sppgId: session.user.sppgId,
+        sppgId: session.user.sppgId!,
       },
       include: {
         production: {
@@ -331,7 +295,7 @@ export async function DELETE(
     })
 
     if (!schedule) {
-      return Response.json(
+      return NextResponse.json(
         { error: 'Schedule not found' },
         { status: 404 }
       )
@@ -339,7 +303,7 @@ export async function DELETE(
 
     // 4. Validate deletion is allowed
     if (['IN_PROGRESS', 'COMPLETED'].includes(schedule.status)) {
-      return Response.json(
+      return NextResponse.json(
         {
           error: 'Cannot delete schedule',
           details: 'Tidak dapat menghapus jadwal yang sedang berjalan atau selesai',
@@ -350,7 +314,7 @@ export async function DELETE(
 
     // Check if there are deliveries
     if (schedule.distribution_deliveries.length > 0) {
-      return Response.json(
+      return NextResponse.json(
         {
           error: 'Cannot delete schedule',
           details: 'Jadwal memiliki delivery yang terkait',
@@ -368,7 +332,7 @@ export async function DELETE(
     await db.auditLog.create({
       data: {
         userId: session.user.id,
-        sppgId: session.user.sppgId,
+        sppgId: session.user.sppgId!,
         action: 'DELETE',
         entityType: 'DistributionSchedule',
         entityId: id,
@@ -377,14 +341,15 @@ export async function DELETE(
       },
     })
 
-    return Response.json({
+    return NextResponse.json({
       success: true,
     })
   } catch (error) {
     console.error('DELETE /api/sppg/distribution/schedule/[id] error:', error)
-    return Response.json(
-      { error: 'Failed to delete schedule' },
+    return NextResponse.json(
+      { success: false, error: 'Failed to delete schedule' },
       { status: 500 }
     )
   }
+  })
 }

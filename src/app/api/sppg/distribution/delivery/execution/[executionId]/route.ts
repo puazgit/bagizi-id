@@ -8,11 +8,13 @@
  * @security Multi-tenant with sppgId filtering
  */
 
-import { NextRequest } from 'next/server'
-import { auth } from '@/auth'
+import { NextRequest, NextResponse } from 'next/server'
+import { withSppgAuth } from '@/lib/api-middleware'
+import { hasPermission } from '@/lib/permissions'
 import { db } from '@/lib/prisma'
 import { deliveryFiltersSchema } from '@/features/sppg/distribution/delivery/schemas'
 import { deliveryListInclude } from '@/features/sppg/distribution/delivery/types'
+import { UserRole } from '@prisma/client'
 
 /**
  * GET /api/sppg/distribution/delivery/execution/:executionId
@@ -22,38 +24,36 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ executionId: string }> }
 ) {
-  try {
-    // 1. Authentication check
-    const session = await auth()
-    if (!session?.user) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+  return withSppgAuth(request, async (session) => {
+    try {
+      // 1. Get execution ID from params
+      const { executionId } = await params
 
-    // 2. Multi-tenant check - user must have sppgId
-    if (!session.user.sppgId) {
-      return Response.json({ error: 'SPPG access required' }, { status: 403 })
-    }
+      // 2. Permission Check
+      if (!hasPermission(session.user.userRole as UserRole, 'DISTRIBUTION_MANAGE')) {
+        return NextResponse.json(
+          { success: false, error: 'Insufficient permissions' },
+          { status: 403 }
+        )
+      }
 
-    // 3. Get execution ID from params
-    const { executionId } = await params
-
-    // 4. Verify execution belongs to user's SPPG
-    const execution = await db.foodDistribution.findFirst({
+      // 3. Verify execution belongs to user's SPPG
+      const execution = await db.foodDistribution.findFirst({
       where: {
         id: executionId,
-        sppgId: session.user.sppgId, // CRITICAL: Multi-tenant security
+        sppgId: session.user.sppgId!, // CRITICAL: Multi-tenant security
       },
       select: { id: true, sppgId: true },
     })
 
     if (!execution) {
-      return Response.json(
+      return NextResponse.json(
         { error: 'Eksekusi distribusi tidak ditemukan atau akses ditolak' },
         { status: 404 }
       )
     }
 
-    // 5. Parse and validate query parameters
+    // 4. Parse and validate query parameters
     const searchParams = request.nextUrl.searchParams
     const filtersInput = {
       distributionId: executionId,
@@ -66,7 +66,7 @@ export async function GET(
 
     const validated = deliveryFiltersSchema.safeParse(filtersInput)
     if (!validated.success) {
-      return Response.json(
+      return NextResponse.json(
         {
           error: 'Invalid filter parameters',
           details: validated.error.issues,
@@ -75,11 +75,11 @@ export async function GET(
       )
     }
 
-    // 6. Build where clause with multi-tenant security
+    // 5. Build where clause with multi-tenant security
     const where: Record<string, unknown> = {
       distributionId: executionId,
       schedule: {
-        sppgId: session.user.sppgId, // CRITICAL: Multi-tenant security
+        sppgId: session.user.sppgId!, // CRITICAL: Multi-tenant security
       },
     }
 
@@ -104,7 +104,7 @@ export async function GET(
       ]
     }
 
-    // 7. Fetch deliveries with relations
+    // 6. Fetch deliveries with relations
     const deliveries = await db.distributionDelivery.findMany({
       where,
       include: deliveryListInclude,
@@ -114,7 +114,7 @@ export async function GET(
       ],
     })
 
-    // 8. Calculate statistics
+    // 7. Calculate statistics
     type DeliveryWithCounts = typeof deliveries[number]
     
     const total = deliveries.length
@@ -145,19 +145,21 @@ export async function GET(
       totalTrackingPoints: deliveries.reduce((sum: number, d: DeliveryWithCounts) => sum + (d._count?.trackingPoints || 0), 0),
     }
 
-    return Response.json({
+    return NextResponse.json({
       success: true,
       data: deliveries,
       statistics,
     })
   } catch (error) {
     console.error('GET /api/sppg/distribution/delivery/execution/[id] error:', error)
-    return Response.json(
+    return NextResponse.json(
       {
+        success: false,
         error: 'Gagal mengambil data pengiriman',
         details: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined,
       },
       { status: 500 }
     )
   }
+  })
 }

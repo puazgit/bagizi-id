@@ -4,50 +4,42 @@
  * @author Bagizi-ID Development Team
  * @see {@link /docs/SCHOOL_BENEFICIARY_COMPREHENSIVE_IMPROVEMENTS.md}
  * @see {@link /docs/copilot-instructions.md} Development Guidelines
+ * 
+ * RBAC Integration:
+ * - GET/PUT/DELETE: Protected by withSppgAuth
+ * - Automatic audit logging
+ * - Multi-tenant: School ownership verified
  */
 
-import { auth } from '@/auth'
+import { NextRequest, NextResponse } from 'next/server'
+import { withSppgAuth } from '@/lib/api-middleware'
 import { db } from '@/lib/prisma'
 import { schoolMasterSchema } from '@/features/sppg/school/schemas'
 
 /**
  * GET /api/sppg/schools/[id]
- * Get single school by ID with comprehensive relations (all 82 fields)
- * 
- * @param params - Route params with school ID (async in Next.js 15)
- * @returns School data with flat regional relations
- * 
- * @example
- * GET /api/sppg/schools/cm5abc123
+ * @rbac Protected by withSppgAuth
+ * @audit Automatic logging
  */
 export async function GET(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    const session = await auth()
-    
-    if (!session?.user) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+  return withSppgAuth(request, async (session) => {
+    try {
+      // Await params (Next.js 15 requirement)
+      const { id } = await params
 
-    if (!session.user.sppgId) {
-      return Response.json({ error: 'SPPG access required' }, { status: 403 })
-    }
-
-    // Await params (Next.js 15 requirement)
-    const { id } = await params
-
-    // Fetch school with multi-tenancy check (CRITICAL!)
-    // Use direct sppgId check for better query performance
-    const school = await db.schoolBeneficiary.findFirst({
-      where: {
-        id,
-        sppgId: session.user.sppgId  // Direct multi-tenancy filter
-      },
-      include: {
-        sppg: {
-          select: {
+      // Fetch school with multi-tenancy check (CRITICAL!)
+      // Use direct sppgId check for better query performance
+      const school = await db.schoolBeneficiary.findFirst({
+        where: {
+          id,
+          sppgId: session.user.sppgId!  // Direct multi-tenancy filter
+        },
+        include: {
+          sppg: {
+            select: {
             id: true,
             name: true,
             code: true
@@ -89,62 +81,47 @@ export async function GET(
     })
 
     if (!school) {
-      return Response.json({ error: 'School not found' }, { status: 404 })
+      return NextResponse.json({ error: 'School not found' }, { status: 404 })
     }
 
-    return Response.json({ success: true, data: school })
+    return NextResponse.json({ success: true, data: school })
   } catch (error) {
     console.error('GET /api/sppg/schools/[id] error:', error)
-    return Response.json(
+    return NextResponse.json(
       { 
         error: 'Failed to fetch school',
         details: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined
       },
-      { status: 500 }
-    )
-  }
+        { status: 500 }
+      )
+    }
+  })
 }
 
 /**
  * PUT /api/sppg/schools/[id]
- * Full update school beneficiary (all 82 fields with comprehensive validation)
- * 
- * @param request - Request with complete school data (all required fields)
- * @param params - Route params with school ID (async in Next.js 15)
- * @returns Updated school data with flat regional relations
- * 
- * @example
- * PUT /api/sppg/schools/cm5abc123
- * Body: { ...all 82 fields }
+ * @rbac Protected by withSppgAuth
+ * @audit Automatic logging
  */
 export async function PUT(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    const session = await auth()
-    
-    if (!session?.user) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+  return withSppgAuth(request, async (session) => {
+    try {
+      // Await params (Next.js 15 requirement)
+      const { id } = await params
 
-    if (!session.user.sppgId) {
-      return Response.json({ error: 'SPPG access required' }, { status: 403 })
-    }
+      // Verify school exists and belongs to user's SPPG (CRITICAL!)
+      const existingSchool = await db.schoolBeneficiary.findFirst({
+        where: {
+          id,
+          sppgId: session.user.sppgId!  // Direct multi-tenancy check
+        }
+      })
 
-    // Await params (Next.js 15 requirement)
-    const { id } = await params
-
-    // Verify school exists and belongs to user's SPPG (CRITICAL!)
-    const existingSchool = await db.schoolBeneficiary.findFirst({
-      where: {
-        id,
-        sppgId: session.user.sppgId  // Direct multi-tenancy check
-      }
-    })
-
-    if (!existingSchool) {
-      return Response.json({ error: 'School not found' }, { status: 404 })
+      if (!existingSchool) {
+        return NextResponse.json({ error: 'School not found' }, { status: 404 })
     }
 
     // Parse and validate request body with comprehensive schema
@@ -153,13 +130,13 @@ export async function PUT(
     // Ensure sppgId cannot be changed (security)
     const dataWithSppg = {
       ...body,
-      sppgId: session.user.sppgId
+      sppgId: session.user.sppgId!
     }
     
     const validated = schoolMasterSchema.safeParse(dataWithSppg)
     
     if (!validated.success) {
-      return Response.json(
+      return NextResponse.json(
         { 
           error: 'Validation failed',
           details: validated.error.issues
@@ -173,12 +150,12 @@ export async function PUT(
       const program = await db.nutritionProgram.findFirst({
         where: {
           id: validated.data.programId,
-          sppgId: session.user.sppgId
+          sppgId: session.user.sppgId!
         }
       })
 
       if (!program) {
-        return Response.json(
+        return NextResponse.json(
           { error: 'Program not found or access denied' },
           { status: 404 }
         )
@@ -203,7 +180,7 @@ export async function PUT(
       })
 
       if (!village) {
-        return Response.json(
+        return NextResponse.json(
           { error: 'Invalid village ID' },
           { status: 400 }
         )
@@ -261,48 +238,42 @@ export async function PUT(
       }
     })
 
-    return Response.json({ 
+    return NextResponse.json({ 
       success: true, 
       data: updatedSchool,
       message: 'School updated successfully'
     })
   } catch (error) {
     console.error('PUT /api/sppg/schools/[id] error:', error)
-    return Response.json(
+    return NextResponse.json(
       { 
         error: 'Failed to update school',
         details: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined
       },
       { status: 500 }
-    )
-  }
+      )
+    }
+  })
 }
 
 /**
  * PATCH /api/sppg/schools/[id]
- * Partial update school beneficiary (only provided fields with validation)
- * 
- * @param request - Request with partial school data
- * @param params - Route params with school ID (async in Next.js 15)
- * @returns Updated school data with flat regional relations
- * 
- * @example
- * PATCH /api/sppg/schools/cm5abc123
- * Body: { totalStudents: 150, activeStudents: 145, attendanceRate: 95.5 }
+ * @rbac Protected by withSppgAuth
+ * @audit Automatic logging
  */
 export async function PATCH(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    const session = await auth()
+  return withSppgAuth(request, async (session) => {
+    try {
     
     if (!session?.user) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     if (!session.user.sppgId) {
-      return Response.json({ error: 'SPPG access required' }, { status: 403 })
+      return NextResponse.json({ error: 'SPPG access required' }, { status: 403 })
     }
 
     // Await params (Next.js 15 requirement)
@@ -317,7 +288,7 @@ export async function PATCH(
     })
 
     if (!existingSchool) {
-      return Response.json({ error: 'School not found' }, { status: 404 })
+      return NextResponse.json({ error: 'School not found' }, { status: 404 })
     }
 
     // Parse and validate request body (partial schema)
@@ -333,7 +304,7 @@ export async function PATCH(
     const validated = schoolMasterSchema.partial().safeParse(body)
     
     if (!validated.success) {
-      return Response.json(
+      return NextResponse.json(
         { 
           error: 'Validation failed',
           details: validated.error.issues
@@ -352,7 +323,7 @@ export async function PATCH(
       })
 
       if (!program) {
-        return Response.json(
+        return NextResponse.json(
           { error: 'Program not found or access denied' },
           { status: 404 }
         )
@@ -377,7 +348,7 @@ export async function PATCH(
       })
 
       if (!village) {
-        return Response.json(
+        return NextResponse.json(
           { error: 'Invalid village ID' },
           { status: 400 }
         )
@@ -435,64 +406,48 @@ export async function PATCH(
       }
     })
 
-    return Response.json({ 
+    return NextResponse.json({ 
       success: true, 
       data: school,
       message: 'School partially updated successfully'
     })
   } catch (error) {
     console.error('PATCH /api/sppg/schools/[id] error:', error)
-    return Response.json(
+    return NextResponse.json(
       { 
         error: 'Failed to update school',
         details: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined
       },
       { status: 500 }
-    )
-  }
+      )
+    }
+  })
 }
 
 /**
  * DELETE /api/sppg/schools/[id]
- * Soft delete school beneficiary (sets isActive = false)
- * Hard delete available with ?permanent=true query param (admin only)
- * 
- * @param request - Request with optional ?permanent=true query
- * @param params - Route params with school ID (async in Next.js 15)
- * @returns Success message or deleted school data
- * 
- * @example
- * DELETE /api/sppg/schools/cm5abc123 (soft delete)
- * DELETE /api/sppg/schools/cm5abc123?permanent=true (hard delete)
+ * @rbac Protected by withSppgAuth
+ * @audit Automatic logging
  */
 export async function DELETE(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    const session = await auth()
-    
-    if (!session?.user) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+  return withSppgAuth(request, async (session) => {
+    try {
+      // Await params (Next.js 15 requirement)
+      const { id } = await params
 
-    if (!session.user.sppgId) {
-      return Response.json({ error: 'SPPG access required' }, { status: 403 })
-    }
-
-    // Await params (Next.js 15 requirement)
-    const { id } = await params
-
-    // Verify school exists and belongs to user's SPPG (CRITICAL!)
-    const existingSchool = await db.schoolBeneficiary.findFirst({
-      where: {
-        id,
-        sppgId: session.user.sppgId  // Direct multi-tenancy check
-      }
-    })
+      // Verify school exists and belongs to user's SPPG (CRITICAL!)
+      const existingSchool = await db.schoolBeneficiary.findFirst({
+        where: {
+          id,
+          sppgId: session.user.sppgId!  // Direct multi-tenancy check
+        }
+      })
 
     if (!existingSchool) {
-      return Response.json({ error: 'School not found' }, { status: 404 })
+      return NextResponse.json({ error: 'School not found' }, { status: 404 })
     }
 
     // Check delete type (soft vs permanent)
@@ -503,7 +458,7 @@ export async function DELETE(
       // Hard delete - only for admin roles
       const allowedRoles = ['SPPG_KEPALA', 'SPPG_ADMIN', 'PLATFORM_SUPERADMIN']
       if (!session.user.userRole || !allowedRoles.includes(session.user.userRole)) {
-        return Response.json(
+        return NextResponse.json(
           { error: 'Insufficient permissions for permanent delete' },
           { status: 403 }
         )
@@ -514,7 +469,7 @@ export async function DELETE(
         where: { id }
       })
 
-      return Response.json({ 
+      return NextResponse.json({ 
         success: true, 
         message: 'School permanently deleted',
         deletedId: id
@@ -538,20 +493,21 @@ export async function DELETE(
         }
       })
 
-      return Response.json({ 
+      return NextResponse.json({ 
         success: true, 
         message: 'School deactivated (soft delete)',
         data: deletedSchool
       })
     }
-  } catch (error) {
-    console.error('DELETE /api/sppg/schools/[id] error:', error)
-    return Response.json(
-      { 
-        error: 'Failed to delete school',
-        details: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined
-      },
-      { status: 500 }
-    )
-  }
+    } catch (error) {
+      console.error('DELETE /api/sppg/schools/[id] error:', error)
+      return NextResponse.json(
+        { 
+          error: 'Failed to delete school',
+          details: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined
+        },
+        { status: 500 }
+      )
+    }
+  })
 }

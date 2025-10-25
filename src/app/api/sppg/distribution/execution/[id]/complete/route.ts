@@ -5,11 +5,12 @@
  * @author Bagizi-ID Development Team
  */
 
-import { NextRequest } from 'next/server'
-import { auth } from '@/auth'
-import { checkSppgAccess } from '@/lib/permissions'
+import { NextRequest, NextResponse } from 'next/server'
+import { withSppgAuth } from '@/lib/api-middleware'
+import { hasPermission } from '@/lib/permissions'
 import { db } from '@/lib/prisma'
 import { completeExecutionSchema } from '@/features/sppg/distribution/execution/schemas'
+import { UserRole } from '@prisma/client'
 
 /**
  * POST /api/sppg/distribution/execution/[id]/complete
@@ -19,31 +20,24 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    const { id } = await params
+  return withSppgAuth(request, async (session) => {
+    try {
+      const { id } = await params
 
-    // 1. Authentication Check
-    const session = await auth()
-    if (!session?.user) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+      // Permission Check
+      if (!hasPermission(session.user.userRole as UserRole, 'DISTRIBUTION_MANAGE')) {
+        return NextResponse.json(
+          { success: false, error: 'Insufficient permissions' },
+          { status: 403 }
+        )
+      }
 
-    // 2. SPPG Access Check (Multi-tenant Security)
-    if (!session.user.sppgId) {
-      return Response.json({ error: 'SPPG access required' }, { status: 403 })
-    }
-
-    const sppg = await checkSppgAccess(session.user.sppgId)
-    if (!sppg) {
-      return Response.json({ error: 'SPPG not found or access denied' }, { status: 403 })
-    }
-
-    // 3. Verify Execution Exists & Belongs to SPPG
-    const existingExecution = await db.foodDistribution.findFirst({
+      // Verify Execution Exists & Belongs to SPPG
+      const existingExecution = await db.foodDistribution.findFirst({
       where: { 
         id,
         schedule: {
-          sppgId: session.user.sppgId, // Multi-tenant safety
+          sppgId: session.user.sppgId!, // Multi-tenant safety
         },
       },
       include: {
@@ -57,7 +51,7 @@ export async function POST(
     })
 
     if (!existingExecution) {
-      return Response.json({ 
+      return NextResponse.json({ 
         error: 'Execution not found or access denied' 
       }, { status: 404 })
     }
@@ -67,7 +61,7 @@ export async function POST(
     const validated = completeExecutionSchema.safeParse(body)
     
     if (!validated.success) {
-      return Response.json({ 
+      return NextResponse.json({ 
         error: 'Validation failed',
         details: validated.error.issues
       }, { status: 400 })
@@ -75,33 +69,33 @@ export async function POST(
 
     // 5. Business Logic Validation
     if (existingExecution.status === 'COMPLETED') {
-      return Response.json({ 
+      return NextResponse.json({ 
         error: 'Execution already completed' 
       }, { status: 400 })
     }
 
     if (existingExecution.status === 'CANCELLED') {
-      return Response.json({ 
+      return NextResponse.json({ 
         error: 'Cannot complete cancelled execution' 
       }, { status: 400 })
     }
 
     if (existingExecution.status === 'SCHEDULED') {
-      return Response.json({ 
+      return NextResponse.json({ 
         error: 'Execution belum dimulai' 
       }, { status: 400 })
     }
 
     // Check for unresolved issues
     if (existingExecution.issues.length > 0) {
-      return Response.json({ 
+      return NextResponse.json({ 
         error: `Masih ada ${existingExecution.issues.length} issue yang belum diselesaikan` 
       }, { status: 400 })
     }
 
     // Validate deliveries exist
     if (existingExecution.deliveries.length === 0) {
-      return Response.json({ 
+      return NextResponse.json({ 
         error: 'Tidak ada delivery yang tercatat untuk execution ini' 
       }, { status: 400 })
     }
@@ -147,7 +141,7 @@ export async function POST(
       })
     }
 
-    return Response.json({ 
+    return NextResponse.json({ 
       success: true, 
       data: execution,
       message: 'Execution completed successfully'
@@ -155,9 +149,11 @@ export async function POST(
   } catch (error) {
     console.error('POST /api/sppg/distribution/execution/[id]/complete error:', error)
     
-    return Response.json({ 
+    return NextResponse.json({
+      success: false,
       error: 'Failed to complete execution',
       details: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined
     }, { status: 500 })
   }
+  })
 }

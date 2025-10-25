@@ -117,8 +117,17 @@ const config = NextAuth({
     },
     async redirect({ url, baseUrl }) {
       // Handle redirect after sign in based on user role
-      if (url.startsWith('/')) return `${baseUrl}${url}`
-      if (new URL(url).origin === baseUrl) return url
+      // If url starts with baseUrl, it's internal
+      if (url.startsWith(baseUrl)) {
+        return url
+      }
+      
+      // If url is a relative path, append to baseUrl
+      if (url.startsWith('/')) {
+        return `${baseUrl}${url}`
+      }
+      
+      // For external URLs, return baseUrl for security
       return baseUrl
     },
   },

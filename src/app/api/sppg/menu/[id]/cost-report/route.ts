@@ -4,8 +4,10 @@
  * @see {@link /docs/copilot-instructions.md} Multi-tenant security patterns
  */
 
-import { NextRequest } from 'next/server'
-import { auth } from '@/auth'
+import { NextRequest, NextResponse } from 'next/server'
+import { withSppgAuth } from '@/lib/api-middleware'
+import { hasPermission } from '@/lib/permissions'
+import { UserRole } from '@prisma/client'
 import { db } from '@/lib/prisma'
 
 // ================================ GET /api/sppg/menu/[id]/cost-report ================================
@@ -14,17 +16,15 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    // 1. Authentication check
-    const session = await auth()
-    if (!session?.user) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+  return withSppgAuth(request, async (session) => {
+    try {
+      if (!hasPermission(session.user.userRole as UserRole, 'READ')) {
+        return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 403 })
+      }
 
-    // 2. Extract menuId
-    const { id: menuId } = await params
+      const { id: menuId } = await params
 
-    // 3. Fetch menu with cost calculation and ingredients (multi-tenant security)
+      // Fetch menu with cost calculation and ingredients (multi-tenant security)
     const menu = await db.nutritionMenu.findFirst({
       where: {
         id: menuId,
@@ -67,14 +67,14 @@ export async function GET(
     })
 
     if (!menu) {
-      return Response.json({ 
+      return NextResponse.json({ 
         error: 'Menu not found or access denied' 
       }, { status: 404 })
     }
 
     // 4. Check if cost calculation exists
     if (!menu.costCalc) {
-      return Response.json({
+      return NextResponse.json({
         success: false,
         error: 'Biaya belum dihitung. Silakan hitung biaya terlebih dahulu.'
       }, { status: 404 })
@@ -166,17 +166,18 @@ export async function GET(
       calculatedAt: menu.costCalc.calculatedAt.toISOString()
     }
 
-    return Response.json({
+    return NextResponse.json({
       success: true,
       data: report
     })
 
   } catch (error) {
     console.error('GET /api/sppg/menu/[id]/cost-report error:', error)
-    return Response.json({
+    return NextResponse.json({
       success: false,
       error: 'Failed to generate cost report',
       details: process.env.NODE_ENV === 'development' ? error : undefined
     }, { status: 500 })
   }
+  })
 }

@@ -3,60 +3,53 @@
  * @version Next.js 15.5.4 / Prisma 6.17.1 / Enterprise-grade
  * @author Bagizi-ID Development Team
  * @see {@link /docs/copilot-instructions.md} Development Guidelines
+ * 
+ * RBAC Integration:
+ * - GET: Protected by withSppgAuth (all SPPG roles)
+ * - Automatic audit logging for activity views
+ * - Multi-tenant: Activities filtered by session.user.sppgId
  */
 
-import { NextResponse } from 'next/server'
-import { auth } from '@/auth'
+import { NextRequest, NextResponse } from 'next/server'
+import { withSppgAuth } from '@/lib/api-middleware'
 import { db } from '@/lib/prisma'
 
 /**
  * GET /api/sppg/dashboard/activities
  * Fetch recent activities for authenticated SPPG user
+ * 
+ * @rbac Protected by withSppgAuth - requires valid SPPG session
+ * @audit Automatic logging via middleware
  */
-export async function GET() {
-  try {
-    // 1. Authentication Check
-    const session = await auth()
-    if (!session?.user) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
+export async function GET(request: NextRequest) {
+  return withSppgAuth(request, async (session) => {
+    try {
+      const sppgId = session.user.sppgId
 
-    // 2. SPPG Access Check
-    const sppgId = session.user.sppgId
-    if (!sppgId) {
-      return NextResponse.json(
-        { success: false, error: 'SPPG access required' },
-        { status: 403 }
-      )
-    }
-
-    // 3. Fetch audit logs as activities (last 50 activities)
-    const auditLogs = await db.auditLog.findMany({
-      where: {
-        sppgId,
-        action: {
-          in: ['CREATE', 'UPDATE', 'DELETE']
+      // Fetch audit logs as activities (last 50 activities)
+      const auditLogs = await db.auditLog.findMany({
+        where: {
+          sppgId,
+          action: {
+            in: ['CREATE', 'UPDATE', 'DELETE']
+          }
+        },
+        orderBy: {
+          createdAt: 'desc'
+        },
+        take: 50,
+        select: {
+          id: true,
+          action: true,
+          entityType: true,
+          entityId: true,
+          description: true,
+          createdAt: true,
+          userName: true
         }
-      },
-      orderBy: {
-        createdAt: 'desc'
-      },
-      take: 50,
-      select: {
-        id: true,
-        action: true,
-        entityType: true,
-        entityId: true,
-        description: true,
-        createdAt: true,
-        userName: true
-      }
-    })
+      })
 
-    // 4. Transform audit logs to activity items
+      // Transform audit logs to activity items
     const activities = auditLogs.map(log => {
       let type: 'menu' | 'distribution' | 'procurement' | 'production' = 'menu'
       let badge = 'Activity'
@@ -131,4 +124,5 @@ export async function GET() {
       { status: 500 }
     )
   }
+  })
 }

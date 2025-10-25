@@ -5,10 +5,11 @@
  * @author Bagizi-ID Development Team
  */
 
-import { NextRequest } from 'next/server'
-import { auth } from '@/auth'
+import { NextRequest, NextResponse } from 'next/server'
+import { withSppgAuth } from '@/lib/api-middleware'
+import { hasPermission } from '@/lib/permissions'
 import { db } from '@/lib/prisma'
-import { checkSppgAccess } from '@/lib/permissions'
+import { UserRole } from '@prisma/client'
 import {
   createScheduleSchema,
   scheduleFilterSchema,
@@ -21,52 +22,40 @@ import { ScheduleStatus } from '@/features/sppg/distribution/schedule/types'
  * Fetch all schedules with filters and pagination
  */
 export async function GET(request: NextRequest) {
-  try {
-    // 1. Authentication Check
-    const session = await auth()
-    if (!session?.user) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+  return withSppgAuth(request, async (session) => {
+    try {
+      // Permission check
+      if (!hasPermission(session.user.userRole as UserRole, 'DISTRIBUTION_MANAGE')) {
+        return NextResponse.json({ 
+          success: false,
+          error: 'Insufficient permissions' 
+        }, { status: 403 })
+      }
 
-    // 2. SPPG Access Check (CRITICAL FOR MULTI-TENANCY!)
-    if (!session.user.sppgId) {
-      return Response.json(
-        { error: 'SPPG access required' },
-        { status: 403 }
-      )
-    }
-    
-    const sppg = await checkSppgAccess(session.user.sppgId)
-    if (!sppg) {
-      return Response.json(
-        { error: 'SPPG not found or access denied' },
-        { status: 403 }
-      )
-    }
+      // Parse Query Parameters
+      const { searchParams } = new URL(request.url)
+      
+      // Get status array and filter out empty values
+      const statusParams = searchParams.getAll('status').filter(Boolean)
+      
+      // Filters - use safeParse to catch validation errors
+      const filtersResult = scheduleFilterSchema.safeParse({
+        status: statusParams.length > 0 ? statusParams : undefined,
+        dateFrom: searchParams.get('dateFrom') || undefined,
+        dateTo: searchParams.get('dateTo') || undefined,
+        wave: searchParams.get('wave') || undefined,
+        deliveryMethod: searchParams.get('deliveryMethod') || undefined,
+        search: searchParams.get('search') || undefined,
+      })
 
-    // 3. Parse Query Parameters
-    const { searchParams } = new URL(request.url)
-    
-    // Get status array and filter out empty values
-    const statusParams = searchParams.getAll('status').filter(Boolean)
-    
-    // Filters - use safeParse to catch validation errors
-    const filtersResult = scheduleFilterSchema.safeParse({
-      status: statusParams.length > 0 ? statusParams : undefined,
-      dateFrom: searchParams.get('dateFrom') || undefined,
-      dateTo: searchParams.get('dateTo') || undefined,
-      wave: searchParams.get('wave') || undefined,
-      deliveryMethod: searchParams.get('deliveryMethod') || undefined,
-      search: searchParams.get('search') || undefined,
-    })
-
-    if (!filtersResult.success) {
-      return Response.json(
-        {
-          error: 'Invalid filter parameters',
-          details: filtersResult.error.issues,
-        },
-        { status: 400 }
+      if (!filtersResult.success) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'Invalid filter parameters',
+            details: filtersResult.error.issues,
+          },
+          { status: 400 }
       )
     }
 
@@ -79,7 +68,7 @@ export async function GET(request: NextRequest) {
     })
 
     if (!paginationResult.success) {
-      return Response.json(
+      return NextResponse.json(
         {
           error: 'Invalid pagination parameters',
           details: paginationResult.error.issues,
@@ -96,7 +85,7 @@ export async function GET(request: NextRequest) {
 
     // 4. Build Query
     const where: Record<string, unknown> = {
-      sppgId: session.user.sppgId, // MANDATORY multi-tenant filter
+      sppgId: session.user.sppgId!, // MANDATORY multi-tenant filter
     }
 
     // Status filter
@@ -220,7 +209,7 @@ export async function GET(request: NextRequest) {
       createdAt: schedule.createdAt,
     }))
 
-    return Response.json({
+    return NextResponse.json({
       success: true,
       data: formattedSchedules,
       pagination: {
@@ -234,61 +223,51 @@ export async function GET(request: NextRequest) {
     console.error('GET /api/sppg/distribution/schedule error:', error)
     console.error('Error stack:', (error as Error).stack)
     console.error('Error name:', (error as Error).name)
-    return Response.json(
+    return NextResponse.json(
       {
-        error: 'Internal server error',
-        message: 'Gagal memuat data jadwal distribusi',
+        success: false,
+        error: 'Failed to fetch schedules',
         details: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined,
         stack: process.env.NODE_ENV === 'development' ? (error as Error).stack : undefined,
       },
       { status: 500 }
     )
   }
+  })
 }
+
 /**
  * POST /api/sppg/distribution/schedule
  * Create new distribution schedule
  */
 export async function POST(request: NextRequest) {
-  try {
-    // 1. Authentication Check
-    const session = await auth()
-    if (!session?.user) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+  return withSppgAuth(request, async (session) => {
+    try {
+      // Permission check
+      if (!hasPermission(session.user.userRole as UserRole, 'DISTRIBUTION_MANAGE')) {
+        return NextResponse.json({ 
+          success: false,
+          error: 'Insufficient permissions' 
+        }, { status: 403 })
+      }
 
-    // 2. SPPG Access Check
-    if (!session.user.sppgId) {
-      return Response.json(
-        { error: 'SPPG access required' },
-        { status: 403 }
-      )
-    }
-    
-    const sppg = await checkSppgAccess(session.user.sppgId)
-    if (!sppg) {
-      return Response.json(
-        { error: 'SPPG not found or access denied' },
-        { status: 403 }
-      )
-    }
+      // Parse and Validate Request Body
+      const body = await request.json()
+      const validated = createScheduleSchema.safeParse(body)
 
-    // 3. Parse and Validate Request Body
-    const body = await request.json()
-    const validated = createScheduleSchema.safeParse(body)
+      if (!validated.success) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'Validation failed',
+            details: validated.error.issues,
+          },
+          { status: 400 }
+        )
+      }
 
-    if (!validated.success) {
-      return Response.json(
-        {
-          error: 'Validation failed',
-          details: validated.error.issues,
-        },
-        { status: 400 }
-      )
-    }
-
-    // 4. Validate Production Exists and is COMPLETED
-    const production = await db.foodProduction.findUnique({
+      // Validate Production Exists and is COMPLETED
+      const production = await db.foodProduction.findUnique({
       where: {
         id: validated.data.productionId,
       },
@@ -304,7 +283,7 @@ export async function POST(request: NextRequest) {
     })
 
     if (!production) {
-      return Response.json(
+      return NextResponse.json(
         {
           error: 'Production not found',
           details: 'Batch produksi tidak ditemukan',
@@ -315,7 +294,7 @@ export async function POST(request: NextRequest) {
 
     // Check production belongs to same SPPG
     if (production.sppgId !== session.user.sppgId) {
-      return Response.json(
+      return NextResponse.json(
         {
           error: 'Access denied',
           details: 'Batch produksi bukan milik SPPG Anda',
@@ -326,7 +305,7 @@ export async function POST(request: NextRequest) {
 
     // Check production status is COMPLETED
     if (production.status !== 'COMPLETED') {
-      return Response.json(
+      return NextResponse.json(
         {
           error: 'Invalid production status',
           details: 'Hanya batch produksi dengan status COMPLETED yang dapat dijadwalkan untuk distribusi',
@@ -337,7 +316,7 @@ export async function POST(request: NextRequest) {
 
     // Check if production has available portions
     if (!production.actualPortions || production.actualPortions <= 0) {
-      return Response.json(
+      return NextResponse.json(
         {
           error: 'No available portions',
           details: 'Batch produksi tidak memiliki porsi yang tersedia',
@@ -350,14 +329,14 @@ export async function POST(request: NextRequest) {
     // Check if there's already a schedule for this date and wave
     const existingSchedule = await db.distributionSchedule.findFirst({
       where: {
-        sppgId: session.user.sppgId,
+        sppgId: session.user.sppgId!,
         distributionDate: validated.data.distributionDate,
         wave: validated.data.wave,
       },
     })
 
     if (existingSchedule) {
-      return Response.json(
+      return NextResponse.json(
         {
           error: 'Schedule conflict',
           details: 'Sudah ada jadwal untuk tanggal dan gelombang ini',
@@ -369,7 +348,7 @@ export async function POST(request: NextRequest) {
     // 6. Create Schedule
     const schedule = await db.distributionSchedule.create({
       data: {
-        sppgId: session.user.sppgId, // Multi-tenant safety
+        sppgId: session.user.sppgId!, // Multi-tenant safety
         productionId: validated.data.productionId, // Link to production
         distributionDate: validated.data.distributionDate,
         wave: validated.data.wave,
@@ -425,7 +404,7 @@ export async function POST(request: NextRequest) {
     await db.auditLog.create({
       data: {
         userId: session.user.id,
-        sppgId: session.user.sppgId,
+        sppgId: session.user.sppgId!,
         action: 'CREATE',
         entityType: 'DistributionSchedule',
         entityId: schedule.id,
@@ -439,7 +418,7 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    return Response.json(
+    return NextResponse.json(
       {
         success: true,
         data: schedule,
@@ -449,12 +428,14 @@ export async function POST(request: NextRequest) {
     )
   } catch (error) {
     console.error('POST /api/sppg/distribution/schedule error:', error)
-    return Response.json(
+    return NextResponse.json(
       {
+        success: false,
         error: 'Failed to create schedule',
         details: process.env.NODE_ENV === 'development' ? error : undefined,
       },
       { status: 500 }
     )
   }
+  })
 }

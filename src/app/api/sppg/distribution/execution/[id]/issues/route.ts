@@ -4,11 +4,11 @@
  * @see {@link /docs/copilot-instructions.md} Development Guidelines
  */
 
-import { NextRequest } from 'next/server'
-import { auth } from '@/auth'
-import { checkSppgAccess } from '@/lib/permissions'
+import { NextRequest, NextResponse } from 'next/server'
+import { withSppgAuth } from '@/lib/api-middleware'
+import { hasPermission } from '@/lib/permissions'
 import { db } from '@/lib/prisma'
-import type { IssueType, IssueSeverity } from '@prisma/client'
+import type { IssueType, IssueSeverity ,  UserRole } from '@prisma/client'
 
 /**
  * GET /api/sppg/distribution/execution/[id]/issues
@@ -31,25 +31,22 @@ export async function GET(
   request: NextRequest,
   props: { params: Promise<{ id: string }> }
 ) {
-  try {
-    // 1. Authentication Check
-    const session = await auth()
-    if (!session?.user) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+  return withSppgAuth(request, async (session) => {
+    try {
+      // 1. Get execution ID from params
+      const params = await props.params
+      const executionId = params.id
 
-    // 2. SPPG Access Check
-    const sppg = await checkSppgAccess(session.user.sppgId || null)
-    if (!sppg) {
-      return Response.json({ error: 'SPPG access denied' }, { status: 403 })
-    }
+      // 2. Permission Check
+      if (!hasPermission(session.user.userRole as UserRole, 'DISTRIBUTION_MANAGE')) {
+        return NextResponse.json(
+          { success: false, error: 'Insufficient permissions' },
+          { status: 403 }
+        )
+      }
 
-    // 3. Get execution ID from params
-    const params = await props.params
-    const executionId = params.id
-
-    // 4. Verify execution belongs to user's SPPG
-    const execution = await db.foodDistribution.findFirst({
+      // 3. Verify execution belongs to user's SPPG
+      const execution = await db.foodDistribution.findFirst({
       where: {
         id: executionId,
         sppgId: session.user.sppgId || undefined,
@@ -57,13 +54,13 @@ export async function GET(
     })
 
     if (!execution) {
-      return Response.json(
+      return NextResponse.json(
         { error: 'Execution not found or access denied' },
         { status: 404 }
       )
     }
 
-    // 5. Parse query parameters
+    // 4. Parse query parameters
     const { searchParams } = new URL(request.url)
     const issueType = searchParams.get('issueType') as IssueType | null
     const severity = searchParams.get('severity') as IssueSeverity | null
@@ -79,7 +76,7 @@ export async function GET(
       }),
     }
 
-    // 6. Fetch issues from database
+    // 5. Fetch issues from database
     const issues = await db.distributionIssue.findMany({
       where: whereClause,
       orderBy: [
@@ -101,7 +98,7 @@ export async function GET(
       },
     })
 
-    // 7. Calculate summary statistics
+    // 6. Calculate summary statistics
     const summary = {
       total: issues.length,
       resolved: issues.filter((i) => i.resolvedAt !== null).length,
@@ -124,7 +121,7 @@ export async function GET(
       },
     }
 
-    return Response.json({
+    return NextResponse.json({
       success: true,
       data: {
         issues,
@@ -133,14 +130,16 @@ export async function GET(
     })
   } catch (error) {
     console.error('Get execution issues error:', error)
-    return Response.json(
+    return NextResponse.json(
       {
+        success: false,
         error: 'Failed to fetch execution issues',
         details: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined,
       },
       { status: 500 }
     )
   }
+  })
 }
 
 /**
@@ -159,25 +158,22 @@ export async function POST(
   request: NextRequest,
   props: { params: Promise<{ id: string }> }
 ) {
-  try {
-    // 1. Authentication Check
-    const session = await auth()
-    if (!session?.user) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+  return withSppgAuth(request, async (session) => {
+    try {
+      // 1. Get execution ID from params
+      const params = await props.params
+      const executionId = params.id
 
-    // 2. SPPG Access Check
-    const sppg = await checkSppgAccess(session.user.sppgId || null)
-    if (!sppg) {
-      return Response.json({ error: 'SPPG access denied' }, { status: 403 })
-    }
+      // 2. Permission Check
+      if (!hasPermission(session.user.userRole as UserRole, 'DISTRIBUTION_MANAGE')) {
+        return NextResponse.json(
+          { success: false, error: 'Insufficient permissions' },
+          { status: 403 }
+        )
+      }
 
-    // 3. Get execution ID from params
-    const params = await props.params
-    const executionId = params.id
-
-    // 4. Verify execution belongs to user's SPPG
-    const execution = await db.foodDistribution.findFirst({
+      // 3. Verify execution belongs to user's SPPG
+      const execution = await db.foodDistribution.findFirst({
       where: {
         id: executionId,
         sppgId: session.user.sppgId || undefined,
@@ -185,24 +181,24 @@ export async function POST(
     })
 
     if (!execution) {
-      return Response.json(
+      return NextResponse.json(
         { error: 'Execution not found or access denied' },
         { status: 404 }
       )
     }
 
-    // 5. Parse request body
+    // 4. Parse request body
     const body = await request.json()
 
-    // 6. Validate required fields
+    // 5. Validate required fields
     if (!body.issueType || !body.severity || !body.description) {
-      return Response.json(
+      return NextResponse.json(
         { error: 'Missing required fields: issueType, severity, description' },
         { status: 400 }
       )
     }
 
-    // 7. Create issue in database
+    // 6. Create issue in database
     const issue = await db.distributionIssue.create({
       data: {
         distributionId: executionId,
@@ -228,7 +224,7 @@ export async function POST(
       },
     })
 
-    return Response.json(
+    return NextResponse.json(
       {
         success: true,
         data: issue,
@@ -237,12 +233,14 @@ export async function POST(
     )
   } catch (error) {
     console.error('Create execution issue error:', error)
-    return Response.json(
+    return NextResponse.json(
       {
+        success: false,
         error: 'Failed to create execution issue',
         details: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined,
       },
       { status: 500 }
     )
   }
+  })
 }

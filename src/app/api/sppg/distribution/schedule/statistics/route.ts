@@ -5,40 +5,28 @@
  * @author Bagizi-ID Development Team
  */
 
-import { NextRequest } from 'next/server'
-import { auth } from '@/auth'
+import { NextRequest, NextResponse } from 'next/server'
+import { withSppgAuth } from '@/lib/api-middleware'
+import { hasPermission } from '@/lib/permissions'
 import { db } from '@/lib/prisma'
-import { checkSppgAccess } from '@/lib/permissions'
+import { UserRole } from '@prisma/client'
 
 /**
  * GET /api/sppg/distribution/schedule/statistics
  * Get overall distribution schedule statistics
  */
 export async function GET(request: NextRequest) {
-  try {
-    // 1. Authentication Check
-    const session = await auth()
-    if (!session?.user) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+  return withSppgAuth(request, async (session) => {
+    try {
+      // Permission Check
+      if (!hasPermission(session.user.userRole as UserRole, 'DISTRIBUTION_MANAGE')) {
+        return NextResponse.json(
+          { success: false, error: 'Insufficient permissions' },
+          { status: 403 }
+        )
+      }
 
-    // 2. SPPG Access Check
-    if (!session.user.sppgId) {
-      return Response.json(
-        { error: 'SPPG access required' },
-        { status: 403 }
-      )
-    }
-    
-    const sppg = await checkSppgAccess(session.user.sppgId)
-    if (!sppg) {
-      return Response.json(
-        { error: 'SPPG not found or access denied' },
-        { status: 403 }
-      )
-    }
-
-    // 3. Parse Query Parameters (optional date filtering)
+      // Parse Query Parameters (optional date filtering)
     const searchParams = request.nextUrl.searchParams
     const startDate = searchParams.get('startDate')
     const endDate = searchParams.get('endDate')
@@ -53,7 +41,7 @@ export async function GET(request: NextRequest) {
     }
 
     const whereClause: Record<string, unknown> = {
-      sppgId: session.user.sppgId,
+      sppgId: session.user.sppgId!,
     }
 
     if (Object.keys(dateFilter).length > 0) {
@@ -135,7 +123,7 @@ export async function GET(request: NextRequest) {
 
     const todaySchedules = await db.distributionSchedule.findMany({
       where: {
-        sppgId: session.user.sppgId,
+        sppgId: session.user.sppgId!,
         distributionDate: {
           gte: today,
           lt: tomorrow,
@@ -171,7 +159,7 @@ export async function GET(request: NextRequest) {
 
     const upcomingSchedules = await db.distributionSchedule.findMany({
       where: {
-        sppgId: session.user.sppgId,
+        sppgId: session.user.sppgId!,
         distributionDate: {
           gte: tomorrow,
           lt: nextWeek,
@@ -272,7 +260,7 @@ export async function GET(request: NextRequest) {
       },
     }
 
-    return Response.json({
+    return NextResponse.json({
       success: true,
       data: statistics,
     })
@@ -281,12 +269,14 @@ export async function GET(request: NextRequest) {
       'GET /api/sppg/distribution/schedule/statistics error:',
       error
     )
-    return Response.json(
+    return NextResponse.json(
       {
+        success: false,
         error: 'Failed to fetch statistics',
         details: process.env.NODE_ENV === 'development' ? error : undefined,
       },
       { status: 500 }
     )
   }
+  })
 }

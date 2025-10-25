@@ -5,69 +5,63 @@
  * @requires Auth.js v5 - Authentication
  * @requires Prisma - Database operations
  * @requires Zod - Request validation
+ * 
+ * RBAC Integration:
+ * - POST: Protected by withSppgAuth
+ * - Automatic audit logging
+ * - Permission: INVENTORY_MANAGE
  */
 
-import { NextRequest } from 'next/server'
-import { auth } from '@/auth'
+import { NextRequest, NextResponse } from 'next/server'
+import { withSppgAuth } from '@/lib/api-middleware'
 import { db } from '@/lib/prisma'
 import { hasPermission } from '@/lib/permissions'
+import { UserRole } from '@prisma/client'
 import { batchStockMovementSchema } from '@/features/sppg/inventory/schemas'
 import type { Prisma } from '@prisma/client'
 
 /**
  * POST /api/sppg/inventory/movements/batch
- * Create multiple stock movements in a single transaction
- * @security Requires authentication and INVENTORY_MANAGE permission
+ * @rbac Protected by withSppgAuth
+ * @audit Automatic logging
+ * @security Requires INVENTORY_MANAGE permission
  * @body {BatchStockMovementInput} Array of stock movement data
  * @returns {Promise<Response>} Created stock movements
  */
 export async function POST(request: NextRequest) {
-  try {
-    // 1. Authentication Check
-    const session = await auth()
-    if (!session?.user) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+  return withSppgAuth(request, async (session) => {
+    try {
+      // Permission Check
+      if (!session.user.userRole || !hasPermission(session.user.userRole as UserRole, 'INVENTORY_MANAGE')) {
+        return NextResponse.json({ 
+          error: 'Insufficient permissions',
+          message: 'Anda tidak memiliki akses untuk mengelola pergerakan stok'
+        }, { status: 403 })
+      }
 
-    // 2. Permission Check
-    if (!session.user.userRole || !hasPermission(session.user.userRole, 'INVENTORY_MANAGE')) {
-      return Response.json({ 
-        error: 'Insufficient permissions',
-        message: 'Anda tidak memiliki akses untuk mengelola pergerakan stok'
-      }, { status: 403 })
-    }
+      // Parse and validate request body
+      const body = await request.json()
+      const validated = batchStockMovementSchema.safeParse(body)
+      
+      if (!validated.success) {
+        return NextResponse.json({ 
+          error: 'Validation failed',
+          message: 'Data tidak valid',
+          details: validated.error.issues
+        }, { status: 400 })
+      }
 
-    // 3. Multi-tenant Check
-    if (!session.user.sppgId) {
-      return Response.json({ 
-        error: 'SPPG access required',
-        message: 'Akses SPPG diperlukan'
-      }, { status: 403 })
-    }
-
-    // 4. Parse and validate request body
-    const body = await request.json()
-    const validated = batchStockMovementSchema.safeParse(body)
-    
-    if (!validated.success) {
-      return Response.json({ 
-        error: 'Validation failed',
-        message: 'Data tidak valid',
-        details: validated.error.issues
-      }, { status: 400 })
-    }
-
-    // 5. Verify all inventory items exist and belong to SPPG
+      // Verify all inventory items exist and belong to SPPG
     const inventoryIds = validated.data.movements.map((m) => m.inventoryId)
     const inventories = await db.inventoryItem.findMany({
       where: {
         id: { in: inventoryIds },
-        sppgId: session.user.sppgId,
+        sppgId: session.user.sppgId!,
       }
     })
 
     if (inventories.length !== inventoryIds.length) {
-      return Response.json({
+      return NextResponse.json({
         error: 'Invalid inventory items',
         message: 'Beberapa item inventori tidak ditemukan atau tidak valid'
       }, { status: 404 })
@@ -104,7 +98,7 @@ export async function POST(request: NextRequest) {
     })
 
     if (errors.length > 0) {
-      return Response.json({
+      return NextResponse.json({
         error: 'Insufficient stock',
         message: 'Beberapa item memiliki stok tidak mencukupi',
         details: errors
@@ -190,18 +184,18 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    return Response.json({ 
+    return NextResponse.json({ 
       success: true, 
       data: movements,
       message: `Berhasil mencatat ${movements.length} pergerakan stok`
     }, { status: 201 })
 
-  } catch (error) {
-    console.error('POST /api/sppg/inventory/movements/batch error:', error)
-    return Response.json({ 
-      error: 'Internal server error',
-      message: 'Terjadi kesalahan saat mencatat pergerakan stok batch',
-      details: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined
-    }, { status: 500 })
-  }
+    } catch (error) {
+      return NextResponse.json({ 
+        error: 'Internal server error',
+        message: 'Terjadi kesalahan saat mencatat pergerakan stok batch',
+        details: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined
+      }, { status: 500 })
+    }
+  })
 }

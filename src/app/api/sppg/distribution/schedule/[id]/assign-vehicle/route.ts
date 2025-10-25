@@ -5,11 +5,12 @@
  * @author Bagizi-ID Development Team
  */
 
-import { NextRequest } from 'next/server'
-import { auth } from '@/auth'
+import { NextRequest, NextResponse } from 'next/server'
+import { withSppgAuth } from '@/lib/api-middleware'
+import { hasPermission } from '@/lib/permissions'
 import { db } from '@/lib/prisma'
-import { checkSppgAccess } from '@/lib/permissions'
 import { assignVehicleSchema } from '@/features/sppg/distribution/schedule/schemas'
+import { UserRole } from '@prisma/client'
 
 /**
  * POST /api/sppg/distribution/schedule/[id]/assign-vehicle
@@ -19,36 +20,23 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    const { id: scheduleId } = await params
+  return withSppgAuth(request, async (session) => {
+    try {
+      const { id: scheduleId } = await params
 
-    // 1. Authentication Check
-    const session = await auth()
-    if (!session?.user) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+      // Permission Check
+      if (!hasPermission(session.user.userRole as UserRole, 'DISTRIBUTION_MANAGE')) {
+        return NextResponse.json(
+          { success: false, error: 'Insufficient permissions' },
+          { status: 403 }
+        )
+      }
 
-    // 2. SPPG Access Check
-    if (!session.user.sppgId) {
-      return Response.json(
-        { error: 'SPPG access required' },
-        { status: 403 }
-      )
-    }
-    
-    const sppg = await checkSppgAccess(session.user.sppgId)
-    if (!sppg) {
-      return Response.json(
-        { error: 'SPPG not found or access denied' },
-        { status: 403 }
-      )
-    }
-
-    // 3. Check if schedule exists and belongs to SPPG
+      // Check if schedule exists and belongs to SPPG
     const schedule = await db.distributionSchedule.findUnique({
       where: {
         id: scheduleId,
-        sppgId: session.user.sppgId,
+        sppgId: session.user.sppgId!,
       },
       include: {
         production: {
@@ -72,7 +60,7 @@ export async function POST(
     })
 
     if (!schedule) {
-      return Response.json(
+      return NextResponse.json(
         { error: 'Schedule not found' },
         { status: 404 }
       )
@@ -80,7 +68,7 @@ export async function POST(
 
     // 4. Validate schedule status (only allow for PLANNED and ASSIGNED)
     if (!['PLANNED', 'ASSIGNED', 'CONFIRMED'].includes(schedule.status)) {
-      return Response.json(
+      return NextResponse.json(
         {
           error: 'Cannot assign vehicle',
           details: 'Kendaraan hanya dapat ditugaskan saat status PLANNED, ASSIGNED, atau CONFIRMED',
@@ -94,7 +82,7 @@ export async function POST(
     const validated = assignVehicleSchema.safeParse(body)
 
     if (!validated.success) {
-      return Response.json(
+      return NextResponse.json(
         {
           error: 'Validation failed',
           details: validated.error.issues,
@@ -110,12 +98,12 @@ export async function POST(
     const vehicle = await db.vehicle.findUnique({
       where: {
         id: vehicleId,
-        sppgId: session.user.sppgId,
+        sppgId: session.user.sppgId!,
       },
     })
 
     if (!vehicle) {
-      return Response.json(
+      return NextResponse.json(
         { error: 'Vehicle not found or access denied' },
         { status: 404 }
       )
@@ -154,7 +142,7 @@ export async function POST(
     })
 
     if (conflictingAssignment && conflictingAssignment.schedule) {
-      return Response.json(
+      return NextResponse.json(
         {
           error: 'Vehicle conflict',
           details: `Kendaraan ${vehicle.licensePlate} sudah ditugaskan pada jadwal lain di tanggal dan waktu yang sama`,
@@ -174,7 +162,7 @@ export async function POST(
     )
 
     if (existingAssignment) {
-      return Response.json(
+      return NextResponse.json(
         {
           error: 'Vehicle already assigned',
           details: 'Kendaraan ini sudah ditugaskan pada jadwal ini',
@@ -190,7 +178,7 @@ export async function POST(
     // 10. Create Vehicle Assignment
     const assignment = await db.vehicleAssignment.create({
       data: {
-        sppgId: session.user.sppgId, // ✅ FIXED: Add required sppgId
+        sppgId: session.user.sppgId!, // ✅ FIXED: Add required sppgId
         scheduleId,
         vehicleId,
         driverId,
@@ -248,7 +236,7 @@ export async function POST(
     await db.auditLog.create({
       data: {
         userId: session.user.id,
-        sppgId: session.user.sppgId,
+        sppgId: session.user.sppgId!,
         action: 'CREATE',
         entityType: 'VehicleAssignment',
         entityId: assignment.id,
@@ -262,7 +250,7 @@ export async function POST(
       },
     })
 
-    return Response.json({
+    return NextResponse.json({
       success: true,
       data: updatedSchedule,
       message: `Kendaraan ${vehicle.licensePlate} berhasil ditugaskan`,
@@ -272,12 +260,14 @@ export async function POST(
       'POST /api/sppg/distribution/schedule/[id]/assign-vehicle error:',
       error
     )
-    return Response.json(
+    return NextResponse.json(
       {
+        success: false,
         error: 'Failed to assign vehicle',
         details: process.env.NODE_ENV === 'development' ? error : undefined,
       },
       { status: 500 }
     )
   }
+  })
 }

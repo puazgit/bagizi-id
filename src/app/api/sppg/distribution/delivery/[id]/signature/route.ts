@@ -5,8 +5,10 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/auth'
+import { withSppgAuth } from '@/lib/api-middleware'
+import { hasPermission } from '@/lib/permissions'
 import { db } from '@/lib/prisma'
+import { UserRole } from '@prisma/client'
 
 /**
  * POST /api/sppg/distribution/delivery/[id]/signature
@@ -21,20 +23,19 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    // 1. Authentication Check
-    const session = await auth()
-    if (!session?.user) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
+  return withSppgAuth(request, async (session) => {
+    try {
+      const { id: deliveryId } = await params
 
-    // 2. Parse Parameters
-    const { id: deliveryId } = await params
+      // 2. Permission Check
+      if (!hasPermission(session.user.userRole as UserRole, 'DISTRIBUTION_MANAGE')) {
+        return NextResponse.json(
+          { success: false, error: 'Insufficient permissions' },
+          { status: 403 }
+        )
+      }
 
-    // 3. Parse Request Body
+      // 3. Parse Request Body
     const body = await request.json()
     const {
       signatureDataUrl,
@@ -121,12 +122,13 @@ export async function POST(
     return NextResponse.json(
       {
         success: false,
-        error: 'Failed to save signature',
+        error: 'Failed to capture signature',
         details: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined,
       },
       { status: 500 }
     )
   }
+  })
 }
 
 /**
@@ -142,20 +144,19 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    // 1. Authentication Check
-    const session = await auth()
-    if (!session?.user) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
+  return withSppgAuth(request, async (session) => {
+    try {
+      const { id: deliveryId } = await params
 
-    // 2. Parse Parameters
-    const { id: deliveryId } = await params
+      // 2. Permission Check
+      if (!hasPermission(session.user.userRole as UserRole, 'DISTRIBUTION_MANAGE')) {
+        return NextResponse.json(
+          { success: false, error: 'Insufficient permissions' },
+          { status: 403 }
+        )
+      }
 
-    // 3. Verify Delivery Exists and Access
+      // 3. Verify Delivery Exists and Access
     const delivery = await db.distributionDelivery.findUnique({
       where: { id: deliveryId },
       include: {
@@ -214,4 +215,5 @@ export async function DELETE(
       { status: 500 }
     )
   }
+  })
 }

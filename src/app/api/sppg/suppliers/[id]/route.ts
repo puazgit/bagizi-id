@@ -3,53 +3,46 @@
  * @version Next.js 15.5.4 / Prisma 6.17.1 / Enterprise-grade
  * @author Bagizi-ID Development Team
  * @see {@link /docs/copilot-instructions.md} Enterprise Development Guidelines
+ * 
+ * RBAC Integration:
+ * - GET/PUT/DELETE: Protected by withSppgAuth
+ * - Automatic audit logging
+ * - Multi-tenant: Supplier ownership verified
  */
 
-import { NextRequest } from 'next/server'
-import { auth } from '@/auth'
+import { NextRequest, NextResponse } from 'next/server'
+import { withSppgAuth } from '@/lib/api-middleware'
 import { db } from '@/lib/prisma'
 import { supplierUpdateSchema } from '@/features/sppg/procurement/schemas'
 
 // ================================ GET /api/sppg/suppliers/[id] ================================
 
+/**
+ * @rbac Protected by withSppgAuth
+ * @audit Automatic logging
+ */
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    const { id } = await params
-    
-    // 1. Authentication Check
-    const session = await auth()
-    if (!session?.user) {
-      return Response.json({ 
-        success: false, 
-        error: 'Unauthorized - Login required' 
-      }, { status: 401 })
-    }
+  return withSppgAuth(request, async (session) => {
+    try {
+      const { id } = await params
 
-    // 2. SPPG Access Check (Multi-tenancy - CRITICAL!)
-    if (!session.user.sppgId) {
-      return Response.json({ 
-        success: false, 
-        error: 'SPPG access required' 
-      }, { status: 403 })
-    }
-
-    // 3. Fetch supplier with multi-tenant check
-    const supplier = await db.supplier.findFirst({
-      where: {
-        id,
-        sppgId: session.user.sppgId // CRITICAL: Ensure supplier belongs to user's SPPG
-      },
-      include: {
-        sppg: {
-          select: {
-            id: true,
-            name: true
-          }
+      // Fetch supplier with multi-tenant check
+      const supplier = await db.supplier.findFirst({
+        where: {
+          id,
+          sppgId: session.user.sppgId! // CRITICAL: Ensure supplier belongs to user's SPPG
         },
-        procurements: {
+        include: {
+          sppg: {
+            select: {
+              id: true,
+              name: true
+            }
+          },
+          procurements: {
           select: {
             id: true,
             procurementCode: true,
@@ -120,7 +113,7 @@ export async function GET(
     })
 
     if (!supplier) {
-      return Response.json({ 
+      return NextResponse.json({ 
         success: false, 
         error: 'Supplier not found or access denied' 
       }, { status: 404 })
@@ -146,7 +139,7 @@ export async function GET(
       : 0
 
     // 5. Success response
-    return Response.json({
+    return NextResponse.json({
       success: true,
       data: {
         ...supplier,
@@ -159,55 +152,44 @@ export async function GET(
         encryptedBankDetails: undefined,
         encryptedContracts: undefined
       }
-    })
+      })
 
-  } catch (error) {
-    console.error('GET /api/sppg/suppliers/[id] error:', error)
-    
-    return Response.json({ 
-      success: false, 
-      error: 'Failed to fetch supplier',
-      details: process.env.NODE_ENV === 'development' ? error : undefined
-    }, { status: 500 })
-  }
+    } catch (error) {
+      console.error('GET /api/sppg/suppliers/[id] error:', error)
+      
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Failed to fetch supplier',
+        details: process.env.NODE_ENV === 'development' ? error : undefined
+      }, { status: 500 })
+    }
+  })
 }
 
 // ================================ PUT /api/sppg/suppliers/[id] ================================
 
+/**
+ * @rbac Protected by withSppgAuth
+ * @audit Automatic logging
+ */
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    const { id } = await params
-    
-    // 1. Authentication Check
-    const session = await auth()
-    if (!session?.user) {
-      return Response.json({ 
-        success: false, 
-        error: 'Unauthorized - Login required' 
-      }, { status: 401 })
-    }
+  return withSppgAuth(request, async (session) => {
+    try {
+      const { id } = await params
 
-    // 2. SPPG Access Check (Multi-tenancy - CRITICAL!)
-    if (!session.user.sppgId) {
-      return Response.json({ 
-        success: false, 
-        error: 'SPPG access required' 
-      }, { status: 403 })
-    }
-
-    // 3. Verify supplier exists and belongs to SPPG
-    const existingSupplier = await db.supplier.findFirst({
-      where: {
-        id,
-        sppgId: session.user.sppgId
-      }
-    })
+      // Verify supplier exists and belongs to SPPG
+      const existingSupplier = await db.supplier.findFirst({
+        where: {
+          id,
+          sppgId: session.user.sppgId!
+        }
+      })
 
     if (!existingSupplier) {
-      return Response.json({ 
+      return NextResponse.json({ 
         success: false, 
         error: 'Supplier not found or access denied' 
       }, { status: 404 })
@@ -221,7 +203,7 @@ export async function PUT(
     ]
     
     if (!session.user.userRole || !allowedRoles.includes(session.user.userRole)) {
-      return Response.json({ 
+      return NextResponse.json({ 
         success: false, 
         error: 'Insufficient permissions' 
       }, { status: 403 })
@@ -235,7 +217,7 @@ export async function PUT(
     if (validated.supplierName || validated.phone) {
       const duplicateSupplier = await db.supplier.findFirst({
         where: {
-          sppgId: session.user.sppgId,
+          sppgId: session.user.sppgId!,
           id: { not: id },
           OR: [
             ...(validated.supplierName ? [{ supplierName: validated.supplierName }] : []),
@@ -245,7 +227,7 @@ export async function PUT(
       })
 
       if (duplicateSupplier) {
-        return Response.json({ 
+        return NextResponse.json({ 
           success: false, 
           error: 'Supplier with this name or phone already exists' 
         }, { status: 409 })
@@ -267,7 +249,7 @@ export async function PUT(
     })
 
     // 8. Success response
-    return Response.json({
+    return NextResponse.json({
       success: true,
       data: {
         ...updatedSupplier,
@@ -283,57 +265,46 @@ export async function PUT(
     
     // Validation error
     if (error instanceof Error && error.name === 'ZodError') {
-      return Response.json({ 
+      return NextResponse.json({ 
         success: false, 
         error: 'Validation failed',
         details: error 
       }, { status: 400 })
     }
 
-    // Internal server error
-    return Response.json({ 
-      success: false, 
-      error: 'Failed to update supplier',
-      details: process.env.NODE_ENV === 'development' ? error : undefined
-    }, { status: 500 })
-  }
+      // Internal server error
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Failed to update supplier',
+        details: process.env.NODE_ENV === 'development' ? error : undefined
+      }, { status: 500 })
+    }
+  })
 }
 
 // ================================ DELETE /api/sppg/suppliers/[id] ================================
 
+/**
+ * @rbac Protected by withSppgAuth
+ * @audit Automatic logging
+ */
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    const { id } = await params
-    
-    // 1. Authentication Check
-    const session = await auth()
-    if (!session?.user) {
-      return Response.json({ 
-        success: false, 
-        error: 'Unauthorized - Login required' 
-      }, { status: 401 })
-    }
+  return withSppgAuth(request, async (session) => {
+    try {
+      const { id } = await params
 
-    // 2. SPPG Access Check (Multi-tenancy - CRITICAL!)
-    if (!session.user.sppgId) {
-      return Response.json({ 
-        success: false, 
-        error: 'SPPG access required' 
-      }, { status: 403 })
-    }
-
-    // 3. Role Check - Only admins can delete
-    const allowedRoles = [
-      'SPPG_KEPALA',
-      'SPPG_ADMIN'
-    ]
-    
-    if (!session.user.userRole || !allowedRoles.includes(session.user.userRole)) {
-      return Response.json({ 
-        success: false, 
+      // Role Check - Only admins can delete
+      const allowedRoles = [
+        'SPPG_KEPALA',
+        'SPPG_ADMIN'
+      ]
+      
+      if (!session.user.userRole || !allowedRoles.includes(session.user.userRole)) {
+        return NextResponse.json({ 
+          success: false, 
         error: 'Insufficient permissions - Only admins can delete suppliers' 
       }, { status: 403 })
     }
@@ -342,7 +313,7 @@ export async function DELETE(
     const supplier = await db.supplier.findFirst({
       where: {
         id,
-        sppgId: session.user.sppgId
+        sppgId: session.user.sppgId!
       },
       include: {
         procurements: {
@@ -355,7 +326,7 @@ export async function DELETE(
     })
 
     if (!supplier) {
-      return Response.json({ 
+      return NextResponse.json({ 
         success: false, 
         error: 'Supplier not found or access denied' 
       }, { status: 404 })
@@ -367,7 +338,7 @@ export async function DELETE(
     )
     
     if (hasCompletedProcurements) {
-      return Response.json({ 
+      return NextResponse.json({ 
         success: false, 
         error: 'Cannot delete supplier with completed procurements. Mark as inactive instead.' 
       }, { status: 403 })
@@ -384,19 +355,20 @@ export async function DELETE(
     })
 
     // 7. Success response
-    return Response.json({
+    return NextResponse.json({
       success: true,
-      message: 'Supplier deactivated successfully'
-    })
+        message: 'Supplier deactivated successfully'
+      })
 
-  } catch (error) {
-    console.error('DELETE /api/sppg/suppliers/[id] error:', error)
-    
-    // Internal server error
-    return Response.json({ 
-      success: false, 
-      error: 'Failed to delete supplier',
-      details: process.env.NODE_ENV === 'development' ? error : undefined
-    }, { status: 500 })
-  }
+    } catch (error) {
+      console.error('DELETE /api/sppg/suppliers/[id] error:', error)
+      
+      // Internal server error
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Failed to delete supplier',
+        details: process.env.NODE_ENV === 'development' ? error : undefined
+      }, { status: 500 })
+    }
+  })
 }

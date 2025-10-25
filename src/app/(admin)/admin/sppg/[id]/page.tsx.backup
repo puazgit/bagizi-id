@@ -1,0 +1,911 @@
+/**
+ * Admin SPPG Detail Page
+ * Comprehensive view of SPPG with all details and actions
+ * 
+ * @route /admin/sppg/[id]
+ * @access Platform Admin (SUPERADMIN, SUPPORT, ANALYST)
+ * 
+ * @version Next.js 15.5.4
+ * @author Bagizi-ID Development Team
+ */
+
+'use client'
+
+import { useState } from 'react'
+import { useRouter, useParams } from 'next/navigation'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Separator } from '@/components/ui/separator'
+import { Skeleton } from '@/components/ui/skeleton'
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '@/components/ui/tabs'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { 
+  useSppg, 
+  useDeleteSppg, 
+  useActivateSppg, 
+  useSuspendSppg 
+} from '@/features/admin/sppg-management/hooks'
+import {
+  getSppgStatusConfig,
+  getOrganizationTypeLabel,
+  getTimezoneLabel
+} from '@/features/admin/sppg-management/lib'
+import { 
+  ArrowLeft, 
+  Edit, 
+  MoreVertical, 
+  Trash2, 
+  CheckCircle2, 
+  XCircle,
+  Building2,
+  MapPin,
+  Phone,
+  Mail,
+  User,
+  FileText,
+  Settings,
+  DollarSign,
+  Calendar,
+  Users,
+  Package,
+  TrendingUp,
+  AlertCircle
+} from 'lucide-react'
+import Link from 'next/link'
+import { toast } from 'sonner'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import type { SppgStatus } from '@prisma/client'
+
+/**
+ * Get status badge component for SPPG status
+ */
+function getStatusBadge(status: SppgStatus) {
+  const config = getSppgStatusConfig(status)
+  
+  return (
+    <Badge 
+      variant={
+        config.variant === 'default' ? 'default' :
+        config.variant === 'secondary' ? 'secondary' :
+        config.variant === 'destructive' ? 'destructive' :
+        config.variant === 'outline' ? 'outline' :
+        'default'
+      } 
+      className={config.className}
+    >
+      {config.label}
+    </Badge>
+  )
+}
+
+export default function SppgDetailPage() {
+  const router = useRouter()
+  const params = useParams()
+  const sppgId = params.id as string
+
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [suspendDialogOpen, setSuspendDialogOpen] = useState(false)
+
+  const { data: sppg, isLoading, error } = useSppg(sppgId)
+  const { mutate: deleteSppg, isPending: isDeleting } = useDeleteSppg()
+  const { mutate: activateSppg, isPending: isActivating } = useActivateSppg()
+  const { mutate: suspendSppg, isPending: isSuspending } = useSuspendSppg()
+
+  const handleDelete = () => {
+    deleteSppg(sppgId, {
+      onSuccess: () => {
+        toast.success('SPPG berhasil dihapus')
+        router.push('/admin/sppg')
+      },
+      onError: (error: Error) => {
+        toast.error(error.message || 'Gagal menghapus SPPG')
+      },
+    })
+  }
+
+  const handleActivate = () => {
+    activateSppg(sppgId, {
+      onSuccess: () => {
+        toast.success('SPPG berhasil diaktifkan')
+      },
+      onError: (error: Error) => {
+        toast.error(error.message || 'Gagal mengaktifkan SPPG')
+      },
+    })
+  }
+
+  const handleSuspend = () => {
+    suspendSppg(sppgId, {
+      onSuccess: () => {
+        toast.success('SPPG berhasil ditangguhkan')
+        setSuspendDialogOpen(false)
+      },
+      onError: (error: Error) => {
+        toast.error(error.message || 'Gagal menangguhkan SPPG')
+      },
+    })
+  }
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto py-6 space-y-6 max-w-6xl">
+        <Skeleton className="h-12 w-3/4" />
+        <Skeleton className="h-96 w-full" />
+      </div>
+    )
+  }
+
+  if (error || !sppg) {
+    return (
+      <div className="container mx-auto py-6 max-w-6xl">
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>
+            {error?.message || 'SPPG tidak ditemukan'}
+          </AlertDescription>
+        </Alert>
+        <Button variant="outline" className="mt-4" asChild>
+          <Link href="/admin/sppg">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Kembali
+          </Link>
+        </Button>
+      </div>
+    )
+  }
+
+  // Get status configuration from helper
+  const statusConfig = getSppgStatusConfig(sppg.status)
+
+  return (
+    <div className="container mx-auto py-6 space-y-6 max-w-6xl">
+      {/* Header */}
+      <div className="flex items-start justify-between">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" asChild>
+            <Link href="/admin/sppg">
+              <ArrowLeft className="h-4 w-4" />
+            </Link>
+          </Button>
+          <div>
+            <div className="flex items-center gap-3">
+              <h1 className="text-3xl font-bold tracking-tight">{sppg.name}</h1>
+              <Badge variant={statusConfig.variant} className={statusConfig.className}>
+                {statusConfig.label}
+              </Badge>
+              {sppg.isDemoAccount && (
+                <Badge variant="outline" className="border-blue-500 text-blue-500">
+                  Demo
+                </Badge>
+              )}
+            </div>
+            <p className="text-muted-foreground mt-1">
+              {sppg.code} • {getOrganizationTypeLabel(sppg.organizationType)}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Button variant="outline" asChild>
+            <Link href={`/admin/sppg/${sppgId}/edit`}>
+              <Edit className="h-4 w-4 mr-2" />
+              Edit
+            </Link>
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="icon">
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Aksi</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {sppg.status !== 'ACTIVE' && (
+                <DropdownMenuItem onClick={handleActivate} disabled={isActivating}>
+                  <CheckCircle2 className="h-4 w-4 mr-2" />
+                  Aktifkan
+                </DropdownMenuItem>
+              )}
+              {sppg.status === 'ACTIVE' && (
+                <DropdownMenuItem 
+                  onClick={() => setSuspendDialogOpen(true)}
+                  className="text-orange-600"
+                >
+                  <XCircle className="h-4 w-4 mr-2" />
+                  Tangguhkan
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => setDeleteDialogOpen(true)}
+                className="text-destructive"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Hapus
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <Tabs defaultValue="overview" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="contact">Kontak</TabsTrigger>
+          <TabsTrigger value="operational">Operasional</TabsTrigger>
+          <TabsTrigger value="legal">Legal</TabsTrigger>
+          <TabsTrigger value="financial">Keuangan</TabsTrigger>
+        </TabsList>
+
+        {/* Overview Tab */}
+        <TabsContent value="overview" className="space-y-4">
+          {/* Quick Stats - Real Schema Fields */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Status
+                </CardTitle>
+                <Settings className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold mb-2">
+                  {getStatusBadge(sppg.status)}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Status operasional
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Target Penerima
+                </CardTitle>
+                <Users className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{sppg.targetRecipients.toLocaleString('id-ID')}</div>
+                <p className="text-xs text-muted-foreground">
+                  Penerima manfaat target
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Jangkauan
+                </CardTitle>
+                <MapPin className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{sppg.maxRadius} km</div>
+                <p className="text-xs text-muted-foreground">
+                  Radius maksimal
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Budget Bulanan
+                </CardTitle>
+                <DollarSign className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {sppg.monthlyBudget 
+                    ? `Rp ${(sppg.monthlyBudget / 1000000).toFixed(0)}jt`
+                    : 'Belum diset'
+                  }
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Budget operasional bulanan
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Basic Information */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Building2 className="h-5 w-5 text-primary" />
+                <CardTitle>Informasi Dasar</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <div className="text-sm font-medium text-muted-foreground">Kode SPPG</div>
+                  <div className="text-base font-mono font-semibold">{sppg.code}</div>
+                </div>
+                <div>
+                  <div className="text-sm font-medium text-muted-foreground">Nama SPPG</div>
+                  <div className="text-base font-semibold">{sppg.name}</div>
+                </div>
+                <div>
+                  <div className="text-sm font-medium text-muted-foreground">Jenis Organisasi</div>
+                  <Badge variant="outline">
+                    {getOrganizationTypeLabel(sppg.organizationType)}
+                  </Badge>
+                </div>
+                {sppg.establishedYear && (
+                  <div>
+                    <div className="text-sm font-medium text-muted-foreground">Tahun Berdiri</div>
+                    <div className="text-base">{sppg.establishedYear}</div>
+                  </div>
+                )}
+              </div>
+
+              {sppg.description && (
+                <>
+                  <Separator />
+                  <div>
+                    <div className="text-sm font-medium text-muted-foreground mb-2">Deskripsi</div>
+                    <div className="text-base">{sppg.description}</div>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Location */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <MapPin className="h-5 w-5 text-primary" />
+                <CardTitle>Lokasi</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <div className="text-sm font-medium text-muted-foreground mb-2">Alamat</div>
+                <div className="text-base">{sppg.addressDetail}</div>
+              </div>
+
+              <Separator />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {sppg.province && (
+                  <div>
+                    <div className="text-sm font-medium text-muted-foreground">Provinsi</div>
+                    <div className="text-base">{sppg.province.name}</div>
+                  </div>
+                )}
+                {sppg.regency && (
+                  <div>
+                    <div className="text-sm font-medium text-muted-foreground">Kabupaten/Kota</div>
+                    <div className="text-base">{sppg.regency.name}</div>
+                  </div>
+                )}
+                {sppg.district && (
+                  <div>
+                    <div className="text-sm font-medium text-muted-foreground">Kecamatan</div>
+                    <div className="text-base">{sppg.district.name}</div>
+                  </div>
+                )}
+                {sppg.village && (
+                  <div>
+                    <div className="text-sm font-medium text-muted-foreground">Desa/Kelurahan</div>
+                    <div className="text-base">{sppg.village.name}</div>
+                  </div>
+                )}
+              </div>
+
+              {(sppg.postalCode || sppg.coordinates || sppg.timezone) && (
+                <>
+                  <Separator />
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {sppg.postalCode && (
+                      <div>
+                        <div className="text-sm font-medium text-muted-foreground">Kode Pos</div>
+                        <div className="text-base">{sppg.postalCode}</div>
+                      </div>
+                    )}
+                    {sppg.coordinates && (
+                      <div>
+                        <div className="text-sm font-medium text-muted-foreground">Koordinat</div>
+                        <div className="text-sm font-mono">{sppg.coordinates}</div>
+                        <a 
+                          href={`https://www.google.com/maps?q=${sppg.coordinates}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-primary hover:underline"
+                        >
+                          Buka di Google Maps →
+                        </a>
+                      </div>
+                    )}
+                    <div>
+                      <div className="text-sm font-medium text-muted-foreground">Zona Waktu</div>
+                      <Badge variant="secondary">
+                        {getTimezoneLabel(sppg.timezone)}
+                      </Badge>
+                    </div>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Demo Account Info */}
+          {sppg.isDemoAccount && (
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Akun Demo</AlertTitle>
+              <AlertDescription className="space-y-1">
+                <p>SPPG ini adalah akun demo dengan batasan berikut:</p>
+                <ul className="list-disc list-inside space-y-1">
+                  {sppg.demoStartedAt && (
+                    <li>Dimulai: {new Date(sppg.demoStartedAt).toLocaleDateString('id-ID')}</li>
+                  )}
+                  {sppg.demoExpiresAt && (
+                    <li>Berlaku hingga: {new Date(sppg.demoExpiresAt).toLocaleDateString('id-ID')}</li>
+                  )}
+                  {sppg.demoMaxBeneficiaries && (
+                    <li>Maksimal penerima: {sppg.demoMaxBeneficiaries} orang</li>
+                  )}
+                  {sppg.demoAllowedFeatures && sppg.demoAllowedFeatures.length > 0 && (
+                    <li>Fitur yang diizinkan: {sppg.demoAllowedFeatures.length} fitur</li>
+                  )}
+                </ul>
+              </AlertDescription>
+            </Alert>
+          )}
+        </TabsContent>
+
+        {/* Contact Tab */}
+        <TabsContent value="contact" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Phone className="h-5 w-5 text-primary" />
+                <CardTitle>Kontak SPPG</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex items-center gap-3">
+                  <Phone className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <div className="text-sm font-medium text-muted-foreground">Telepon</div>
+                    <a href={`tel:${sppg.phone}`} className="text-base hover:text-primary">
+                      {sppg.phone}
+                    </a>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <Mail className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <div className="text-sm font-medium text-muted-foreground">Email</div>
+                    <a href={`mailto:${sppg.email}`} className="text-base hover:text-primary">
+                      {sppg.email}
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <User className="h-5 w-5 text-primary" />
+                <CardTitle>Penanggung Jawab (PIC)</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <div className="text-sm font-medium text-muted-foreground">Nama</div>
+                  <div className="text-base font-semibold">{sppg.picName}</div>
+                </div>
+                <div>
+                  <div className="text-sm font-medium text-muted-foreground">Jabatan</div>
+                  <div className="text-base">{sppg.picPosition}</div>
+                </div>
+              </div>
+
+              <Separator />
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="flex items-center gap-3">
+                  <Mail className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <div className="text-sm font-medium text-muted-foreground">Email</div>
+                    <a href={`mailto:${sppg.picEmail}`} className="text-base hover:text-primary">
+                      {sppg.picEmail}
+                    </a>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <Phone className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <div className="text-sm font-medium text-muted-foreground">Telepon</div>
+                    <a href={`tel:${sppg.picPhone}`} className="text-base hover:text-primary">
+                      {sppg.picPhone}
+                    </a>
+                  </div>
+                </div>
+
+                {sppg.picWhatsapp && (
+                  <div className="flex items-center gap-3">
+                    <Phone className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <div className="text-sm font-medium text-muted-foreground">WhatsApp</div>
+                      <a 
+                        href={`https://wa.me/${sppg.picWhatsapp.replace(/[^0-9]/g, '')}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-base text-green-600 hover:text-green-700 hover:underline"
+                      >
+                        {sppg.picWhatsapp}
+                      </a>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Operational Tab */}
+        <TabsContent value="operational" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Calendar className="h-5 w-5 text-primary" />
+                <CardTitle>Informasi Operasional</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <div className="text-sm font-medium text-muted-foreground">Tanggal Mulai Operasi</div>
+                  <div className="text-base font-semibold">
+                    {new Date(sppg.operationStartDate).toLocaleDateString('id-ID', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric'
+                    })}
+                  </div>
+                </div>
+                {sppg.operationEndDate && (
+                  <div>
+                    <div className="text-sm font-medium text-muted-foreground">Tanggal Berakhir Operasi</div>
+                    <div className="text-base font-semibold">
+                      {new Date(sppg.operationEndDate).toLocaleDateString('id-ID', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <Separator />
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <div className="text-sm font-medium text-muted-foreground">Target Penerima</div>
+                  <div className="text-2xl font-bold text-primary">{sppg.targetRecipients.toLocaleString('id-ID')}</div>
+                  <p className="text-xs text-muted-foreground mt-1">Jumlah penerima manfaat target</p>
+                </div>
+                <div>
+                  <div className="text-sm font-medium text-muted-foreground">Radius Maksimal</div>
+                  <div className="text-2xl font-bold text-primary">{sppg.maxRadius} km</div>
+                  <p className="text-xs text-muted-foreground mt-1">Jangkauan layanan</p>
+                </div>
+                <div>
+                  <div className="text-sm font-medium text-muted-foreground">Waktu Tempuh Maks</div>
+                  <div className="text-2xl font-bold text-primary">{sppg.maxTravelTime} menit</div>
+                  <p className="text-xs text-muted-foreground mt-1">Waktu perjalanan maksimal</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Legal Tab */}
+        <TabsContent value="legal" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Informasi Legal</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Tidak Ada Data</AlertTitle>
+                <AlertDescription>
+                  Informasi legal dan dokumen tidak tersedia di schema saat ini.
+                </AlertDescription>
+              </Alert>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Financial Tab */}
+        <TabsContent value="financial" className="space-y-4">
+                        <Badge variant="outline">Gudang</Badge>
+                      )}
+                      {sppg.hasDeliveryVehicle && (
+                        <Badge variant="outline">Kendaraan Distribusi</Badge>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Legal Tab */}
+        <TabsContent value="legal" className="space-y-4">
+          {(sppg.legalDocumentType || sppg.legalDocumentNumber) && (
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <FileText className="h-5 w-5 text-primary" />
+                  <CardTitle>Dokumen Legalitas</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {sppg.legalDocumentType && (
+                    <div>
+                      <div className="text-sm font-medium text-muted-foreground">Jenis Dokumen</div>
+                      <div className="text-base">{sppg.legalDocumentType}</div>
+                    </div>
+                  )}
+                  {sppg.legalDocumentNumber && (
+                    <div>
+                      <div className="text-sm font-medium text-muted-foreground">Nomor Dokumen</div>
+                      <div className="text-base font-mono">{sppg.legalDocumentNumber}</div>
+                    </div>
+                  )}
+                  {sppg.legalDocumentDate && (
+                    <div>
+                      <div className="text-sm font-medium text-muted-foreground">Tanggal</div>
+                      <div className="text-base">
+                        {new Date(sppg.legalDocumentDate).toLocaleDateString('id-ID')}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {sppg.legalDocumentFile && (
+                  <>
+                    <Separator />
+                    <div>
+                      <div className="text-sm font-medium text-muted-foreground mb-2">File Dokumen</div>
+                      <a 
+                        href={sppg.legalDocumentFile}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary hover:underline"
+                      >
+                        Lihat Dokumen
+                      </a>
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {(sppg.operationalLicense || sppg.operationalLicenseDate) && (
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <FileText className="h-5 w-5 text-primary" />
+                  <CardTitle>Izin Operasional</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {sppg.operationalLicense && (
+                    <div>
+                      <div className="text-sm font-medium text-muted-foreground">Nomor Izin</div>
+                      <div className="text-base font-mono">{sppg.operationalLicense}</div>
+                    </div>
+                  )}
+                  {sppg.operationalLicenseDate && (
+                    <div>
+                      <div className="text-sm font-medium text-muted-foreground">Tanggal</div>
+                      <div className="text-base">
+                        {new Date(sppg.operationalLicenseDate).toLocaleDateString('id-ID')}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {sppg.operationalLicenseFile && (
+                  <>
+                    <Separator />
+                    <div>
+                      <div className="text-sm font-medium text-muted-foreground mb-2">File Izin</div>
+                      <a 
+                        href={sppg.operationalLicenseFile}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary hover:underline"
+                      >
+                        Lihat Izin
+                      </a>
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        {/* Financial Tab */}
+        <TabsContent value="financial" className="space-y-4">
+          {(sppg.bankName || sppg.bankAccountNumber) && (
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <DollarSign className="h-5 w-5 text-primary" />
+                  <CardTitle>Informasi Bank</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {sppg.bankName && (
+                    <div>
+                      <div className="text-sm font-medium text-muted-foreground">Nama Bank</div>
+                      <div className="text-base">{sppg.bankName}</div>
+                    </div>
+                  )}
+                  {sppg.bankAccountNumber && (
+                    <div>
+                      <div className="text-sm font-medium text-muted-foreground">Nomor Rekening</div>
+                      <div className="text-base font-mono">{sppg.bankAccountNumber}</div>
+                    </div>
+                  )}
+                  {sppg.bankAccountName && (
+                    <div>
+                      <div className="text-sm font-medium text-muted-foreground">Nama Pemilik</div>
+                      <div className="text-base">{sppg.bankAccountName}</div>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {sppg.taxIdNumber && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Informasi Pajak</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div>
+                  <div className="text-sm font-medium text-muted-foreground">NPWP</div>
+                  <div className="text-base font-mono">{sppg.taxIdNumber}</div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+      </Tabs>
+
+      {/* System Info */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm">Informasi Sistem</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+            <div className="flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+              <div>
+                <div className="text-muted-foreground">Dibuat</div>
+                <div>{new Date(sppg.createdAt).toLocaleDateString('id-ID')}</div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+              <div>
+                <div className="text-muted-foreground">Terakhir Diubah</div>
+                <div>{new Date(sppg.updatedAt).toLocaleDateString('id-ID')}</div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Settings className="h-4 w-4 text-muted-foreground" />
+              <div>
+                <div className="text-muted-foreground">Status</div>
+                <div>{getStatusBadge(sppg.status)}</div>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Delete Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Konfirmasi Hapus SPPG</AlertDialogTitle>
+            <AlertDialogDescription>
+              Apakah Anda yakin ingin menghapus SPPG <strong>{sppg.name}</strong>?
+              <br />
+              <br />
+              Tindakan ini tidak dapat dibatalkan. Semua data terkait SPPG akan dihapus.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              {isDeleting ? 'Menghapus...' : 'Hapus SPPG'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Suspend Dialog */}
+      <AlertDialog open={suspendDialogOpen} onOpenChange={setSuspendDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Konfirmasi Penangguhan SPPG</AlertDialogTitle>
+            <AlertDialogDescription>
+              Apakah Anda yakin ingin menangguhkan SPPG <strong>{sppg.name}</strong>?
+              <br />
+              <br />
+              SPPG yang ditangguhkan tidak dapat melakukan operasional hingga diaktifkan kembali.
+              Tindakan ini akan dicatat dalam audit log.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleSuspend}
+              disabled={isSuspending}
+              className="bg-orange-600 hover:bg-orange-700"
+            >
+              {isSuspending ? 'Menangguhkan...' : 'Tangguhkan SPPG'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  )
+}

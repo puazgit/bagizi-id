@@ -86,17 +86,11 @@ export function getFetchOptions(headers?: HeadersInit): RequestInit {
     ? { ...baseHeaders, ...headers }
     : baseHeaders
 
-  // Server-side: Include credentials for cookie forwarding
-  if (typeof window === 'undefined') {
-    return {
-      headers: mergedHeaders,
-      credentials: 'include',
-    }
-  }
-
-  // Client-side: Standard headers
+  // Always include credentials for cookie/session handling
+  // This is essential for authentication in both client and server
   return {
     headers: mergedHeaders,
+    credentials: 'include',
   }
 }
 

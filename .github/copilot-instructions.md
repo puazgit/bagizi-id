@@ -271,6 +271,274 @@ components/
     └── admin/          # Admin feature modules
 ```
 
+### Component-Based Architecture for Complex Pages
+
+**🎯 When to Split Components (The 200-Line Rule)**
+
+**ALWAYS split components when:**
+- ✅ Page file exceeds **200 lines**
+- ✅ Multiple distinct sections/tabs (detail pages, dashboards)
+- ✅ Repeated UI patterns (stat cards, info sections)
+- ✅ Complex forms with multiple steps
+- ✅ Heavy business logic mixed with presentation
+
+**Detail Page Pattern (Recommended)**
+
+```typescript
+// ❌ BAD: Monolithic 900-line page file
+src/app/(admin)/admin/sppg/[id]/page.tsx  // 900 lines - hard to maintain!
+
+// ✅ GOOD: Component-based architecture
+src/features/admin/sppg-management/
+├── components/
+│   ├── detail/                          # Detail page components
+│   │   ├── SppgDetailHeader.tsx         # ~80 lines: Title, actions, badges
+│   │   ├── SppgOverviewTab.tsx          # ~120 lines: Stats & quick info
+│   │   ├── SppgProfileTab.tsx           # ~100 lines: Organization details
+│   │   ├── SppgLocationTab.tsx          # ~150 lines: Address & contacts
+│   │   ├── SppgBudgetTab.tsx            # ~180 lines: Financial details
+│   │   ├── SppgDemoTab.tsx              # ~80 lines: Demo settings (conditional)
+│   │   ├── SppgSystemTab.tsx            # ~60 lines: Audit trail
+│   │   └── index.ts                     # Export barrel
+│   └── SppgForm.tsx                     # Already exists
+└── ...
+
+src/app/(admin)/admin/sppg/[id]/page.tsx  # ~120 lines: Orchestrator only!
+```
+
+**Page File Responsibilities (Orchestrator Pattern)**
+
+```typescript
+// src/app/(admin)/admin/sppg/[id]/page.tsx (~120 lines max)
+'use client'
+
+import { useParams } from 'next/navigation'
+import { useSppg, useDeleteSppg } from '@/features/admin/sppg-management/hooks'
+import {
+  SppgDetailHeader,
+  SppgOverviewTab,
+  SppgProfileTab,
+  SppgLocationTab,
+  SppgBudgetTab,
+  SppgDemoTab,
+  SppgSystemTab,
+} from '@/features/admin/sppg-management/components/detail'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Skeleton } from '@/components/ui/skeleton'
+
+export default function SppgDetailPage() {
+  const params = useParams()
+  const { data: sppg, isLoading, error } = useSppg(params.id as string)
+  const { mutate: deleteSppg } = useDeleteSppg()
+
+  // Loading & error states
+  if (isLoading) return <DetailPageSkeleton />
+  if (error || !sppg) return <ErrorState error={error} />
+
+  // Action handlers
+  const handleDelete = () => deleteSppg(sppg.id, { onSuccess: () => router.push('/admin/sppg') })
+
+  return (
+    <div className="container mx-auto py-6 space-y-6">
+      {/* Header with actions */}
+      <SppgDetailHeader 
+        sppg={sppg} 
+        onDelete={handleDelete}
+        onEdit={() => router.push(`/admin/sppg/${sppg.id}/edit`)}
+      />
+
+      {/* Tabs with components */}
+      <Tabs defaultValue="overview">
+        <TabsList>
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="profile">Profile</TabsTrigger>
+          <TabsTrigger value="location">Location & Contacts</TabsTrigger>
+          <TabsTrigger value="budget">Budget</TabsTrigger>
+          {sppg.isDemoAccount && <TabsTrigger value="demo">Demo Settings</TabsTrigger>}
+          <TabsTrigger value="system">System</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview"><SppgOverviewTab sppg={sppg} /></TabsContent>
+        <TabsContent value="profile"><SppgProfileTab sppg={sppg} /></TabsContent>
+        <TabsContent value="location"><SppgLocationTab sppg={sppg} /></TabsContent>
+        <TabsContent value="budget"><SppgBudgetTab sppg={sppg} /></TabsContent>
+        {sppg.isDemoAccount && (
+          <TabsContent value="demo"><SppgDemoTab sppg={sppg} /></TabsContent>
+        )}
+        <TabsContent value="system"><SppgSystemTab sppg={sppg} /></TabsContent>
+      </Tabs>
+    </div>
+  )
+}
+```
+
+**Component Structure Pattern**
+
+```typescript
+// src/features/admin/sppg-management/components/detail/SppgOverviewTab.tsx
+/**
+ * SPPG Overview Tab Component
+ * Displays key metrics and quick information
+ * 
+ * @component
+ * @example
+ * <SppgOverviewTab sppg={sppgData} />
+ */
+
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import type { SppgDetail } from '@/features/admin/sppg-management/types'
+
+interface SppgOverviewTabProps {
+  sppg: SppgDetail
+}
+
+export function SppgOverviewTab({ sppg }: SppgOverviewTabProps) {
+  return (
+    <div className="grid gap-6">
+      {/* Status Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Status & Organization</CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {/* Only use fields that exist in Prisma schema! */}
+          <StatCard 
+            label="Status" 
+            value={<StatusBadge status={sppg.status} />} 
+            icon={CheckCircle2}
+          />
+          <StatCard 
+            label="Organization Type" 
+            value={getOrganizationTypeLabel(sppg.organizationType)} 
+            icon={Building2}
+          />
+          <StatCard 
+            label="Target Recipients" 
+            value={sppg.targetRecipients} 
+            icon={Users}
+          />
+          <StatCard 
+            label="Monthly Budget" 
+            value={formatCurrency(sppg.monthlyBudget)} 
+            icon={DollarSign}
+          />
+        </CardContent>
+      </Card>
+
+      {/* Other sections... */}
+    </div>
+  )
+}
+
+// Helper component
+function StatCard({ label, value, icon: Icon }) {
+  return (
+    <div className="flex items-center gap-3">
+      <Icon className="h-5 w-5 text-muted-foreground" />
+      <div>
+        <div className="text-sm text-muted-foreground">{label}</div>
+        <div className="text-lg font-semibold">{value}</div>
+      </div>
+    </div>
+  )
+}
+```
+
+**Component Naming Conventions**
+
+```typescript
+// Pattern: {Entity}{Section}{ComponentType}.tsx
+SppgDetailHeader.tsx       // Header section
+SppgOverviewTab.tsx        // Tab content
+SppgBudgetCard.tsx         // Specific card component
+SppgStatusBadge.tsx        // Reusable badge
+
+// NOT like this:
+SppgDetail.tsx             // Too vague
+Detail.tsx                 // Missing context
+Overview.tsx               // Missing entity
+```
+
+**Benefits of Component-Based Architecture**
+
+```typescript
+const benefits = {
+  maintainability: {
+    smallerFiles: '80-180 lines vs 900 lines',
+    focusedLogic: 'One responsibility per component',
+    easierBugFixes: 'Isolated changes, less side effects'
+  },
+  
+  reusability: {
+    sharedComponents: 'StatCard, InfoSection reused across tabs',
+    consistentUI: 'Same patterns everywhere',
+    lessCode: 'DRY principle applied'
+  },
+  
+  testability: {
+    unitTests: 'Test components in isolation',
+    mockingEasy: 'Mock only what you need',
+    fasterTests: 'Smaller test suites'
+  },
+  
+  collaboration: {
+    parallelWork: 'Multiple devs on different tabs',
+    clearOwnership: 'Each file has clear purpose',
+    codeReview: 'Smaller, focused PRs'
+  },
+  
+  performance: {
+    lazyLoading: 'Load tab components on demand',
+    memoization: 'React.memo on individual components',
+    smallerBundles: 'Code splitting per component'
+  }
+}
+```
+
+**When NOT to Split Components**
+
+```typescript
+// ✅ Keep simple pages as single file (<150 lines)
+src/app/(admin)/admin/sppg/new/page.tsx  // 88 lines - OK!
+
+// ✅ Simple forms (<200 lines)
+src/features/admin/simple-form/SimpleForm.tsx  // 150 lines - OK!
+
+// ❌ DON'T over-engineer
+// Bad: Creating components for every 20 lines
+src/features/admin/sppg/components/
+├── SppgTitleComponent.tsx      // 15 lines - TOO SMALL!
+├── SppgDescriptionText.tsx     // 20 lines - TOO SMALL!
+└── SppgCodeDisplay.tsx         // 18 lines - TOO SMALL!
+```
+
+**Migration Strategy (Refactor Existing Pages)**
+
+```typescript
+// Step 1: Identify sections in monolithic file
+// - Header (title, actions, badges)
+// - Tab 1: Overview
+// - Tab 2: Profile
+// - Tab 3: Location
+// - etc.
+
+// Step 2: Create component directory
+mkdir -p src/features/{feature}/components/detail
+
+// Step 3: Extract components one by one
+// Start with simplest (SystemTab) → most complex (BudgetTab)
+
+// Step 4: Replace inline code with component imports
+// Old: 200 lines of inline JSX
+// New: <SppgOverviewTab sppg={sppg} />
+
+// Step 5: Test after each extraction
+// Ensure no regressions
+
+// Step 6: Clean up imports and types
+```
+
 ### Service Layer Pattern
 ```typescript
 // src/domains/menu/services/menuService.ts

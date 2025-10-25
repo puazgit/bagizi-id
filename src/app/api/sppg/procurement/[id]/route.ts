@@ -3,45 +3,54 @@
  * @version Next.js 15.5.4 / Prisma 6.17.1 / Enterprise-grade
  * @author Bagizi-ID Development Team
  * @see {@link /docs/copilot-instructions.md} Enterprise Development Guidelines
+ * 
+ * RBAC Integration:
+ * - GET: Protected by withSppgAuth
+ * - PUT: Protected by withSppgAuth
+ * - DELETE: Protected by withSppgAuth
+ * - Automatic audit logging
+ * - Permission: READ, PROCUREMENT_MANAGE
  */
 
-import { NextRequest } from 'next/server'
-import { auth } from '@/auth'
+import { NextRequest, NextResponse } from 'next/server'
+import { withSppgAuth } from '@/lib/api-middleware'
 import { db } from '@/lib/prisma'
+import { hasPermission } from '@/lib/permissions'
+import { UserRole } from '@prisma/client'
 import { procurementUpdateSchema } from '@/features/sppg/procurement/schemas'
 
 // ================================ GET /api/sppg/procurement/[id] ================================
 
+/**
+ * GET /api/sppg/procurement/[id]
+ * @rbac Protected by withSppgAuth
+ * @audit Automatic logging
+ * @security Requires READ permission
+ * @param {string} id - Procurement ID
+ * @returns {Promise<Response>} Procurement details
+ */
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    const { id } = await params
-    
-    // 1. Authentication Check
-    const session = await auth()
-    if (!session?.user) {
-      return Response.json({ 
-        success: false, 
-        error: 'Unauthorized - Login required' 
-      }, { status: 401 })
-    }
+  return withSppgAuth(request, async (session) => {
+    try {
+      // Permission Check
+      if (!session.user.userRole || !hasPermission(session.user.userRole as UserRole, 'READ')) {
+        return NextResponse.json({ 
+          success: false, 
+          error: 'Insufficient permissions' 
+        }, { status: 403 })
+      }
 
-    // 2. SPPG Access Check (Multi-tenancy - CRITICAL!)
-    if (!session.user.sppgId) {
-      return Response.json({ 
-        success: false, 
-        error: 'SPPG access required' 
-      }, { status: 403 })
-    }
+      const { id } = await params
 
-    // 3. Fetch procurement with multi-tenant check
-    const procurement = await db.procurement.findFirst({
-      where: {
-        id,
-        sppgId: session.user.sppgId // CRITICAL: Ensure procurement belongs to user's SPPG
-      },
+      // Fetch procurement with multi-tenant check
+      const procurement = await db.procurement.findFirst({
+        where: {
+          id,
+          sppgId: session.user.sppgId! // CRITICAL: Ensure procurement belongs to user's SPPG
+        },
       include: {
         sppg: {
           select: {
@@ -92,7 +101,7 @@ export async function GET(
     })
 
     if (!procurement) {
-      return Response.json({ 
+      return NextResponse.json({ 
         success: false, 
         error: 'Procurement not found or access denied' 
       }, { status: 404 })
@@ -106,7 +115,7 @@ export async function GET(
     const rejectedItems = procurement.items.filter(item => !item.isAccepted).length
 
     // 5. Success response
-    return Response.json({
+    return NextResponse.json({
       success: true,
       data: {
         ...procurement,
@@ -114,65 +123,65 @@ export async function GET(
         totalQuantity,
         receivedItems,
         acceptedItems,
-        rejectedItems
+        rejectedItems,
       }
     })
 
-  } catch (error) {
-    console.error('GET /api/sppg/procurement/[id] error:', error)
-    
-    return Response.json({ 
-      success: false, 
-      error: 'Failed to fetch procurement',
-      details: process.env.NODE_ENV === 'development' ? error : undefined
-    }, { status: 500 })
-  }
+    } catch (error) {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Failed to fetch procurement',
+        details: process.env.NODE_ENV === 'development' ? error : undefined
+      }, { status: 500 })
+    }
+  })
 }
 
 // ================================ PUT /api/sppg/procurement/[id] ================================
 
+/**
+ * PUT /api/sppg/procurement/[id]
+ * @rbac Protected by withSppgAuth
+ * @audit Automatic logging
+ * @security Requires PROCUREMENT_MANAGE permission
+ * @param {string} id - Procurement ID
+ * @body {ProcurementUpdateInput} Update data
+ * @returns {Promise<Response>} Updated procurement
+ */
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    const { id } = await params
-    
-    // 1. Authentication Check
-    const session = await auth()
-    if (!session?.user) {
-      return Response.json({ 
-        success: false, 
-        error: 'Unauthorized - Login required' 
-      }, { status: 401 })
-    }
-
-    // 2. SPPG Access Check (Multi-tenancy - CRITICAL!)
-    if (!session.user.sppgId) {
-      return Response.json({ 
-        success: false, 
-        error: 'SPPG access required' 
-      }, { status: 403 })
-    }
-
-    // 3. Verify procurement exists and belongs to SPPG
-    const existingProcurement = await db.procurement.findFirst({
-      where: {
-        id,
-        sppgId: session.user.sppgId
+  return withSppgAuth(request, async (session) => {
+    try {
+      // Permission Check
+      if (!session.user.userRole || !hasPermission(session.user.userRole as UserRole, 'PROCUREMENT_MANAGE')) {
+        return NextResponse.json({ 
+          success: false, 
+          error: 'Insufficient permissions' 
+        }, { status: 403 })
       }
-    })
 
-    if (!existingProcurement) {
-      return Response.json({ 
-        success: false, 
-        error: 'Procurement not found or access denied' 
-      }, { status: 404 })
-    }
+      const { id} = await params
 
-    // 4. Check if procurement can be edited
+      // Verify procurement exists and belongs to SPPG
+      const existingProcurement = await db.procurement.findFirst({
+        where: {
+          id,
+          sppgId: session.user.sppgId!
+        }
+      })
+
+      if (!existingProcurement) {
+        return NextResponse.json({ 
+          success: false, 
+          error: 'Procurement not found or access denied' 
+        }, { status: 404 })
+      }
+
+      // Check if procurement can be edited
     if (existingProcurement.status === 'COMPLETED' || existingProcurement.status === 'CANCELLED') {
-      return Response.json({ 
+      return NextResponse.json({ 
         success: false, 
         error: `Cannot edit ${existingProcurement.status.toLowerCase()} procurement` 
       }, { status: 403 })
@@ -187,7 +196,7 @@ export async function PUT(
     ]
     
     if (!session.user.userRole || !allowedRoles.includes(session.user.userRole)) {
-      return Response.json({ 
+      return NextResponse.json({ 
         success: false, 
         error: 'Insufficient permissions' 
       }, { status: 403 })
@@ -197,19 +206,26 @@ export async function PUT(
     const body = await request.json()
     const validated = procurementUpdateSchema.parse(body)
 
-    // 7. Verify supplier if changed
+    // Verify supplier if changed
     if (validated.supplierId && validated.supplierId !== existingProcurement.supplierId) {
+      const supplierWhere: {
+        id: string
+        sppgId: string
+        isActive: boolean
+        isBlacklisted: boolean
+      } = {
+        id: validated.supplierId,
+        sppgId: session.user.sppgId!,
+        isActive: true,
+        isBlacklisted: false
+      }
+
       const supplier = await db.supplier.findFirst({
-        where: {
-          id: validated.supplierId,
-          sppgId: session.user.sppgId,
-          isActive: true,
-          isBlacklisted: false
-        }
+        where: supplierWhere
       })
 
       if (!supplier) {
-        return Response.json({ 
+        return NextResponse.json({ 
           success: false, 
           error: 'Supplier not found, inactive, or blacklisted' 
         }, { status: 404 })
@@ -259,90 +275,76 @@ export async function PUT(
     })
 
     // 9. Success response
-    return Response.json({
+    return NextResponse.json({
       success: true,
       data: updatedProcurement,
       message: 'Procurement updated successfully'
     })
 
-  } catch (error) {
-    console.error('PUT /api/sppg/procurement/[id] error:', error)
-    
-    // Validation error
-    if (error instanceof Error && error.name === 'ZodError') {
-      return Response.json({ 
-        success: false, 
-        error: 'Validation failed',
-        details: error 
-      }, { status: 400 })
-    }
+    } catch (error) {
+      // Validation error
+      if (error instanceof Error && error.name === 'ZodError') {
+        return NextResponse.json({ 
+          success: false, 
+          error: 'Validation failed',
+          details: error 
+        }, { status: 400 })
+      }
 
-    // Internal server error
-    return Response.json({ 
-      success: false, 
-      error: 'Failed to update procurement',
-      details: process.env.NODE_ENV === 'development' ? error : undefined
-    }, { status: 500 })
-  }
+      // Internal server error
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Failed to update procurement',
+        details: process.env.NODE_ENV === 'development' ? error : undefined
+      }, { status: 500 })
+    }
+  })
 }
 
 // ================================ DELETE /api/sppg/procurement/[id] ================================
 
+/**
+ * DELETE /api/sppg/procurement/[id]
+ * @rbac Protected by withSppgAuth
+ * @audit Automatic logging
+ * @security Requires PROCUREMENT_MANAGE permission
+ * @param {string} id - Procurement ID
+ * @returns {Promise<Response>} Success confirmation
+ */
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    const { id } = await params
-    
-    // 1. Authentication Check
-    const session = await auth()
-    if (!session?.user) {
-      return Response.json({ 
-        success: false, 
-        error: 'Unauthorized - Login required' 
-      }, { status: 401 })
-    }
-
-    // 2. SPPG Access Check (Multi-tenancy - CRITICAL!)
-    if (!session.user.sppgId) {
-      return Response.json({ 
-        success: false, 
-        error: 'SPPG access required' 
-      }, { status: 403 })
-    }
-
-    // 3. Role Check - Only admins can delete
-    const allowedRoles = [
-      'SPPG_KEPALA',
-      'SPPG_ADMIN'
-    ]
-    
-    if (!session.user.userRole || !allowedRoles.includes(session.user.userRole)) {
-      return Response.json({ 
-        success: false, 
-        error: 'Insufficient permissions - Only admins can delete procurements' 
-      }, { status: 403 })
-    }
-
-    // 4. Verify procurement exists and belongs to SPPG
-    const procurement = await db.procurement.findFirst({
-      where: {
-        id,
-        sppgId: session.user.sppgId
+  return withSppgAuth(request, async (session) => {
+    try {
+      // Permission Check
+      if (!session.user.userRole || !hasPermission(session.user.userRole as UserRole, 'PROCUREMENT_MANAGE')) {
+        return NextResponse.json({ 
+          success: false, 
+          error: 'Insufficient permissions' 
+        }, { status: 403 })
       }
-    })
 
-    if (!procurement) {
-      return Response.json({ 
-        success: false, 
-        error: 'Procurement not found or access denied' 
-      }, { status: 404 })
-    }
+      const { id } = await params
+
+      // Verify procurement exists and belongs to SPPG
+      const procurement = await db.procurement.findFirst({
+        where: {
+          id,
+          sppgId: session.user.sppgId!
+        }
+      })
+
+      if (!procurement) {
+        return NextResponse.json({ 
+          success: false, 
+          error: 'Procurement not found or access denied' 
+        }, { status: 404 })
+      }
 
     // 5. Check if procurement can be deleted
     if (procurement.status === 'COMPLETED' || procurement.status === 'FULLY_RECEIVED') {
-      return Response.json({ 
+      return NextResponse.json({ 
         success: false, 
         error: 'Cannot delete completed or received procurement. Cancel it instead.' 
       }, { status: 403 })
@@ -375,20 +377,19 @@ export async function DELETE(
       })
     })
 
-    // 7. Success response
-    return Response.json({
-      success: true,
-      message: 'Procurement deleted successfully'
-    })
+      // Success response
+      return NextResponse.json({
+        success: true,
+        message: 'Procurement deleted successfully'
+      })
 
-  } catch (error) {
-    console.error('DELETE /api/sppg/procurement/[id] error:', error)
-    
-    // Internal server error
-    return Response.json({ 
-      success: false, 
-      error: 'Failed to delete procurement',
-      details: process.env.NODE_ENV === 'development' ? error : undefined
-    }, { status: 500 })
-  }
+    } catch (error) {
+      // Internal server error
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Failed to delete procurement',
+        details: process.env.NODE_ENV === 'development' ? error : undefined
+      }, { status: 500 })
+    }
+  })
 }

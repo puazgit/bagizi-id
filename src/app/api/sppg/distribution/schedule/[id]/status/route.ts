@@ -5,15 +5,16 @@
  * @author Bagizi-ID Development Team
  */
 
-import { NextRequest } from 'next/server'
-import { auth } from '@/auth'
+import { NextRequest, NextResponse } from 'next/server'
+import { withSppgAuth } from '@/lib/api-middleware'
+import { hasPermission } from '@/lib/permissions'
 import { db } from '@/lib/prisma'
-import { checkSppgAccess } from '@/lib/permissions'
 import { updateScheduleStatusSchema } from '@/features/sppg/distribution/schedule/schemas'
 import { 
   ScheduleStatus, 
   SCHEDULE_STATUS_TRANSITIONS 
 } from '@/features/sppg/distribution/schedule/types'
+import { UserRole } from '@prisma/client'
 
 /**
  * PATCH /api/sppg/distribution/schedule/[id]/status
@@ -23,36 +24,23 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    const { id } = await params
+  return withSppgAuth(request, async (session) => {
+    try {
+      const { id } = await params
 
-    // 1. Authentication Check
-    const session = await auth()
-    if (!session?.user) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+      // Permission Check
+      if (!hasPermission(session.user.userRole as UserRole, 'DISTRIBUTION_MANAGE')) {
+        return NextResponse.json(
+          { success: false, error: 'Insufficient permissions' },
+          { status: 403 }
+        )
+      }
 
-    // 2. SPPG Access Check
-    if (!session.user.sppgId) {
-      return Response.json(
-        { error: 'SPPG access required' },
-        { status: 403 }
-      )
-    }
-    
-    const sppg = await checkSppgAccess(session.user.sppgId)
-    if (!sppg) {
-      return Response.json(
-        { error: 'SPPG not found or access denied' },
-        { status: 403 }
-      )
-    }
-
-    // 3. Check if schedule exists and belongs to SPPG
+      // Check if schedule exists and belongs to SPPG
     const schedule = await db.distributionSchedule.findUnique({
       where: {
         id,
-        sppgId: session.user.sppgId,
+        sppgId: session.user.sppgId!,
       },
       include: {
         vehicleAssignments: true,
@@ -61,7 +49,7 @@ export async function PATCH(
     })
 
     if (!schedule) {
-      return Response.json(
+      return NextResponse.json(
         { error: 'Schedule not found' },
         { status: 404 }
       )
@@ -72,7 +60,7 @@ export async function PATCH(
     const validated = updateScheduleStatusSchema.safeParse(body)
 
     if (!validated.success) {
-      return Response.json(
+      return NextResponse.json(
         {
           error: 'Validation failed',
           details: validated.error.issues,
@@ -88,7 +76,7 @@ export async function PATCH(
     const allowedTransitions = SCHEDULE_STATUS_TRANSITIONS[currentStatus]
 
     if (!allowedTransitions.includes(newStatus as ScheduleStatus)) {
-      return Response.json(
+      return NextResponse.json(
         {
           error: 'Invalid status transition',
           details: `Tidak dapat mengubah status dari ${currentStatus} ke ${newStatus}`,
@@ -157,7 +145,7 @@ export async function PATCH(
     }
 
     if (validationErrors.length > 0) {
-      return Response.json(
+      return NextResponse.json(
         {
           error: 'Status validation failed',
           details: validationErrors,
@@ -210,7 +198,7 @@ export async function PATCH(
     await db.auditLog.create({
       data: {
         userId: session.user.id,
-        sppgId: session.user.sppgId,
+        sppgId: session.user.sppgId!,
         action: 'UPDATE',
         entityType: 'DistributionSchedule',
         entityId: id,
@@ -227,7 +215,7 @@ export async function PATCH(
       },
     })
 
-    return Response.json({
+    return NextResponse.json({
       success: true,
       data: updatedSchedule,
       message: `Status berhasil diubah ke ${newStatus}`,
@@ -237,12 +225,14 @@ export async function PATCH(
       'PATCH /api/sppg/distribution/schedule/[id]/status error:',
       error
     )
-    return Response.json(
+    return NextResponse.json(
       {
+        success: false,
         error: 'Failed to update status',
         details: process.env.NODE_ENV === 'development' ? error : undefined,
       },
       { status: 500 }
     )
   }
+  })
 }

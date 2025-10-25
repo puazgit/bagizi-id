@@ -3,62 +3,68 @@
  * @version Next.js 15.5.4 / Prisma 6.17.1 / Enterprise-grade
  * @author Bagizi-ID Development Team
  * @see {@link /docs/copilot-instructions.md} Enterprise Development Guidelines
+ * 
+ * RBAC Integration:
+ * - GET: Protected by withSppgAuth
+ * - Automatic audit logging
+ * - Permission: READ
  */
 
-import { NextRequest } from 'next/server'
-import { auth } from '@/auth'
+import { NextRequest, NextResponse } from 'next/server'
+import { withSppgAuth } from '@/lib/api-middleware'
 import { db } from '@/lib/prisma'
-import { ProcurementStatus } from '@prisma/client'
+import { hasPermission } from '@/lib/permissions'
+import { UserRole, ProcurementStatus } from '@prisma/client'
 
 // ================================ GET /api/sppg/procurement/statistics ================================
 
+/**
+ * GET /api/sppg/procurement/statistics
+ * @rbac Protected by withSppgAuth
+ * @audit Automatic logging
+ * @security Requires READ permission
+ * @query {string} period - Time period filter (current_year, last_12_months, etc.)
+ * @returns {Promise<Response>} Procurement statistics and analytics
+ */
 export async function GET(request: NextRequest) {
-  try {
-    // 1. Authentication Check
-    const session = await auth()
-    if (!session?.user) {
-      return Response.json({ 
-        success: false, 
-        error: 'Unauthorized - Login required' 
-      }, { status: 401 })
-    }
+  return withSppgAuth(request, async (session) => {
+    try {
+      // Permission Check
+      if (!session.user.userRole || !hasPermission(session.user.userRole as UserRole, 'READ')) {
+        return NextResponse.json({ 
+          success: false, 
+          error: 'Insufficient permissions' 
+        }, { status: 403 })
+      }
 
-    // 2. SPPG Access Check (Multi-tenancy - CRITICAL!)
-    if (!session.user.sppgId) {
-      return Response.json({ 
-        success: false, 
-        error: 'SPPG access required' 
-      }, { status: 403 })
-    }
+      // Parse query parameters for date filtering
+      const { searchParams } = new URL(request.url)
+      const period = searchParams.get('period') || 'current_year' // current_year, last_12_months, last_6_months, last_3_months, current_month
 
-    // 3. Parse query parameters for date filtering
-    const { searchParams } = new URL(request.url)
-    const period = searchParams.get('period') || 'current_year' // current_year, last_12_months, last_6_months, last_3_months, current_month
+      // Calculate date range
+      const now = new Date()
+      let startDate: Date
+      
+      switch (period) {
+        case 'current_month':
+          startDate = new Date(now.getFullYear(), now.getMonth(), 1)
+          break
+        case 'last_3_months':
+          startDate = new Date(now.setMonth(now.getMonth() - 3))
+          break
+        case 'last_6_months':
+          startDate = new Date(now.setMonth(now.getMonth() - 6))
+          break
+        case 'last_12_months':
+          startDate = new Date(now.setMonth(now.getMonth() - 12))
+          break
+        case 'current_year':
+        default:
+          startDate = new Date(now.getFullYear(), 0, 1)
+          break
+      }
 
-    // Calculate date range
-    const now = new Date()
-    let startDate: Date
-    
-    switch (period) {
-      case 'current_month':
-        startDate = new Date(now.getFullYear(), now.getMonth(), 1)
-        break
-      case 'last_3_months':
-        startDate = new Date(now.setMonth(now.getMonth() - 3))
-        break
-      case 'last_6_months':
-        startDate = new Date(now.setMonth(now.getMonth() - 6))
-        break
-      case 'last_12_months':
-        startDate = new Date(now.setMonth(now.getMonth() - 12))
-        break
-      case 'current_year':
-      default:
-        startDate = new Date(now.getFullYear(), 0, 1)
-        break
-    }
-
-    // 4. Fetch data for statistics (multi-tenant filtered)
+      // Fetch data for statistics (multi-tenant filtered)
     const [
       procurements,
       procurementPlans,
@@ -68,7 +74,7 @@ export async function GET(request: NextRequest) {
       // Get all procurements
       db.procurement.findMany({
         where: {
-          sppgId: session.user.sppgId,
+          sppgId: session.user.sppgId!,
           procurementDate: {
             gte: startDate
           }
@@ -99,11 +105,10 @@ export async function GET(request: NextRequest) {
           }
         }
       }),
-      
       // Get procurement plans
       db.procurementPlan.findMany({
         where: {
-          sppgId: session.user.sppgId,
+          sppgId: session.user.sppgId!,
           createdAt: {
             gte: startDate
           }
@@ -113,7 +118,7 @@ export async function GET(request: NextRequest) {
       // Get all suppliers
       db.supplier.findMany({
         where: {
-          sppgId: session.user.sppgId,
+          sppgId: session.user.sppgId!,
           isActive: true
         }
       }),
@@ -121,7 +126,7 @@ export async function GET(request: NextRequest) {
       // Get total inventory items count
       db.inventoryItem.count({
         where: {
-          sppgId: session.user.sppgId
+          sppgId: session.user.sppgId!
         }
       })
     ])
@@ -331,7 +336,7 @@ export async function GET(request: NextRequest) {
       : 0
 
     // 6. Success response
-    return Response.json({
+    return NextResponse.json({
       success: true,
       data: {
         overview,
@@ -354,14 +359,12 @@ export async function GET(request: NextRequest) {
         generatedAt: new Date().toISOString()
       }
     })
-
   } catch (error) {
-    console.error('GET /api/sppg/procurement/statistics error:', error)
-    
-    return Response.json({ 
-      success: false, 
-      error: 'Failed to fetch procurement statistics',
-      details: process.env.NODE_ENV === 'development' ? error : undefined
-    }, { status: 500 })
-  }
+    return NextResponse.json({ 
+        success: false, 
+        error: 'Failed to fetch procurement statistics',
+        details: process.env.NODE_ENV === 'development' ? error : undefined
+      }, { status: 500 })
+    }
+  })
 }

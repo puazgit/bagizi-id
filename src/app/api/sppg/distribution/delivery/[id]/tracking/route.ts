@@ -9,10 +9,12 @@
  * @security Multi-tenant with ownership check
  */
 
-import { NextRequest } from 'next/server'
-import { auth } from '@/auth'
+import { NextRequest, NextResponse } from 'next/server'
+import { withSppgAuth } from '@/lib/api-middleware'
+import { hasPermission } from '@/lib/permissions'
 import { db } from '@/lib/prisma'
 import { trackLocationSchema } from '@/features/sppg/distribution/delivery/schemas'
+import { UserRole } from '@prisma/client'
 
 /**
  * GET /api/sppg/distribution/delivery/:id/tracking
@@ -22,46 +24,43 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    // 1. Authentication check
-    const session = await auth()
-    if (!session?.user) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+  return withSppgAuth(request, async (session) => {
+    try {
+      const { id } = await params
 
-    // 2. Multi-tenant check
-    if (!session.user.sppgId) {
-      return Response.json({ error: 'SPPG access required' }, { status: 403 })
-    }
+      // 2. Permission Check
+      if (!hasPermission(session.user.userRole as UserRole, 'DISTRIBUTION_MANAGE')) {
+        return NextResponse.json(
+          { success: false, error: 'Insufficient permissions' },
+          { status: 403 }
+        )
+      }
 
-    // 3. Get delivery ID from params
-    const { id } = await params
-
-    // 4. Verify ownership
+      // 3. Verify ownership
     const existing = await db.distributionDelivery.findFirst({
       where: {
         id,
         schedule: {
-          sppgId: session.user.sppgId, // CRITICAL: Multi-tenant security
+          sppgId: session.user.sppgId!, // CRITICAL: Multi-tenant security
         },
       },
       select: { id: true },
     })
 
     if (!existing) {
-      return Response.json(
+      return NextResponse.json(
         { error: 'Pengiriman tidak ditemukan atau akses ditolak' },
         { status: 404 }
       )
     }
 
-    // 5. Get tracking history
+    // 4. Get tracking history
     const trackingPoints = await db.deliveryTracking.findMany({
       where: { deliveryId: id },
       orderBy: { recordedAt: 'asc' },
     })
 
-    // 6. Calculate statistics
+    // 5. Calculate statistics
     const totalPoints = trackingPoints.length
     const latestPoint = trackingPoints[trackingPoints.length - 1] || null
     
@@ -91,7 +90,7 @@ export async function GET(
       totalDistance += R * c
     }
 
-    return Response.json({
+    return NextResponse.json({
       success: true,
       data: trackingPoints,
       statistics: {
@@ -109,14 +108,16 @@ export async function GET(
     })
   } catch (error) {
     console.error('GET /api/sppg/distribution/delivery/[id]/tracking error:', error)
-    return Response.json(
+    return NextResponse.json(
       {
+        success: false,
         error: 'Gagal mengambil riwayat tracking',
         details: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined,
       },
       { status: 500 }
     )
   }
+  })
 }
 
 /**
@@ -127,27 +128,24 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    // 1. Authentication check
-    const session = await auth()
-    if (!session?.user) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+  return withSppgAuth(request, async (session) => {
+    try {
+      const { id } = await params
 
-    // 2. Multi-tenant check
-    if (!session.user.sppgId) {
-      return Response.json({ error: 'SPPG access required' }, { status: 403 })
-    }
+      // 2. Permission Check
+      if (!hasPermission(session.user.userRole as UserRole, 'DISTRIBUTION_MANAGE')) {
+        return NextResponse.json(
+          { success: false, error: 'Insufficient permissions' },
+          { status: 403 }
+        )
+      }
 
-    // 3. Get delivery ID from params
-    const { id } = await params
-
-    // 4. Verify ownership and status
+      // 3. Verify ownership and status
     const existing = await db.distributionDelivery.findFirst({
       where: {
         id,
         schedule: {
-          sppgId: session.user.sppgId, // CRITICAL: Multi-tenant security
+          sppgId: session.user.sppgId!, // CRITICAL: Multi-tenant security
         },
       },
       select: { 
@@ -158,15 +156,15 @@ export async function POST(
     })
 
     if (!existing) {
-      return Response.json(
+      return NextResponse.json(
         { error: 'Pengiriman tidak ditemukan atau akses ditolak' },
         { status: 404 }
       )
     }
 
-    // 5. Check if delivery is in transit
+    // 4. Check if delivery is in transit
     if (existing.status !== 'DEPARTED' && existing.status !== 'DELIVERED') {
-      return Response.json(
+      return NextResponse.json(
         {
           error: 'Tracking hanya tersedia untuk pengiriman yang sedang berlangsung',
           details: `Status saat ini: ${existing.status}`,
@@ -180,7 +178,7 @@ export async function POST(
     const validated = trackLocationSchema.safeParse(body)
 
     if (!validated.success) {
-      return Response.json(
+      return NextResponse.json(
         {
           error: 'Data lokasi tidak valid',
           details: validated.error.issues,
@@ -191,7 +189,7 @@ export async function POST(
 
     const { latitude, longitude, accuracy, status, notes } = validated.data
 
-    // 7. Create tracking point
+    // 6. Create tracking point
     const trackingPoint = await db.deliveryTracking.create({
       data: {
         deliveryId: id,
@@ -203,7 +201,7 @@ export async function POST(
       },
     })
 
-    // 8. Update delivery current location and route trail
+    // 7. Update delivery current location and route trail
     const currentLocation = `${latitude},${longitude}`
     const updatedRoute = [...(existing.routeTrackingPoints || []), currentLocation]
 
@@ -216,19 +214,21 @@ export async function POST(
       },
     })
 
-    return Response.json({
+    return NextResponse.json({
       success: true,
       data: trackingPoint,
       message: 'Lokasi berhasil dilacak',
     })
   } catch (error) {
     console.error('POST /api/sppg/distribution/delivery/[id]/tracking error:', error)
-    return Response.json(
+    return NextResponse.json(
       {
+        success: false,
         error: 'Gagal melacak lokasi',
         details: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined,
       },
       { status: 500 }
     )
   }
+  })
 }

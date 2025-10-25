@@ -3,10 +3,15 @@
  * @version Next.js 15.5.4 / Prisma 6.17.1 / Enterprise-grade
  * @author Bagizi-ID Development Team
  * @see {@link /docs/copilot-instructions.md} Enterprise Development Guidelines
+ * 
+ * RBAC Integration:
+ * - GET/POST: Protected by withSppgAuth
+ * - Automatic audit logging
+ * - Multi-tenant: Supplier ownership verified
  */
 
-import { NextRequest } from 'next/server'
-import { auth } from '@/auth'
+import { NextRequest, NextResponse } from 'next/server'
+import { withSppgAuth } from '@/lib/api-middleware'
 import { db } from '@/lib/prisma'
 import { 
   supplierCreateSchema, 
@@ -15,26 +20,14 @@ import {
 
 // ================================ GET /api/sppg/suppliers ================================
 
+/**
+ * @rbac Protected by withSppgAuth
+ * @audit Automatic logging
+ */
 export async function GET(request: NextRequest) {
-  try {
-    // 1. Authentication Check
-    const session = await auth()
-    if (!session?.user) {
-      return Response.json({ 
-        success: false, 
-        error: 'Unauthorized - Login required' 
-      }, { status: 401 })
-    }
-
-    // 2. SPPG Access Check (Multi-tenancy - CRITICAL!)
-    if (!session.user.sppgId) {
-      return Response.json({ 
-        success: false, 
-        error: 'SPPG access required' 
-      }, { status: 403 })
-    }
-
-    // 3. Parse and validate query parameters
+  return withSppgAuth(request, async (session) => {
+    try {
+      // Parse and validate query parameters
     const url = new URL(request.url)
     const queryParams = Object.fromEntries(url.searchParams)
     
@@ -59,7 +52,7 @@ export async function GET(request: NextRequest) {
     // 4. Build database query with multi-tenant filtering
     const where = {
       // Multi-tenant: Only get suppliers from user's SPPG
-      sppgId: session.user.sppgId,
+      sppgId: session.user.sppgId!,
       
       // Apply filters
       ...(filters.search && {
@@ -80,7 +73,7 @@ export async function GET(request: NextRequest) {
       ...(filters.minRating && { overallRating: { gte: filters.minRating } }),
       ...(filters.partnershipLevel && { partnershipLevel: { in: filters.partnershipLevel } }),
       ...(filters.complianceStatus && { complianceStatus: { in: filters.complianceStatus } })
-    } as const
+    }
 
     // 5. Execute queries with pagination
     const [suppliers, total] = await Promise.all([
@@ -150,7 +143,7 @@ export async function GET(request: NextRequest) {
     })
 
     // 7. Success response with pagination
-    return Response.json({
+    return NextResponse.json({
       success: true,
       data: transformedSuppliers,
       pagination: {
@@ -166,7 +159,7 @@ export async function GET(request: NextRequest) {
     
     // Validation error
     if (error instanceof Error && error.name === 'ZodError') {
-      return Response.json({ 
+      return NextResponse.json({ 
         success: false, 
         error: 'Invalid query parameters',
         details: error 
@@ -174,44 +167,33 @@ export async function GET(request: NextRequest) {
     }
 
     // Internal server error
-    return Response.json({ 
-      success: false, 
-      error: 'Failed to fetch suppliers',
-      details: process.env.NODE_ENV === 'development' ? error : undefined
-    }, { status: 500 })
-  }
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Failed to fetch suppliers',
+        details: process.env.NODE_ENV === 'development' ? error : undefined
+      }, { status: 500 })
+    }
+  })
 }
 
 // ================================ POST /api/sppg/suppliers ================================
 
+/**
+ * @rbac Protected by withSppgAuth
+ * @audit Automatic logging
+ */
 export async function POST(request: NextRequest) {
-  try {
-    // 1. Authentication Check
-    const session = await auth()
-    if (!session?.user) {
-      return Response.json({ 
-        success: false, 
-        error: 'Unauthorized - Login required' 
-      }, { status: 401 })
-    }
-
-    // 2. SPPG Access Check (Multi-tenancy - CRITICAL!)
-    if (!session.user.sppgId) {
-      return Response.json({ 
-        success: false, 
-        error: 'SPPG access required' 
-      }, { status: 403 })
-    }
-
-    // 3. Role Check - Only certain roles can create suppliers
-    const allowedRoles = [
-      'SPPG_KEPALA',
-      'SPPG_ADMIN',
+  return withSppgAuth(request, async (session) => {
+    try {
+      // Role Check - Only certain roles can create suppliers
+      const allowedRoles = [
+        'SPPG_KEPALA',
+        'SPPG_ADMIN',
       'SPPG_AKUNTAN'
     ]
     
     if (!session.user.userRole || !allowedRoles.includes(session.user.userRole)) {
-      return Response.json({ 
+      return NextResponse.json({ 
         success: false, 
         error: 'Insufficient permissions - Only managers can create suppliers' 
       }, { status: 403 })
@@ -224,7 +206,7 @@ export async function POST(request: NextRequest) {
     // 5. Generate unique supplier code
     const count = await db.supplier.count({
       where: {
-        sppgId: session.user.sppgId
+        sppgId: session.user.sppgId!
       }
     })
 
@@ -233,7 +215,7 @@ export async function POST(request: NextRequest) {
     // 6. Check for duplicate supplier (by name or phone)
     const existingSupplier = await db.supplier.findFirst({
       where: {
-        sppgId: session.user.sppgId,
+        sppgId: session.user.sppgId!,
         OR: [
           { supplierName: validated.supplierName },
           { phone: validated.phone }
@@ -242,7 +224,7 @@ export async function POST(request: NextRequest) {
     })
 
     if (existingSupplier) {
-      return Response.json({ 
+      return NextResponse.json({ 
         success: false, 
         error: 'Supplier with this name or phone already exists' 
       }, { status: 409 })
@@ -251,7 +233,7 @@ export async function POST(request: NextRequest) {
     // 7. Create supplier
     const supplier = await db.supplier.create({
       data: {
-        sppgId: session.user.sppgId,
+        sppgId: session.user.sppgId!,
         supplierCode,
         supplierName: validated.supplierName,
         businessName: validated.businessName,
@@ -310,7 +292,7 @@ export async function POST(request: NextRequest) {
     })
 
     // 8. Success response
-    return Response.json({
+    return NextResponse.json({
       success: true,
       data: supplier,
       message: 'Supplier created successfully'
@@ -321,7 +303,7 @@ export async function POST(request: NextRequest) {
     
     // Validation error
     if (error instanceof Error && error.name === 'ZodError') {
-      return Response.json({ 
+      return NextResponse.json({ 
         success: false, 
         error: 'Validation failed',
         details: error 
@@ -331,7 +313,7 @@ export async function POST(request: NextRequest) {
     // Prisma error
     if (error && typeof error === 'object' && 'code' in error) {
       if (error.code === 'P2002') {
-        return Response.json({ 
+        return NextResponse.json({ 
           success: false, 
           error: 'Supplier with this code already exists' 
         }, { status: 409 })
@@ -339,10 +321,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Internal server error
-    return Response.json({ 
+    return NextResponse.json({ 
       success: false, 
       error: 'Failed to create supplier',
       details: process.env.NODE_ENV === 'development' ? error : undefined
     }, { status: 500 })
-  }
+    }
+  })
 }

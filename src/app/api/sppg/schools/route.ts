@@ -4,55 +4,30 @@
  * @author Bagizi-ID Development Team
  * @see {@link /docs/SCHOOL_BENEFICIARY_COMPREHENSIVE_IMPROVEMENTS.md}
  * @see {@link /docs/copilot-instructions.md} Development Guidelines
+ * 
+ * RBAC Integration:
+ * - GET/POST: Protected by withSppgAuth
+ * - Automatic audit logging
+ * - Multi-tenant: School ownership verified
  */
 
-import { auth } from '@/auth'
+import { NextRequest, NextResponse } from 'next/server'
+import { withSppgAuth } from '@/lib/api-middleware'
 import { db } from '@/lib/prisma'
 import { schoolMasterSchema, schoolMasterFilterSchema } from '@/features/sppg/school/schemas'
 import { Prisma } from '@prisma/client'
 
 /**
  * GET /api/sppg/schools
- * Get all schools for current SPPG with comprehensive filtering
- * 
- * Query Params:
- * - mode: 'autocomplete' | 'full' | 'standard' (default)
- * - programId: Filter by program
- * - schoolType: Filter by type (SD, SMP, SMA, etc.)
- * - schoolStatus: Filter by status (NEGERI, SWASTA, etc.)
- * - isActive: Filter by active status
- * - provinceId, regencyId, districtId, villageId: Regional filters
- * - hasContract: Filter schools with contracts
- * - contractExpiring: Filter contracts expiring in 30 days
- * - minStudents, maxStudents: Student range filters
- * - search: Search by name, code, NPSN, or principal
- * - page, limit: Pagination
- * - sortBy, sortOrder: Sorting
- * 
- * @example
- * GET /api/sppg/schools?mode=autocomplete
- * GET /api/sppg/schools?schoolType=SD&isActive=true
- * GET /api/sppg/schools?hasContract=true&contractExpiring=true
- * GET /api/sppg/schools?provinceId=xxx&minStudents=100
- * 
- * @returns List of schools with comprehensive data
+ * @rbac Protected by withSppgAuth
+ * @audit Automatic logging
  */
-export async function GET(request: Request) {
-  try {
-    // 1. Authentication Check
-    const session = await auth()
-    if (!session?.user) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    // 2. SPPG Access Check (CRITICAL FOR MULTI-TENANCY!)
-    if (!session.user.sppgId) {
-      return Response.json({ error: 'SPPG access required' }, { status: 403 })
-    }
-
-    // 3. Parse and validate query parameters
-    const { searchParams } = new URL(request.url)
-    const mode = searchParams.get('mode') || 'standard'
+export async function GET(request: NextRequest) {
+  return withSppgAuth(request, async (session) => {
+    try {
+      // Parse and validate query parameters
+      const { searchParams } = new URL(request.url)
+      const mode = searchParams.get('mode') || 'standard'
     
     // Build filter object from query params
     const filterParams: Record<string, string | number | boolean> = {}
@@ -74,7 +49,7 @@ export async function GET(request: Request) {
 
     // 4. Build comprehensive where clause
     const where: Prisma.SchoolBeneficiaryWhereInput = {
-      sppgId: session.user.sppgId, // CRITICAL: Multi-tenancy isolation
+      sppgId: session.user.sppgId!, // CRITICAL: Multi-tenancy isolation
     }
 
     // Program filter
@@ -312,57 +287,34 @@ export async function GET(request: Request) {
     }
 
     // 8. Return response with pagination metadata
-    return Response.json({ 
-      success: true, 
-      data: schools,
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit)
-      }
-    })
-  } catch (error) {
-    console.error('GET /api/sppg/schools error:', error)
-    return Response.json({ 
-      error: 'Failed to fetch schools',
-      details: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined
-    }, { status: 500 })
-  }
+      return NextResponse.json({ 
+        success: true, 
+        data: schools,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit)
+        }
+      })
+    } catch (error) {
+      console.error('GET /api/sppg/schools error:', error)
+      return NextResponse.json({ 
+        error: 'Failed to fetch schools',
+        details: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined
+      }, { status: 500 })
+    }
+  })
 }
 
 /**
  * POST /api/sppg/schools
- * Create new school beneficiary with comprehensive 82-field data
- * 
- * @param request - Request with school data in body
- * @returns Created school with complete relations
- * 
- * @example
- * POST /api/sppg/schools
- * Body: {
- *   programId: "xxx",
- *   sppgId: "xxx",
- *   schoolName: "SDN 01 Menteng",
- *   schoolCode: "SD-001",
- *   npsn: "20104623",
- *   schoolType: "SD",
- *   schoolStatus: "NEGERI",
- *   // ... all 82 fields
- * }
+ * @rbac Protected by withSppgAuth
+ * @audit Automatic logging
  */
-export async function POST(request: Request) {
-  try {
-    // 1. Authentication Check
-    const session = await auth()
-    if (!session?.user) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    // 2. SPPG Access Check (CRITICAL FOR MULTI-TENANCY!)
-    if (!session.user.sppgId) {
-      return Response.json({ error: 'SPPG access required' }, { status: 403 })
-    }
+export async function POST(request: NextRequest) {
+  return withSppgAuth(request, async (session) => {
+    try {
 
     // 3. Parse and validate request body with comprehensive schema
     const body = await request.json()
@@ -376,7 +328,7 @@ export async function POST(request: Request) {
     const validated = schoolMasterSchema.safeParse(dataWithSppg)
     
     if (!validated.success) {
-      return Response.json(
+      return NextResponse.json(
         { 
           error: 'Validation failed',
           details: validated.error.issues
@@ -389,12 +341,12 @@ export async function POST(request: Request) {
     const program = await db.nutritionProgram.findFirst({
       where: {
         id: validated.data.programId,
-        sppgId: session.user.sppgId
+        sppgId: session.user.sppgId!
       }
     })
 
     if (!program) {
-      return Response.json(
+      return NextResponse.json(
         { error: 'Program not found or access denied' },
         { status: 404 }
       )
@@ -418,7 +370,7 @@ export async function POST(request: Request) {
       })
 
       if (!village) {
-        return Response.json(
+        return NextResponse.json(
           { error: 'Invalid village ID' },
           { status: 400 }
         )
@@ -440,7 +392,7 @@ export async function POST(request: Request) {
     const school = await db.schoolBeneficiary.create({
       data: {
         ...validated.data,
-        sppgId: session.user.sppgId, // CRITICAL: Multi-tenant safety
+        sppgId: session.user.sppgId!, // CRITICAL: Multi-tenant safety
       },
       include: {
         sppg: {
@@ -483,19 +435,20 @@ export async function POST(request: Request) {
       }
     })
 
-    return Response.json({ 
+    return NextResponse.json({ 
       success: true, 
-      data: school,
-      message: 'School created successfully'
-    }, { status: 201 })
-  } catch (error) {
-    console.error('POST /api/sppg/schools error:', error)
-    return Response.json(
-      { 
-        error: 'Failed to create school',
-        details: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined
-      },
-      { status: 500 }
-    )
-  }
+        data: school,
+        message: 'School created successfully'
+      }, { status: 201 })
+    } catch (error) {
+      console.error('POST /api/sppg/schools error:', error)
+      return NextResponse.json(
+        { 
+          error: 'Failed to create school',
+          details: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined
+        },
+        { status: 500 }
+      )
+    }
+  })
 }

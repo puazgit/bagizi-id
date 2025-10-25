@@ -8,10 +8,11 @@
  * @security Multi-tenant with ownership check
  */
 
-import { NextRequest } from 'next/server'
-import { auth } from '@/auth'
+import { NextRequest, NextResponse } from 'next/server'
+import { withSppgAuth } from '@/lib/api-middleware'
+import { hasPermission } from '@/lib/permissions'
 import { db } from '@/lib/prisma'
-import { Prisma } from '@prisma/client'
+import { Prisma ,  UserRole } from '@prisma/client'
 import { completeDeliverySchema } from '@/features/sppg/distribution/delivery/schemas'
 
 /**
@@ -22,27 +23,25 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    // 1. Authentication check
-    const session = await auth()
-    if (!session?.user) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+  return withSppgAuth(request, async (session) => {
+    try {
+      // 1. Get delivery ID from params
+      const { id } = await params
 
-    // 2. Multi-tenant check
-    if (!session.user.sppgId) {
-      return Response.json({ error: 'SPPG access required' }, { status: 403 })
-    }
+      // 2. Permission Check
+      if (!hasPermission(session.user.userRole as UserRole, 'DISTRIBUTION_MANAGE')) {
+        return NextResponse.json(
+          { success: false, error: 'Insufficient permissions' },
+          { status: 403 }
+        )
+      }
 
-    // 3. Get delivery ID from params
-    const { id } = await params
-
-    // 4. Verify ownership and status
-    const existing = await db.distributionDelivery.findFirst({
+      // 3. Verify ownership and status
+      const existing = await db.distributionDelivery.findFirst({
       where: {
         id,
         schedule: {
-          sppgId: session.user.sppgId, // CRITICAL: Multi-tenant security
+          sppgId: session.user.sppgId!, // CRITICAL: Multi-tenant security
         },
       },
       select: { 
@@ -55,15 +54,15 @@ export async function POST(
     })
 
     if (!existing) {
-      return Response.json(
+      return NextResponse.json(
         { error: 'Pengiriman tidak ditemukan atau akses ditolak' },
         { status: 404 }
       )
     }
 
-    // 5. Check if delivery can be completed
+    // 4. Check if delivery can be completed
     if (existing.status !== 'DEPARTED') {
-      return Response.json(
+      return NextResponse.json(
         {
           error: 'Pengiriman tidak dapat diselesaikan',
           details: `Status saat ini: ${existing.status}. Hanya pengiriman dengan status DEPARTED yang dapat diselesaikan.`,
@@ -73,7 +72,7 @@ export async function POST(
     }
 
     if (!existing.arrivalTime) {
-      return Response.json(
+      return NextResponse.json(
         {
           error: 'Pengiriman belum ditandai sampai',
           details: 'Tandai kedatangan terlebih dahulu sebelum menyelesaikan pengiriman.',
@@ -83,7 +82,7 @@ export async function POST(
     }
 
     if (existing.deliveryCompletedAt) {
-      return Response.json(
+      return NextResponse.json(
         {
           error: 'Pengiriman sudah diselesaikan sebelumnya',
           details: `Waktu penyelesaian: ${existing.deliveryCompletedAt}`,
@@ -92,12 +91,12 @@ export async function POST(
       )
     }
 
-    // 6. Parse and validate request body
+    // 5. Parse and validate request body
     const body = await request.json()
     const validated = completeDeliverySchema.safeParse(body)
 
     if (!validated.success) {
-      return Response.json(
+      return NextResponse.json(
         {
           error: 'Data tidak valid',
           details: validated.error.issues,
@@ -119,14 +118,14 @@ export async function POST(
       deliveryPhoto,
     } = validated.data
 
-    // 7. Determine final status based on portions
+    // 6. Determine final status based on portions
     // Note: PARTIAL status removed - if less portions delivered, mark as FAILED with notes
     let finalStatus: 'DELIVERED' | 'FAILED' = 'DELIVERED'
     if (portionsDelivered < existing.portionsPlanned) {
       finalStatus = 'FAILED' // Mark as failed if not all portions delivered
     }
 
-    // 8. Update delivery - complete
+    // 7. Update delivery - complete
     const updated = await db.distributionDelivery.update({
       where: { id },
       data: {
@@ -147,7 +146,7 @@ export async function POST(
       },
     })
 
-    // 9. Create delivery photo if provided
+    // 8. Create delivery photo if provided
     if (deliveryPhoto) {
       await db.deliveryPhoto.create({
         data: {
@@ -160,7 +159,7 @@ export async function POST(
       })
     }
 
-    return Response.json({
+    return NextResponse.json({
       success: true,
       data: updated,
       message: finalStatus === 'DELIVERED' 
@@ -169,12 +168,14 @@ export async function POST(
     })
   } catch (error) {
     console.error('POST /api/sppg/distribution/delivery/[id]/complete error:', error)
-    return Response.json(
+    return NextResponse.json(
       {
+        success: false,
         error: 'Gagal menyelesaikan pengiriman',
         details: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined,
       },
       { status: 500 }
     )
   }
+  })
 }

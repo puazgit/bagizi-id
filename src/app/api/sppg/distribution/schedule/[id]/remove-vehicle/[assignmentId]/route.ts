@@ -5,10 +5,11 @@
  * @author Bagizi-ID Development Team
  */
 
-import { NextRequest } from 'next/server'
-import { auth } from '@/auth'
+import { NextRequest, NextResponse } from 'next/server'
+import { withSppgAuth } from '@/lib/api-middleware'
+import { hasPermission } from '@/lib/permissions'
 import { db } from '@/lib/prisma'
-import { checkSppgAccess } from '@/lib/permissions'
+import { UserRole } from '@prisma/client'
 
 /**
  * DELETE /api/sppg/distribution/schedule/[id]/remove-vehicle/[assignmentId]
@@ -18,36 +19,23 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string; assignmentId: string }> }
 ) {
-  try {
-    const { id: scheduleId, assignmentId } = await params
+  return withSppgAuth(request, async (session) => {
+    try {
+      const { id: scheduleId, assignmentId } = await params
 
-    // 1. Authentication Check
-    const session = await auth()
-    if (!session?.user) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+      // Permission Check
+      if (!hasPermission(session.user.userRole as UserRole, 'DISTRIBUTION_MANAGE')) {
+        return NextResponse.json(
+          { success: false, error: 'Insufficient permissions' },
+          { status: 403 }
+        )
+      }
 
-    // 2. SPPG Access Check
-    if (!session.user.sppgId) {
-      return Response.json(
-        { error: 'SPPG access required' },
-        { status: 403 }
-      )
-    }
-    
-    const sppg = await checkSppgAccess(session.user.sppgId)
-    if (!sppg) {
-      return Response.json(
-        { error: 'SPPG not found or access denied' },
-        { status: 403 }
-      )
-    }
-
-    // 3. Check if schedule exists and belongs to SPPG
+      // Check if schedule exists and belongs to SPPG
     const schedule = await db.distributionSchedule.findUnique({
       where: {
         id: scheduleId,
-        sppgId: session.user.sppgId,
+        sppgId: session.user.sppgId!,
       },
       include: {
         production: {
@@ -66,7 +54,7 @@ export async function DELETE(
     })
 
     if (!schedule) {
-      return Response.json(
+      return NextResponse.json(
         { error: 'Schedule not found' },
         { status: 404 }
       )
@@ -74,7 +62,7 @@ export async function DELETE(
 
     // 4. Validate schedule status (cannot remove vehicle if IN_PROGRESS or COMPLETED)
     if (['IN_PROGRESS', 'COMPLETED'].includes(schedule.status)) {
-      return Response.json(
+      return NextResponse.json(
         {
           error: 'Cannot remove vehicle',
           details: 'Kendaraan tidak dapat dihapus saat distribusi sedang berlangsung atau sudah selesai',
@@ -104,7 +92,7 @@ export async function DELETE(
     })
 
     if (!assignment) {
-      return Response.json(
+      return NextResponse.json(
         { error: 'Vehicle assignment not found' },
         { status: 404 }
       )
@@ -116,7 +104,7 @@ export async function DELETE(
       !assignment.schedule ||
       assignment.schedule.sppgId !== session.user.sppgId
     ) {
-      return Response.json(
+      return NextResponse.json(
         { error: 'Access denied or invalid assignment' },
         { status: 403 }
       )
@@ -170,7 +158,7 @@ export async function DELETE(
     await db.auditLog.create({
       data: {
         userId: session.user.id,
-        sppgId: session.user.sppgId,
+        sppgId: session.user.sppgId!,
         action: 'DELETE',
         entityType: 'VehicleAssignment',
         entityId: assignmentId,
@@ -183,7 +171,7 @@ export async function DELETE(
       },
     })
 
-    return Response.json({
+    return NextResponse.json({
       success: true,
       data: updatedSchedule,
       message: `Penugasan kendaraan ${vehiclePlate} berhasil dihapus`,
@@ -193,12 +181,14 @@ export async function DELETE(
       'DELETE /api/sppg/distribution/schedule/[id]/remove-vehicle/[assignmentId] error:',
       error
     )
-    return Response.json(
+    return NextResponse.json(
       {
+        success: false,
         error: 'Failed to remove vehicle assignment',
         details: process.env.NODE_ENV === 'development' ? error : undefined,
       },
       { status: 500 }
     )
   }
+  })
 }

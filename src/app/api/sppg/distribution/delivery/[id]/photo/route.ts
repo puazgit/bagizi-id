@@ -8,10 +8,12 @@
  * @security Multi-tenant with ownership check
  */
 
-import { NextRequest } from 'next/server'
-import { auth } from '@/auth'
+import { NextRequest, NextResponse } from 'next/server'
+import { withSppgAuth } from '@/lib/api-middleware'
+import { hasPermission } from '@/lib/permissions'
 import { db } from '@/lib/prisma'
 import { uploadPhotoSchema } from '@/features/sppg/distribution/delivery/schemas'
+import { UserRole } from '@prisma/client'
 
 /**
  * POST /api/sppg/distribution/delivery/:id/photo
@@ -21,27 +23,24 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    // 1. Authentication check
-    const session = await auth()
-    if (!session?.user) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+  return withSppgAuth(request, async (session) => {
+    try {
+      const { id } = await params
 
-    // 2. Multi-tenant check
-    if (!session.user.sppgId) {
-      return Response.json({ error: 'SPPG access required' }, { status: 403 })
-    }
+      // 2. Permission Check
+      if (!hasPermission(session.user.userRole as UserRole, 'DISTRIBUTION_MANAGE')) {
+        return NextResponse.json(
+          { success: false, error: 'Insufficient permissions' },
+          { status: 403 }
+        )
+      }
 
-    // 3. Get delivery ID from params
-    const { id } = await params
-
-    // 4. Verify ownership
+      // 3. Verify ownership
     const existing = await db.distributionDelivery.findFirst({
       where: {
         id,
         schedule: {
-          sppgId: session.user.sppgId, // CRITICAL: Multi-tenant security
+          sppgId: session.user.sppgId!, // CRITICAL: Multi-tenant security
         },
       },
       select: { 
@@ -52,18 +51,18 @@ export async function POST(
     })
 
     if (!existing) {
-      return Response.json(
+      return NextResponse.json(
         { error: 'Pengiriman tidak ditemukan atau akses ditolak' },
         { status: 404 }
       )
     }
 
-    // 5. Parse and validate request body
+    // 4. Parse and validate request body
     const body = await request.json()
     const validated = uploadPhotoSchema.safeParse(body)
 
     if (!validated.success) {
-      return Response.json(
+      return NextResponse.json(
         {
           error: 'Data foto tidak valid',
           details: validated.error.issues,
@@ -81,7 +80,7 @@ export async function POST(
       mimeType,
     } = validated.data
 
-    // 6. Create photo record
+    // 5. Create photo record
     const photo = await db.deliveryPhoto.create({
       data: {
         deliveryId: id,
@@ -94,19 +93,21 @@ export async function POST(
       },
     })
 
-    return Response.json({
+    return NextResponse.json({
       success: true,
       data: photo,
       message: 'Foto pengiriman berhasil diunggah',
     })
   } catch (error) {
     console.error('POST /api/sppg/distribution/delivery/[id]/photo error:', error)
-    return Response.json(
+    return NextResponse.json(
       {
+        success: false,
         error: 'Gagal mengunggah foto pengiriman',
         details: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined,
       },
       { status: 500 }
     )
   }
+  })
 }

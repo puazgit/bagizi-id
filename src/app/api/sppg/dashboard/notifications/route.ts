@@ -3,42 +3,34 @@
  * @version Next.js 15.5.4 / Prisma 6.17.1 / Enterprise-grade
  * @author Bagizi-ID Development Team
  * @see {@link /docs/copilot-instructions.md} Development Guidelines
+ * 
+ * RBAC Integration:
+ * - GET: Protected by withSppgAuth (all SPPG roles)
+ * - Automatic audit logging for notification access
+ * - Multi-tenant: Notifications filtered by session.user.sppgId
  */
 
-import { NextResponse } from 'next/server'
-import { auth } from '@/auth'
+import { NextRequest, NextResponse } from 'next/server'
+import { withSppgAuth } from '@/lib/api-middleware'
 import { db } from '@/lib/prisma'
 
 /**
  * GET /api/sppg/dashboard/notifications
  * Fetch unread notifications for authenticated SPPG user
+ * 
+ * @rbac Protected by withSppgAuth - requires valid SPPG session
+ * @audit Automatic logging via middleware
  */
-export async function GET() {
-  try {
-    // 1. Authentication Check
-    const session = await auth()
-    if (!session?.user) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
+export async function GET(request: NextRequest) {
+  return withSppgAuth(request, async (session) => {
+    try {
+      const sppgId = session.user.sppgId
+      const notifications = []
 
-    // 2. SPPG Access Check
-    const sppgId = session.user.sppgId
-    if (!sppgId) {
-      return NextResponse.json(
-        { success: false, error: 'SPPG access required' },
-        { status: 403 }
-      )
-    }
-
-    const notifications = []
-
-    // 3. Check for low stock items (critical notifications)
+      // Check for low stock items (critical notifications)
     const lowStockItems = await db.inventoryItem.count({
       where: {
-        sppgId,
+        sppgId: sppgId!,
         currentStock: {
           lte: db.inventoryItem.fields.minStock
         }
@@ -60,7 +52,7 @@ export async function GET() {
     // 4. Check for pending procurement approvals
     const pendingProcurements = await db.procurement.count({
       where: {
-        sppgId,
+        sppgId: sppgId!,
         status: 'PENDING_APPROVAL'
       }
     })
@@ -85,7 +77,7 @@ export async function GET() {
 
     const todayDistributions = await db.foodDistribution.count({
       where: {
-        sppgId,
+        sppgId: sppgId!,
         distributionDate: {
           gte: today,
           lt: tomorrow
@@ -111,7 +103,7 @@ export async function GET() {
     // 6. Check for production schedules today
     const todayProductions = await db.foodProduction.count({
       where: {
-        sppgId,
+        sppgId: sppgId!,
         productionDate: {
           gte: today,
           lt: tomorrow
@@ -161,4 +153,5 @@ export async function GET() {
       { status: 500 }
     )
   }
+  })
 }

@@ -5,9 +5,11 @@
  * @see {@link /docs/copilot-instructions.md} Enterprise Development Guidelines
  */
 
-import { NextRequest } from 'next/server'
-import { auth } from '@/auth'
+import { NextRequest, NextResponse } from 'next/server'
+import { withSppgAuth } from '@/lib/api-middleware'
 import { db } from '@/lib/prisma'
+import { UserRole } from '@prisma/client'
+import { hasPermission } from '@/lib/permissions'
 import { 
   procurementPlanUpdateSchema,
   procurementPlanApprovalSchema
@@ -19,45 +21,37 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    const { id } = await params
-    
-    // 1. Authentication Check
-    const session = await auth()
-    if (!session?.user) {
-      return Response.json({ 
-        success: false, 
-        error: 'Unauthorized - Login required' 
-      }, { status: 401 })
-    }
+  return withSppgAuth(request, async (session) => {
+    try {
+      const { id } = await params
 
-    // 2. SPPG Access Check (Multi-tenancy - CRITICAL!)
-    if (!session.user.sppgId) {
-      return Response.json({ 
-        success: false, 
-        error: 'SPPG access required' 
-      }, { status: 403 })
-    }
+      // Permission Check
+      if (!session.user.userRole || !hasPermission(session.user.userRole as UserRole, 'READ')) {
+        return NextResponse.json({ 
+          success: false, 
+          error: 'Insufficient permissions' 
+        }, { status: 403 })
+      }
 
-    // 3. Fetch procurement plan with multi-tenant check
-    const plan = await db.procurementPlan.findFirst({
-      where: {
-        id,
-        sppgId: session.user.sppgId // CRITICAL: Ensure plan belongs to user's SPPG
-      },
-      include: {
-        sppg: {
-          select: {
-            id: true,
-            name: true
-          }
+      // Fetch procurement plan with multi-tenant check
+      const plan = await db.procurementPlan.findFirst({
+        where: {
+          id,
+          sppgId: session.user.sppgId! // CRITICAL: Ensure plan belongs to user's SPPG
         },
-        program: {
-          select: {
-            id: true,
-            name: true
-          }
-        },
+        include: {
+          sppg: {
+            select: {
+              id: true,
+              name: true
+            }
+          },
+          program: {
+            select: {
+              id: true,
+              name: true
+            }
+          },
         procurements: {
           include: {
             supplier: {
@@ -85,7 +79,7 @@ export async function GET(
     })
 
     if (!plan) {
-      return Response.json({ 
+      return NextResponse.json({ 
         success: false, 
         error: 'Procurement plan not found or access denied' 
       }, { status: 404 })
@@ -101,8 +95,8 @@ export async function GET(
       ? (plan.usedBudget / plan.totalBudget) * 100 
       : 0
 
-    // 5. Success response
-    return Response.json({
+    // Success response
+    return NextResponse.json({
       success: true,
       data: {
         ...plan,
@@ -113,15 +107,16 @@ export async function GET(
       }
     })
 
-  } catch (error) {
-    console.error('GET /api/sppg/procurement/plans/[id] error:', error)
-    
-    return Response.json({ 
-      success: false, 
-      error: 'Failed to fetch procurement plan',
-      details: process.env.NODE_ENV === 'development' ? error : undefined
-    }, { status: 500 })
-  }
+    } catch (error) {
+      console.error('GET /api/sppg/procurement/plans/[id] error:', error)
+      
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Failed to fetch procurement plan',
+        details: process.env.NODE_ENV === 'development' ? error : undefined
+      }, { status: 500 })
+    }
+  })
 }
 
 // ================================ PUT /api/sppg/procurement/plans/[id] ================================
@@ -130,51 +125,43 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    const { id } = await params
-    
-    // 1. Authentication Check
-    const session = await auth()
-    if (!session?.user) {
-      return Response.json({ 
-        success: false, 
-        error: 'Unauthorized - Login required' 
-      }, { status: 401 })
-    }
-
-    // 2. SPPG Access Check (Multi-tenancy - CRITICAL!)
-    if (!session.user.sppgId) {
-      return Response.json({ 
-        success: false, 
-        error: 'SPPG access required' 
-      }, { status: 403 })
-    }
-
-    // 3. Verify plan exists and belongs to SPPG
-    const existingPlan = await db.procurementPlan.findFirst({
-      where: {
-        id,
-        sppgId: session.user.sppgId
+  return withSppgAuth(request, async (session) => {
+    try {
+      const { id } = await params
+      
+      // Permission Check
+      if (!session.user.userRole || !hasPermission(session.user.userRole as UserRole, 'PROCUREMENT_MANAGE')) {
+        return NextResponse.json({
+          success: false,
+          error: 'Insufficient permissions'
+        }, { status: 403 })
       }
-    })
 
-    if (!existingPlan) {
-      return Response.json({ 
-        success: false, 
-        error: 'Procurement plan not found or access denied' 
-      }, { status: 404 })
-    }
+      // Verify plan exists and belongs to SPPG
+      const existingPlan = await db.procurementPlan.findFirst({
+        where: {
+          id,
+          sppgId: session.user.sppgId!
+        }
+      })
 
-    // 4. Check if plan can be edited (not approved or completed)
-    if (existingPlan.approvalStatus === 'APPROVED') {
-      return Response.json({ 
-        success: false, 
-        error: 'Cannot edit approved procurement plan. Request revision first.' 
-      }, { status: 403 })
-    }
+      if (!existingPlan) {
+        return NextResponse.json({ 
+          success: false, 
+          error: 'Procurement plan not found or access denied' 
+        }, { status: 404 })
+      }
 
-    // 5. Role Check - Only certain roles can edit
-    const allowedRoles = [
+      // Check if plan can be edited (not approved or completed)
+      if (existingPlan.approvalStatus === 'APPROVED') {
+        return NextResponse.json({ 
+          success: false, 
+          error: 'Cannot edit approved procurement plan. Request revision first.' 
+        }, { status: 403 })
+      }
+
+      // Role Check - Only certain roles can edit
+      const allowedRoles = [
       'SPPG_KEPALA',
       'SPPG_ADMIN',
       'SPPG_AKUNTAN',
@@ -182,7 +169,7 @@ export async function PUT(
     ]
     
     if (!session.user.userRole || !allowedRoles.includes(session.user.userRole)) {
-      return Response.json({ 
+      return NextResponse.json({ 
         success: false, 
         error: 'Insufficient permissions' 
       }, { status: 403 })
@@ -192,17 +179,17 @@ export async function PUT(
     const body = await request.json()
     const validated = procurementPlanUpdateSchema.parse(body)
 
-    // 7. Verify program belongs to SPPG if programId changed
+    // Verify program belongs to SPPG if programId changed
     if (validated.programId && validated.programId !== existingPlan.programId) {
       const program = await db.nutritionProgram.findFirst({
         where: {
           id: validated.programId,
-          sppgId: session.user.sppgId
+          sppgId: session.user.sppgId! as string
         }
       })
 
       if (!program) {
-        return Response.json({ 
+        return NextResponse.json({ 
           success: false, 
           error: 'Program not found or does not belong to your SPPG' 
         }, { status: 404 })
@@ -254,31 +241,32 @@ export async function PUT(
     })
 
     // 10. Success response
-    return Response.json({
+    return NextResponse.json({
       success: true,
       data: updatedPlan,
       message: 'Procurement plan updated successfully'
     })
 
-  } catch (error) {
-    console.error('PUT /api/sppg/procurement/plans/[id] error:', error)
-    
-    // Validation error
-    if (error instanceof Error && error.name === 'ZodError') {
-      return Response.json({ 
-        success: false, 
-        error: 'Validation failed',
-        details: error 
-      }, { status: 400 })
-    }
+    } catch (error) {
+      console.error('PUT /api/sppg/procurement/plans/[id] error:', error)
+      
+      // Validation error
+      if (error instanceof Error && error.name === 'ZodError') {
+        return NextResponse.json({ 
+          success: false, 
+          error: 'Validation failed',
+          details: error 
+        }, { status: 400 })
+      }
 
-    // Internal server error
-    return Response.json({ 
-      success: false, 
-      error: 'Failed to update procurement plan',
-      details: process.env.NODE_ENV === 'development' ? error : undefined
-    }, { status: 500 })
-  }
+      // Internal server error
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Failed to update procurement plan',
+        details: process.env.NODE_ENV === 'development' ? error : undefined
+      }, { status: 500 })
+    }
+  })
 }
 
 // ================================ DELETE /api/sppg/procurement/plans/[id] ================================
@@ -287,46 +275,25 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    const { id } = await params
-    
-    // 1. Authentication Check
-    const session = await auth()
-    if (!session?.user) {
-      return Response.json({ 
-        success: false, 
-        error: 'Unauthorized - Login required' 
-      }, { status: 401 })
-    }
+  return withSppgAuth(request, async (session) => {
+    try {
+      const { id } = await params
+      
+      // Permission Check
+      if (!session.user.userRole || !hasPermission(session.user.userRole as UserRole, 'PROCUREMENT_MANAGE')) {
+        return NextResponse.json({ 
+          success: false,
+          error: 'Insufficient permissions'
+        }, { status: 403 })
+      }
 
-    // 2. SPPG Access Check (Multi-tenancy - CRITICAL!)
-    if (!session.user.sppgId) {
-      return Response.json({ 
-        success: false, 
-        error: 'SPPG access required' 
-      }, { status: 403 })
-    }
-
-    // 3. Role Check - Only admins can delete
-    const allowedRoles = [
-      'SPPG_KEPALA',
-      'SPPG_ADMIN'
-    ]
-    
-    if (!session.user.userRole || !allowedRoles.includes(session.user.userRole)) {
-      return Response.json({ 
-        success: false, 
-        error: 'Insufficient permissions - Only admins can delete procurement plans' 
-      }, { status: 403 })
-    }
-
-    // 4. Verify plan exists and belongs to SPPG
-    const plan = await db.procurementPlan.findFirst({
-      where: {
-        id,
-        sppgId: session.user.sppgId
-      },
-      include: {
+      // Verify plan exists and belongs to SPPG
+      const plan = await db.procurementPlan.findFirst({
+        where: {
+          id,
+          sppgId: session.user.sppgId!
+        },
+        include: {
         procurements: {
           select: {
             id: true,
@@ -337,7 +304,7 @@ export async function DELETE(
     })
 
     if (!plan) {
-      return Response.json({ 
+      return NextResponse.json({ 
         success: false, 
         error: 'Procurement plan not found or access denied' 
       }, { status: 404 })
@@ -346,7 +313,7 @@ export async function DELETE(
     // 5. Check if plan can be deleted (no completed procurements)
     const hasCompletedProcurements = plan.procurements.some(p => p.status === 'COMPLETED')
     if (hasCompletedProcurements) {
-      return Response.json({ 
+      return NextResponse.json({ 
         success: false, 
         error: 'Cannot delete plan with completed procurements' 
       }, { status: 403 })
@@ -358,21 +325,22 @@ export async function DELETE(
     })
 
     // 7. Success response
-    return Response.json({
+    return NextResponse.json({
       success: true,
       message: 'Procurement plan deleted successfully'
     })
 
-  } catch (error) {
-    console.error('DELETE /api/sppg/procurement/plans/[id] error:', error)
-    
-    // Internal server error
-    return Response.json({ 
-      success: false, 
-      error: 'Failed to delete procurement plan',
-      details: process.env.NODE_ENV === 'development' ? error : undefined
-    }, { status: 500 })
-  }
+    } catch (error) {
+      console.error('DELETE /api/sppg/procurement/plans/[id] error:', error)
+      
+      // Internal server error
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Failed to delete procurement plan',
+        details: process.env.NODE_ENV === 'development' ? error : undefined
+      }, { status: 500 })
+    }
+  })
 }
 
 // ================================ PATCH /api/sppg/procurement/plans/[id] (Approval) ================================
@@ -381,58 +349,42 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    const { id } = await params
-    
-    // 1. Authentication Check
-    const session = await auth()
-    if (!session?.user) {
-      return Response.json({ 
-        success: false, 
-        error: 'Unauthorized - Login required' 
-      }, { status: 401 })
-    }
-
-    // 2. SPPG Access Check (Multi-tenancy - CRITICAL!)
-    if (!session.user.sppgId) {
-      return Response.json({ 
-        success: false, 
-        error: 'SPPG access required' 
-      }, { status: 403 })
-    }
-
-    // 3. Role Check - Only Kepala SPPG can approve
-    if (session.user.userRole !== 'SPPG_KEPALA') {
-      return Response.json({ 
-        success: false, 
-        error: 'Only Kepala SPPG can approve/reject procurement plans' 
-      }, { status: 403 })
-    }
-
-    // 4. Verify plan exists and belongs to SPPG
-    const plan = await db.procurementPlan.findFirst({
-      where: {
-        id,
-        sppgId: session.user.sppgId
+  return withSppgAuth(request, async (session) => {
+    try {
+      const { id } = await params
+      
+      // Permission Check - Approval requires APPROVE permission
+      if (!session.user.userRole || !hasPermission(session.user.userRole as UserRole, 'APPROVE')) {
+        return NextResponse.json({
+          success: false,
+          error: 'Insufficient permissions - Only Kepala SPPG can approve/reject procurement plans'
+        }, { status: 403 })
       }
-    })
 
-    if (!plan) {
-      return Response.json({ 
-        success: false, 
-        error: 'Procurement plan not found or access denied' 
-      }, { status: 404 })
-    }
+      // Verify plan exists and belongs to SPPG
+      const plan = await db.procurementPlan.findFirst({
+        where: {
+          id,
+          sppgId: session.user.sppgId!
+        }
+      })
 
-    // 5. Check if plan is in correct status for approval
-    if (plan.approvalStatus !== 'SUBMITTED') {
-      return Response.json({ 
-        success: false, 
-        error: 'Only submitted plans can be approved/rejected' 
-      }, { status: 403 })
-    }
+      if (!plan) {
+        return NextResponse.json({ 
+          success: false, 
+          error: 'Procurement plan not found or access denied' 
+        }, { status: 404 })
+      }
 
-    // 6. Parse and validate approval action
+      // Check if plan is in correct status for approval
+      if (plan.approvalStatus !== 'SUBMITTED') {
+        return NextResponse.json({ 
+          success: false, 
+          error: 'Only submitted plans can be approved/rejected' 
+        }, { status: 403 })
+      }
+
+      // Parse and validate approval action
     const body = await request.json()
     const validated = procurementPlanApprovalSchema.parse(body)
 
@@ -453,7 +405,7 @@ export async function PATCH(
         rejectionReason = validated.rejectionReason
         break
       default:
-        return Response.json({ 
+        return NextResponse.json({ 
           success: false, 
           error: 'Invalid approval action' 
         }, { status: 400 })
@@ -495,29 +447,30 @@ export async function PATCH(
     })
 
     // 8. Success response
-    return Response.json({
+    return NextResponse.json({
       success: true,
       data: updatedPlan,
       message: `Procurement plan ${validated.action.toLowerCase()}d successfully`
     })
 
-  } catch (error) {
-    console.error('PATCH /api/sppg/procurement/plans/[id] error:', error)
-    
-    // Validation error
-    if (error instanceof Error && error.name === 'ZodError') {
-      return Response.json({ 
-        success: false, 
-        error: 'Validation failed',
-        details: error 
-      }, { status: 400 })
-    }
+    } catch (error) {
+      console.error('PATCH /api/sppg/procurement/plans/[id] error:', error)
+      
+      // Validation error
+      if (error instanceof Error && error.name === 'ZodError') {
+        return NextResponse.json({ 
+          success: false, 
+          error: 'Validation failed',
+          details: error 
+        }, { status: 400 })
+      }
 
-    // Internal server error
-    return Response.json({ 
-      success: false, 
-      error: 'Failed to process approval',
-      details: process.env.NODE_ENV === 'development' ? error : undefined
-    }, { status: 500 })
-  }
+      // Internal server error
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Failed to process approval',
+        details: process.env.NODE_ENV === 'development' ? error : undefined
+      }, { status: 500 })
+    }
+  })
 }

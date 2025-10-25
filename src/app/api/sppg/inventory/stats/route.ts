@@ -4,59 +4,53 @@
  * @description Provides comprehensive inventory statistics and analytics
  * @requires Auth.js v5 - Authentication
  * @requires Prisma - Database operations
+ * 
+ * RBAC Integration:
+ * - GET: Protected by withSppgAuth
+ * - Automatic audit logging
+ * - Permission: INVENTORY_VIEW
  */
 
-import { auth } from '@/auth'
+import { NextRequest, NextResponse } from 'next/server'
+import { withSppgAuth } from '@/lib/api-middleware'
 import { db } from '@/lib/prisma'
 import { hasPermission } from '@/lib/permissions'
-import { InventoryCategory } from '@prisma/client'
+import { UserRole, InventoryCategory } from '@prisma/client'
 
 /**
  * GET /api/sppg/inventory/stats
- * Fetch comprehensive inventory statistics
- * @security Requires authentication and INVENTORY_VIEW permission
+ * @rbac Protected by withSppgAuth
+ * @audit Automatic logging
+ * @security Requires INVENTORY_VIEW permission
  * @returns {Promise<Response>} Inventory statistics and analytics
  */
-export async function GET() {
-  try {
-    // 1. Authentication Check
-    const session = await auth()
-    if (!session?.user) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    // 2. Permission Check
-    if (!session.user.userRole || !hasPermission(session.user.userRole, 'INVENTORY_VIEW')) {
-      return Response.json({ 
-        error: 'Insufficient permissions',
-        message: 'Anda tidak memiliki akses untuk melihat statistik inventori'
-      }, { status: 403 })
-    }
-
-    // 3. Multi-tenant Check
-    if (!session.user.sppgId) {
-      return Response.json({ 
-        error: 'SPPG access required',
-        message: 'Akses SPPG diperlukan'
-      }, { status: 403 })
-    }
-
-    // 4. Fetch all inventory items for calculations
-    const items = await db.inventoryItem.findMany({
-      where: {
-        sppgId: session.user.sppgId,
-        isActive: true,
-      },
-      select: {
-        id: true,
-        category: true,
-        currentStock: true,
-        minStock: true,
-        maxStock: true,
-        unit: true,
-        costPerUnit: true,
+export async function GET(request: NextRequest) {
+  return withSppgAuth(request, async (session) => {
+    try {
+      // Permission Check
+      if (!session.user.userRole || !hasPermission(session.user.userRole as UserRole, 'INVENTORY_VIEW')) {
+        return NextResponse.json({ 
+          error: 'Insufficient permissions',
+          message: 'Anda tidak memiliki akses untuk melihat statistik inventori'
+        }, { status: 403 })
       }
-    })
+
+      // Fetch all inventory items for calculations
+      const items = await db.inventoryItem.findMany({
+        where: {
+          sppgId: session.user.sppgId!,
+          isActive: true,
+        },
+        select: {
+          id: true,
+          category: true,
+          currentStock: true,
+          minStock: true,
+          maxStock: true,
+          unit: true,
+          costPerUnit: true,
+        }
+      })
 
     // 5. Calculate basic statistics
     const totalItems = items.length
@@ -97,7 +91,7 @@ export async function GET() {
     const recentMovements = await db.stockMovement.findMany({
       where: {
         inventory: {
-          sppgId: session.user.sppgId,
+          sppgId: session.user.sppgId!,
         },
         movedAt: {
           gte: thirtyDaysAgo,
@@ -149,7 +143,7 @@ export async function GET() {
       overstocked: totalItems > 0 ? ((overstockedCount / totalItems) * 100).toFixed(1) : '0.0',
     }
 
-    return Response.json({
+    return NextResponse.json({
       success: true,
       data: {
         overview: {
@@ -171,13 +165,12 @@ export async function GET() {
         }
       }
     })
-
   } catch (error) {
-    console.error('GET /api/sppg/inventory/stats error:', error)
-    return Response.json({ 
+    return NextResponse.json({ 
       error: 'Internal server error',
       message: 'Terjadi kesalahan saat mengambil statistik inventori',
       details: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined
     }, { status: 500 })
   }
+  })
 }

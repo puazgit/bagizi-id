@@ -5,8 +5,10 @@
  * @author Bagizi-ID Development Team
  */
 
-import { NextRequest } from 'next/server'
-import { auth } from '@/auth'
+import { NextRequest, NextResponse } from 'next/server'
+import { withSppgAuth } from '@/lib/api-middleware'
+import { hasPermission } from '@/lib/permissions'
+import { UserRole } from '@prisma/client'
 import { db } from '@/lib/prisma'
 import { z } from 'zod'
 import { MealType } from '@prisma/client'
@@ -28,6 +30,46 @@ const assignmentUpdateSchema = z.object({
 type AssignmentUpdateInput = z.infer<typeof assignmentUpdateSchema>
 
 /**
+ * GET /api/sppg/menu-planning/[id]/assignments/[assignmentId]
+ * Get assignment detail
+ */
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string; assignmentId: string }> }
+) {
+  return withSppgAuth(request, async (session) => {
+    try {
+      if (!hasPermission(session.user.userRole as UserRole, 'READ')) {
+        return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 403 })
+      }
+
+      const { id: planId, assignmentId } = await params
+
+      const assignment = await db.menuAssignment.findFirst({
+        where: {
+          id: assignmentId,
+          menuPlanId: planId,
+          menuPlan: { sppgId: session.user.sppgId! }
+        },
+        include: {
+          menu: true,
+          menuPlan: { select: { id: true, name: true, status: true } }
+        }
+      })
+
+      if (!assignment) {
+        return NextResponse.json({ success: false, error: 'Assignment not found' }, { status: 404 })
+      }
+
+      return NextResponse.json({ success: true, data: assignment })
+    } catch (error) {
+      console.error('Get assignment error:', error)
+      return NextResponse.json({ success: false, error: 'Failed to fetch assignment' }, { status: 500 })
+    }
+  })
+}
+
+/**
  * PUT /api/sppg/menu-planning/[id]/assignments/[assignmentId]
  * Update existing menu assignment
  * 
@@ -37,76 +79,63 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string; assignmentId: string }> }
 ) {
-  try {
-    // 1. Authentication Check
-    const session = await auth()
-    if (!session?.user) {
-      return Response.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
+  return withSppgAuth(request, async (session) => {
+    try {
+      if (!hasPermission(session.user.userRole as UserRole, 'WRITE')) {
+        return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 403 })
+      }
 
-    // 2. Multi-tenant Security
-    if (!session.user.sppgId) {
-      return Response.json(
-        { success: false, error: 'SPPG access required' },
-        { status: 403 }
-      )
-    }
+      const { id: planId, assignmentId } = await params
 
-    // 3. Await params (Next.js 15 requirement)
-    const { id: planId, assignmentId } = await params
-
-    // 4. Verify Assignment Exists & Ownership
-    const existingAssignment = await db.menuAssignment.findFirst({
-      where: {
-        id: assignmentId,
-        menuPlanId: planId,
-        menuPlan: {
-          program: {
-            sppgId: session.user.sppgId, // Multi-tenant filter
+      // Verify Assignment Exists & Ownership
+      const existingAssignment = await db.menuAssignment.findFirst({
+        where: {
+          id: assignmentId,
+          menuPlanId: planId,
+          menuPlan: {
+            program: {
+              sppgId: session.user.sppgId!, // Multi-tenant filter
+            },
           },
         },
-      },
-      include: {
-        menuPlan: {
-          select: {
-            id: true,
-            status: true,
-            startDate: true,
-            endDate: true,
+        include: {
+          menuPlan: {
+            select: {
+              id: true,
+              status: true,
+              startDate: true,
+              endDate: true,
+            },
           },
         },
-      },
-    })
+      })
 
-    if (!existingAssignment) {
-      return Response.json(
-        { success: false, error: 'Assignment not found or access denied' },
-        { status: 404 }
-      )
-    }
+      if (!existingAssignment) {
+        return NextResponse.json(
+          { success: false, error: 'Assignment not found or access denied' },
+          { status: 404 }
+        )
+      }
 
-    // 4. Business Rule: Only allow editing DRAFT plans
-    if (existingAssignment.menuPlan.status !== 'DRAFT') {
-      return Response.json(
-        {
-          success: false,
-          error: `Cannot edit assignment in ${existingAssignment.menuPlan.status} plan. Only DRAFT plans can be edited.`,
-        },
-        { status: 400 }
-      )
-    }
+      // Business Rule: Only allow editing DRAFT plans
+      if (existingAssignment.menuPlan.status !== 'DRAFT') {
+        return NextResponse.json(
+          {
+            success: false,
+            error: `Cannot edit assignment in ${existingAssignment.menuPlan.status} plan. Only DRAFT plans can be edited.`,
+          },
+          { status: 400 }
+        )
+      }
 
-    // 5. Parse and Validate Request Body
-    const body = await request.json()
-    const validated = assignmentUpdateSchema.safeParse(body)
+      // Parse and Validate Request Body
+      const body = await request.json()
+      const validated = assignmentUpdateSchema.safeParse(body)
 
-    if (!validated.success) {
-      return Response.json(
-        {
-          success: false,
+      if (!validated.success) {
+        return NextResponse.json(
+          {
+            success: false,
           error: 'Validation failed',
           details: validated.error.issues,
         },
@@ -127,7 +156,7 @@ export async function PUT(
       assignmentDate.setHours(0, 0, 0, 0)
 
       if (assignmentDate < planStartDate || assignmentDate > planEndDate) {
-        return Response.json(
+        return NextResponse.json(
           {
             success: false,
             error: `Assignment date must be within plan range`,
@@ -148,7 +177,7 @@ export async function PUT(
         })
 
         if (duplicateCheck) {
-          return Response.json(
+          return NextResponse.json(
             { success: false, error: 'Assignment already exists for this date and meal type' },
             { status: 409 }
           )
@@ -162,7 +191,7 @@ export async function PUT(
         where: {
           id: input.menuId,
           program: {
-            sppgId: session.user.sppgId,
+            sppgId: session.user.sppgId!,
           },
         },
         select: {
@@ -174,7 +203,7 @@ export async function PUT(
       })
 
       if (!menu) {
-        return Response.json(
+        return NextResponse.json(
           { success: false, error: 'Menu not found or access denied' },
           { status: 404 }
         )
@@ -183,7 +212,7 @@ export async function PUT(
       // Menu meal type should match assignment meal type
       const assignmentMealType = input.mealType ?? existingAssignment.mealType
       if (menu.mealType !== assignmentMealType) {
-        return Response.json(
+        return NextResponse.json(
           {
             success: false,
             error: `Menu "${menu.menuName}" is for ${menu.mealType}, but assignment is for ${assignmentMealType}`,
@@ -234,31 +263,31 @@ export async function PUT(
       },
     })
 
-    // 8.1. Recalculate Plan Metrics (Phase 2)
-    try {
-      await recalculateMenuPlanMetrics(planId)
-    } catch (recalcError) {
-      console.error('⚠️ Metrics recalculation failed (non-critical):', recalcError)
+      // Recalculate Plan Metrics
+      try {
+        await recalculateMenuPlanMetrics(planId)
+      } catch (recalcError) {
+        console.error('⚠️ Metrics recalculation failed (non-critical):', recalcError)
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: 'Assignment updated successfully',
+        data: updatedAssignment,
+      })
+
+    } catch (error) {
+      console.error('Update assignment error:', error)
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Failed to update assignment',
+          details: process.env.NODE_ENV === 'development' ? String(error) : undefined,
+        },
+        { status: 500 }
+      )
     }
-
-    // 9. Success Response
-    return Response.json({
-      success: true,
-      message: 'Assignment updated successfully',
-      data: updatedAssignment,
-    })
-  } catch (error) {
-    console.error('Update assignment error:', error)
-
-    return Response.json(
-      {
-        success: false,
-        error: 'Failed to update assignment',
-        details: process.env.NODE_ENV === 'development' ? String(error) : undefined,
-      },
-      { status: 500 }
-    )
-  }
+  })
 }
 
 /**
@@ -271,92 +300,77 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string; assignmentId: string }> }
 ) {
-  try {
-    // 1. Authentication Check
-    const session = await auth()
-    if (!session?.user) {
-      return Response.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
+  return withSppgAuth(request, async (session) => {
+    try {
+      if (!hasPermission(session.user.userRole as UserRole, 'DELETE')) {
+        return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 403 })
+      }
 
-    // 2. Multi-tenant Security
-    if (!session.user.sppgId) {
-      return Response.json(
-        { success: false, error: 'SPPG access required' },
-        { status: 403 }
-      )
-    }
+      const { id: planId, assignmentId } = await params
 
-    // 3. Await params (Next.js 15 requirement)
-    const { id: planId, assignmentId } = await params
-
-    // 4. Verify Assignment Exists & Ownership
-    const existingAssignment = await db.menuAssignment.findFirst({
-      where: {
-        id: assignmentId,
-        menuPlanId: planId,
-        menuPlan: {
-          program: {
-            sppgId: session.user.sppgId,
+      // Verify Assignment Exists & Ownership
+      const existingAssignment = await db.menuAssignment.findFirst({
+        where: {
+          id: assignmentId,
+          menuPlanId: planId,
+          menuPlan: {
+            sppgId: session.user.sppgId!,
           },
         },
-      },
-      include: {
-        menuPlan: {
-          select: {
-            status: true,
+        include: {
+          menuPlan: {
+            select: {
+              status: true,
+            },
           },
         },
-      },
-    })
+      })
 
-    if (!existingAssignment) {
-      return Response.json(
-        { success: false, error: 'Assignment not found or access denied' },
-        { status: 404 }
-      )
-    }
+      if (!existingAssignment) {
+        return NextResponse.json(
+          { success: false, error: 'Assignment not found or access denied' },
+          { status: 404 }
+        )
+      }
 
-    // 4. Business Rule: Only allow deleting from DRAFT plans
-    if (existingAssignment.menuPlan.status !== 'DRAFT') {
-      return Response.json(
+      // Business Rule: Only allow deleting from DRAFT plans
+      if (existingAssignment.menuPlan.status !== 'DRAFT') {
+        return NextResponse.json(
+          {
+            success: false,
+            error: `Cannot delete assignment from ${existingAssignment.menuPlan.status} plan. Only DRAFT plans can be edited.`,
+          },
+          { status: 400 }
+        )
+      }
+
+      // Delete Assignment
+      await db.menuAssignment.delete({
+        where: { id: assignmentId },
+      })
+
+      // Recalculate Plan Metrics
+      try {
+        await recalculateMenuPlanMetrics(planId)
+      } catch (recalcError) {
+        console.error('⚠️ Metrics recalculation failed (non-critical):', recalcError)
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: 'Assignment deleted successfully',
+      })
+
+    } catch (error) {
+      console.error('Delete assignment error:', error)
+      return NextResponse.json(
         {
           success: false,
-          error: `Cannot delete assignment from ${existingAssignment.menuPlan.status} plan. Only DRAFT plans can be edited.`,
+          error: 'Failed to delete assignment',
+          details: process.env.NODE_ENV === 'development' ? String(error) : undefined,
         },
-        { status: 400 }
+        { status: 500 }
       )
     }
-
-    // 5. Delete Assignment
-    await db.menuAssignment.delete({
-      where: { id: assignmentId },
-    })
-
-    // 5.1. Recalculate Plan Metrics (Phase 2)
-    try {
-      await recalculateMenuPlanMetrics(planId)
-    } catch (recalcError) {
-      console.error('⚠️ Metrics recalculation failed (non-critical):', recalcError)
-    }
-
-    // 6. Success Response
-    return Response.json({
-      success: true,
-      message: 'Assignment deleted successfully',
-    })
-  } catch (error) {
-    console.error('Delete assignment error:', error)
-
-    return Response.json(
-      {
-        success: false,
-        error: 'Failed to delete assignment',
-        details: process.env.NODE_ENV === 'development' ? String(error) : undefined,
-      },
-      { status: 500 }
-    )
-  }
+  })
 }

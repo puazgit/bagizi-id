@@ -17,11 +17,14 @@ import { db } from '@/lib/prisma'
 // ================================ PERMISSION TYPES ================================
 
 export type PermissionType =
+  // General permissions
   | 'ALL'
   | 'READ'
   | 'WRITE'
   | 'DELETE'
   | 'APPROVE'
+  
+  // SPPG Operations (for SPPG users)
   | 'MENU_MANAGE'
   | 'SCHOOL_MANAGE'
   | 'PROCUREMENT_MANAGE'
@@ -37,15 +40,157 @@ export type PermissionType =
   | 'INVENTORY_VIEW'
   | 'INVENTORY_MANAGE'
   | 'INVENTORY_APPROVE'
+  
+  // Platform Admin Permissions
+  | 'PLATFORM_SPPG_VIEW'
+  | 'PLATFORM_SPPG_CREATE'
+  | 'PLATFORM_SPPG_EDIT'
+  | 'PLATFORM_SPPG_DELETE'
+  | 'PLATFORM_SPPG_ACTIVATE'
+  | 'PLATFORM_USER_VIEW'
+  | 'PLATFORM_USER_CREATE'
+  | 'PLATFORM_USER_EDIT'
+  | 'PLATFORM_USER_DELETE'
+  | 'PLATFORM_DEMO_REQUEST_VIEW'
+  | 'PLATFORM_DEMO_REQUEST_APPROVE'
+  | 'PLATFORM_DEMO_REQUEST_REJECT'
+  | 'PLATFORM_DEMO_REQUEST_CONVERT'
+  | 'PLATFORM_SUBSCRIPTION_VIEW'
+  | 'PLATFORM_SUBSCRIPTION_EDIT'
+  | 'PLATFORM_BILLING_VIEW'
+  | 'PLATFORM_BILLING_MANAGE'
+  | 'PLATFORM_ANALYTICS_VIEW'
+  | 'PLATFORM_ANALYTICS_EXPORT'
+  | 'PLATFORM_SETTINGS_VIEW'
+  | 'PLATFORM_SETTINGS_EDIT'
+  | 'PLATFORM_DATABASE_ACCESS'
+  | 'PLATFORM_SECURITY_MANAGE'
+  | 'PLATFORM_AUDIT_LOG_VIEW'
+  | 'PLATFORM_REGION_MANAGE'
 
 // ================================ ROLE PERMISSIONS MAPPING ================================
 
 const rolePermissions: Record<UserRole, PermissionType[]> = {
-  // Platform Level
-  PLATFORM_SUPERADMIN: ['ALL'],
-  PLATFORM_SUPPORT: ['READ', 'REPORTS_VIEW'],
-  PLATFORM_ANALYST: ['READ', 'ANALYTICS_VIEW'],
+  // ================================
+  // PLATFORM LEVEL ROLES
+  // ================================
+  
+  /**
+   * PLATFORM_SUPERADMIN - Full platform access
+   * Use case: CTO, Technical Lead, System Administrator
+   */
+  PLATFORM_SUPERADMIN: [
+    'ALL', // Superadmin has ALL permissions by default
+    
+    // Explicitly list for documentation
+    'PLATFORM_SPPG_VIEW',
+    'PLATFORM_SPPG_CREATE',
+    'PLATFORM_SPPG_EDIT',
+    'PLATFORM_SPPG_DELETE',
+    'PLATFORM_SPPG_ACTIVATE',
+    'PLATFORM_USER_VIEW',
+    'PLATFORM_USER_CREATE',
+    'PLATFORM_USER_EDIT',
+    'PLATFORM_USER_DELETE',
+    'PLATFORM_DEMO_REQUEST_VIEW',
+    'PLATFORM_DEMO_REQUEST_APPROVE',
+    'PLATFORM_DEMO_REQUEST_REJECT',
+    'PLATFORM_DEMO_REQUEST_CONVERT',
+    'PLATFORM_SUBSCRIPTION_VIEW',
+    'PLATFORM_SUBSCRIPTION_EDIT',
+    'PLATFORM_BILLING_VIEW',
+    'PLATFORM_BILLING_MANAGE',
+    'PLATFORM_ANALYTICS_VIEW',
+    'PLATFORM_ANALYTICS_EXPORT',
+    'PLATFORM_SETTINGS_VIEW',
+    'PLATFORM_SETTINGS_EDIT',
+    'PLATFORM_DATABASE_ACCESS',
+    'PLATFORM_SECURITY_MANAGE',
+    'PLATFORM_AUDIT_LOG_VIEW',
+    'PLATFORM_REGION_MANAGE',
+  ],
+  
+  /**
+   * PLATFORM_SUPPORT - Customer support operations
+   * Use case: Customer Success Team, Support Engineers
+   * Can: Manage SPPGs, users, demo requests, view billing
+   * Cannot: Delete SPPGs, manage billing, access database/security
+   */
+  PLATFORM_SUPPORT: [
+    'READ',
+    'WRITE',
+    
+    // SPPG Management - Limited (no delete)
+    'PLATFORM_SPPG_VIEW',
+    'PLATFORM_SPPG_CREATE',
+    'PLATFORM_SPPG_EDIT',
+    'PLATFORM_SPPG_ACTIVATE',
+    
+    // User Management - Full (for customer support)
+    'PLATFORM_USER_VIEW',
+    'PLATFORM_USER_CREATE',
+    'PLATFORM_USER_EDIT',
+    // No USER_DELETE - escalate to superadmin
+    
+    // Demo Requests - Full control (primary responsibility)
+    'PLATFORM_DEMO_REQUEST_VIEW',
+    'PLATFORM_DEMO_REQUEST_APPROVE',
+    'PLATFORM_DEMO_REQUEST_REJECT',
+    'PLATFORM_DEMO_REQUEST_CONVERT',
+    
+    // Subscriptions & Billing - View only (for troubleshooting)
+    'PLATFORM_SUBSCRIPTION_VIEW',
+    'PLATFORM_BILLING_VIEW',
+    // No BILLING_MANAGE - financial separation
+    
+    // Analytics - Full view
+    'PLATFORM_ANALYTICS_VIEW',
+    'PLATFORM_ANALYTICS_EXPORT',
+    'PLATFORM_AUDIT_LOG_VIEW',
+    
+    // Regional Data - Manage
+    'PLATFORM_REGION_MANAGE',
+    
+    // Settings - View only
+    'PLATFORM_SETTINGS_VIEW',
+    // No SETTINGS_EDIT, DATABASE_ACCESS, SECURITY_MANAGE
+  ],
+  
+  /**
+   * PLATFORM_ANALYST - Read-only analytics and reporting
+   * Use case: Business Analysts, Data Team, Management
+   * Can: View everything, export analytics
+   * Cannot: Modify anything
+   */
+  PLATFORM_ANALYST: [
+    'READ',
+    
+    // SPPG & Users - View only
+    'PLATFORM_SPPG_VIEW',
+    'PLATFORM_USER_VIEW',
+    
+    // Demo Requests - View only
+    'PLATFORM_DEMO_REQUEST_VIEW',
+    
+    // Subscriptions & Billing - View only
+    'PLATFORM_SUBSCRIPTION_VIEW',
+    'PLATFORM_BILLING_VIEW',
+    
+    // Analytics - Full access (primary responsibility)
+    'PLATFORM_ANALYTICS_VIEW',
+    'PLATFORM_ANALYTICS_EXPORT',
+    'PLATFORM_AUDIT_LOG_VIEW',
+    'REPORTS_VIEW',
+    'ANALYTICS_VIEW',
+    
+    // Settings - View only
+    'PLATFORM_SETTINGS_VIEW',
+  ],
 
+  // ================================
+  // SPPG LEVEL ROLES
+  // ================================
+  
   // SPPG Management
   SPPG_KEPALA: [
     'READ',
@@ -165,6 +310,115 @@ export function canManageDistribution(role: UserRole): boolean {
  */
 export function canApprove(role: UserRole): boolean {
   return hasPermission(role, 'APPROVE')
+}
+
+// ================================ PLATFORM ADMIN PERMISSION CHECKS ================================
+
+/**
+ * Check if user is a platform admin (any level)
+ */
+export function isPlatformAdmin(role: UserRole | null | undefined): boolean {
+  if (!role) return false
+  return (
+    role === 'PLATFORM_SUPERADMIN' ||
+    role === 'PLATFORM_SUPPORT' ||
+    role === 'PLATFORM_ANALYST'
+  )
+}
+
+/**
+ * Check if user is superadmin specifically
+ */
+export function isSuperAdmin(role: UserRole | null | undefined): boolean {
+  return role === 'PLATFORM_SUPERADMIN'
+}
+
+/**
+ * Check if user has write access (can create/edit)
+ */
+export function hasWriteAccess(role: UserRole | null | undefined): boolean {
+  if (!role) return false
+  return (
+    role === 'PLATFORM_SUPERADMIN' ||
+    role === 'PLATFORM_SUPPORT'
+  )
+}
+
+/**
+ * Check if user has read-only access
+ */
+export function isReadOnly(role: UserRole | null | undefined): boolean {
+  return role === 'PLATFORM_ANALYST'
+}
+
+/**
+ * SPPG Management Permissions for Platform Admins
+ */
+export const PlatformSppgPermissions = {
+  canView: (role: UserRole) => hasPermission(role, 'PLATFORM_SPPG_VIEW'),
+  canCreate: (role: UserRole) => hasPermission(role, 'PLATFORM_SPPG_CREATE'),
+  canEdit: (role: UserRole) => hasPermission(role, 'PLATFORM_SPPG_EDIT'),
+  canDelete: (role: UserRole) => hasPermission(role, 'PLATFORM_SPPG_DELETE'),
+  canActivate: (role: UserRole) => hasPermission(role, 'PLATFORM_SPPG_ACTIVATE'),
+}
+
+/**
+ * User Management Permissions for Platform Admins
+ */
+export const PlatformUserPermissions = {
+  canView: (role: UserRole) => hasPermission(role, 'PLATFORM_USER_VIEW'),
+  canCreate: (role: UserRole) => hasPermission(role, 'PLATFORM_USER_CREATE'),
+  canEdit: (role: UserRole) => hasPermission(role, 'PLATFORM_USER_EDIT'),
+  canDelete: (role: UserRole) => hasPermission(role, 'PLATFORM_USER_DELETE'),
+}
+
+/**
+ * Demo Request Permissions for Platform Admins
+ */
+export const PlatformDemoRequestPermissions = {
+  canView: (role: UserRole) => hasPermission(role, 'PLATFORM_DEMO_REQUEST_VIEW'),
+  canApprove: (role: UserRole) => hasPermission(role, 'PLATFORM_DEMO_REQUEST_APPROVE'),
+  canReject: (role: UserRole) => hasPermission(role, 'PLATFORM_DEMO_REQUEST_REJECT'),
+  canConvert: (role: UserRole) => hasPermission(role, 'PLATFORM_DEMO_REQUEST_CONVERT'),
+  canTakeAction: (role: UserRole) => 
+    hasPermission(role, 'PLATFORM_DEMO_REQUEST_APPROVE') ||
+    hasPermission(role, 'PLATFORM_DEMO_REQUEST_REJECT'),
+}
+
+/**
+ * Subscription & Billing Permissions for Platform Admins
+ */
+export const PlatformBillingPermissions = {
+  canViewSubscription: (role: UserRole) => hasPermission(role, 'PLATFORM_SUBSCRIPTION_VIEW'),
+  canEditSubscription: (role: UserRole) => hasPermission(role, 'PLATFORM_SUBSCRIPTION_EDIT'),
+  canViewBilling: (role: UserRole) => hasPermission(role, 'PLATFORM_BILLING_VIEW'),
+  canManageBilling: (role: UserRole) => hasPermission(role, 'PLATFORM_BILLING_MANAGE'),
+}
+
+/**
+ * Platform Settings Permissions
+ */
+export const PlatformSettingsPermissions = {
+  canView: (role: UserRole) => hasPermission(role, 'PLATFORM_SETTINGS_VIEW'),
+  canEdit: (role: UserRole) => hasPermission(role, 'PLATFORM_SETTINGS_EDIT'),
+  canAccessDatabase: (role: UserRole) => hasPermission(role, 'PLATFORM_DATABASE_ACCESS'),
+  canManageSecurity: (role: UserRole) => hasPermission(role, 'PLATFORM_SECURITY_MANAGE'),
+}
+
+/**
+ * Analytics & Reporting Permissions for Platform Admins
+ */
+export const PlatformAnalyticsPermissions = {
+  canView: (role: UserRole) => hasPermission(role, 'PLATFORM_ANALYTICS_VIEW'),
+  canExport: (role: UserRole) => hasPermission(role, 'PLATFORM_ANALYTICS_EXPORT'),
+  canViewAuditLog: (role: UserRole) => hasPermission(role, 'PLATFORM_AUDIT_LOG_VIEW'),
+}
+
+/**
+ * Regional Data Permissions for Platform Admins
+ */
+export const PlatformRegionalPermissions = {
+  canManage: (role: UserRole) => hasPermission(role, 'PLATFORM_REGION_MANAGE'),
 }
 
 // ================================ SPPG ACCESS VERIFICATION ================================

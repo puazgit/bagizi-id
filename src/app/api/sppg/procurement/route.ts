@@ -3,11 +3,19 @@
  * @version Next.js 15.5.4 / Prisma 6.17.1 / Enterprise-grade
  * @author Bagizi-ID Development Team
  * @see {@link /docs/copilot-instructions.md} Enterprise Development Guidelines
+ * 
+ * RBAC Integration:
+ * - GET: Protected by withSppgAuth
+ * - POST: Protected by withSppgAuth
+ * - Automatic audit logging
+ * - Permission: PROCUREMENT_VIEW, PROCUREMENT_MANAGE
  */
 
-import { NextRequest } from 'next/server'
-import { auth } from '@/auth'
+import { NextRequest, NextResponse } from 'next/server'
+import { withSppgAuth } from '@/lib/api-middleware'
 import { db } from '@/lib/prisma'
+import { hasPermission } from '@/lib/permissions'
+import { UserRole } from '@prisma/client'
 import { 
   procurementCreateSchema, 
   procurementFiltersSchema
@@ -15,50 +23,50 @@ import {
 
 // ================================ GET /api/sppg/procurement ================================
 
+/**
+ * GET /api/sppg/procurement
+ * @rbac Protected by withSppgAuth
+ * @audit Automatic logging
+ * @security Requires PROCUREMENT_VIEW permission
+ * @query {ProcurementFilters} Pagination and filtering parameters
+ * @returns {Promise<Response>} List of procurement orders
+ */
 export async function GET(request: NextRequest) {
-  try {
-    // 1. Authentication Check
-    const session = await auth()
-    if (!session?.user) {
-      return Response.json({ 
-        success: false, 
-        error: 'Unauthorized - Login required' 
-      }, { status: 401 })
-    }
+  return withSppgAuth(request, async (session) => {
+    try {
+      // Permission Check
+      if (!session.user.userRole || !hasPermission(session.user.userRole as UserRole, 'READ')) {
+        return NextResponse.json({ 
+          success: false, 
+          error: 'Insufficient permissions' 
+        }, { status: 403 })
+      }
 
-    // 2. SPPG Access Check (Multi-tenancy - CRITICAL!)
-    if (!session.user.sppgId) {
-      return Response.json({ 
-        success: false, 
-        error: 'SPPG access required' 
-      }, { status: 403 })
-    }
+      // Parse and validate query parameters
+      const url = new URL(request.url)
+      const queryParams = Object.fromEntries(url.searchParams)
+      
+      // Convert string values to appropriate types
+      const processedParams = {
+        ...queryParams,
+        page: queryParams.page ? parseInt(queryParams.page) : undefined,
+        limit: queryParams.limit ? parseInt(queryParams.limit) : undefined,
+        minAmount: queryParams.minAmount ? parseFloat(queryParams.minAmount) : undefined,
+        maxAmount: queryParams.maxAmount ? parseFloat(queryParams.maxAmount) : undefined,
+        dateFrom: queryParams.dateFrom ? new Date(queryParams.dateFrom) : undefined,
+        dateTo: queryParams.dateTo ? new Date(queryParams.dateTo) : undefined,
+        status: queryParams.status ? queryParams.status.split(',') : undefined,
+        deliveryStatus: queryParams.deliveryStatus ? queryParams.deliveryStatus.split(',') : undefined,
+        paymentStatus: queryParams.paymentStatus ? queryParams.paymentStatus.split(',') : undefined,
+        purchaseMethod: queryParams.purchaseMethod ? queryParams.purchaseMethod.split(',') : undefined,
+      }
 
-    // 3. Parse and validate query parameters
-    const url = new URL(request.url)
-    const queryParams = Object.fromEntries(url.searchParams)
-    
-    // Convert string values to appropriate types
-    const processedParams = {
-      ...queryParams,
-      page: queryParams.page ? parseInt(queryParams.page) : undefined,
-      limit: queryParams.limit ? parseInt(queryParams.limit) : undefined,
-      minAmount: queryParams.minAmount ? parseFloat(queryParams.minAmount) : undefined,
-      maxAmount: queryParams.maxAmount ? parseFloat(queryParams.maxAmount) : undefined,
-      dateFrom: queryParams.dateFrom ? new Date(queryParams.dateFrom) : undefined,
-      dateTo: queryParams.dateTo ? new Date(queryParams.dateTo) : undefined,
-      status: queryParams.status ? queryParams.status.split(',') : undefined,
-      deliveryStatus: queryParams.deliveryStatus ? queryParams.deliveryStatus.split(',') : undefined,
-      paymentStatus: queryParams.paymentStatus ? queryParams.paymentStatus.split(',') : undefined,
-      purchaseMethod: queryParams.purchaseMethod ? queryParams.purchaseMethod.split(',') : undefined,
-    }
+      const filters = procurementFiltersSchema.parse(processedParams)
 
-    const filters = procurementFiltersSchema.parse(processedParams)
-
-    // 4. Build database query with multi-tenant filtering
-    const where = {
-      // Multi-tenant: Only get procurements from user's SPPG
-      sppgId: session.user.sppgId,
+      // Build database query with multi-tenant filtering
+      const where = {
+        // Multi-tenant: Only get procurements from user's SPPG
+      sppgId: session.user.sppgId!,
       
       // Apply filters
       ...(filters.search && {
@@ -151,7 +159,7 @@ export async function GET(request: NextRequest) {
     })
 
     // 7. Success response with pagination
-    return Response.json({
+    return NextResponse.json({
       success: true,
       data: transformedProcurements,
       pagination: {
@@ -162,79 +170,63 @@ export async function GET(request: NextRequest) {
       }
     })
 
-  } catch (error) {
-    console.error('GET /api/sppg/procurement error:', error)
-    
-    // Validation error
-    if (error instanceof Error && error.name === 'ZodError') {
-      return Response.json({ 
-        success: false, 
-        error: 'Invalid query parameters',
-        details: error 
-      }, { status: 400 })
-    }
+    } catch (error) {
+      // Validation error
+      if (error instanceof Error && error.name === 'ZodError') {
+        return NextResponse.json({ 
+          success: false, 
+          error: 'Invalid query parameters',
+          details: error 
+        }, { status: 400 })
+      }
 
-    // Internal server error
-    return Response.json({ 
-      success: false, 
-      error: 'Failed to fetch procurements',
-      details: process.env.NODE_ENV === 'development' ? error : undefined
-    }, { status: 500 })
-  }
+      // Internal server error
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Failed to fetch procurements',
+        details: process.env.NODE_ENV === 'development' ? error : undefined
+      }, { status: 500 })
+    }
+  })
 }
 
 // ================================ POST /api/sppg/procurement ================================
 
+/**
+ * POST /api/sppg/procurement
+ * @rbac Protected by withSppgAuth
+ * @audit Automatic logging
+ * @security Requires PROCUREMENT_MANAGE permission
+ * @body {ProcurementCreateInput} Procurement order data
+ * @returns {Promise<Response>} Created procurement order
+ */
 export async function POST(request: NextRequest) {
-  try {
-    // 1. Authentication Check
-    const session = await auth()
-    if (!session?.user) {
-      return Response.json({ 
-        success: false, 
-        error: 'Unauthorized - Login required' 
-      }, { status: 401 })
-    }
+  return withSppgAuth(request, async (session) => {
+    try {
+      // Permission Check
+      if (!session.user.userRole || !hasPermission(session.user.userRole as UserRole, 'PROCUREMENT_MANAGE')) {
+        return NextResponse.json({ 
+          success: false, 
+          error: 'Insufficient permissions' 
+        }, { status: 403 })
+      }
 
-    // 2. SPPG Access Check (Multi-tenancy - CRITICAL!)
-    if (!session.user.sppgId) {
-      return Response.json({ 
-        success: false, 
-        error: 'SPPG access required' 
-      }, { status: 403 })
-    }
+      // Parse and validate request body
+      const body = await request.json()
+      const validated = procurementCreateSchema.parse(body)
 
-    // 3. Role Check - Only certain roles can create procurements
-    const allowedRoles = [
-      'SPPG_KEPALA',
-      'SPPG_ADMIN',
-      'SPPG_AKUNTAN',
-      'SPPG_PRODUKSI_MANAGER'
-    ]
-    
-    if (!session.user.userRole || !allowedRoles.includes(session.user.userRole)) {
-      return Response.json({ 
-        success: false, 
-        error: 'Insufficient permissions - Only managers can create procurements' 
-      }, { status: 403 })
-    }
-
-    // 4. Parse and validate request body
-    const body = await request.json()
-    const validated = procurementCreateSchema.parse(body)
-
-    // 5. Verify plan belongs to SPPG if planId provided
+      // Verify plan belongs to SPPG if planId provided
     if (validated.planId) {
       const plan = await db.procurementPlan.findFirst({
         where: {
           id: validated.planId,
-          sppgId: session.user.sppgId,
+          sppgId: session.user.sppgId!,
           approvalStatus: 'APPROVED' // Only approved plans
         }
       })
 
       if (!plan) {
-        return Response.json({ 
+        return NextResponse.json({ 
           success: false, 
           error: 'Procurement plan not found, not approved, or does not belong to your SPPG' 
         }, { status: 404 })
@@ -242,31 +234,31 @@ export async function POST(request: NextRequest) {
 
       // Check if budget is available
       if (plan.remainingBudget < validated.totalAmount) {
-        return Response.json({ 
+        return NextResponse.json({ 
           success: false, 
           error: `Insufficient budget. Available: Rp ${plan.remainingBudget.toLocaleString()}, Required: Rp ${validated.totalAmount.toLocaleString()}` 
         }, { status: 400 })
       }
     }
 
-    // 6. Verify supplier belongs to SPPG and is active
+    // Verify supplier belongs to SPPG and is active
     const supplier = await db.supplier.findFirst({
       where: {
         id: validated.supplierId,
-        sppgId: session.user.sppgId,
+        sppgId: session.user.sppgId!,
         isActive: true,
         isBlacklisted: false
       }
     })
 
     if (!supplier) {
-      return Response.json({ 
+      return NextResponse.json({ 
         success: false, 
         error: 'Supplier not found, inactive, or blacklisted' 
       }, { status: 404 })
     }
 
-    // 7. Generate unique procurement code
+    // Generate unique procurement code
     const now = new Date()
     const year = now.getFullYear()
     const month = String(now.getMonth() + 1).padStart(2, '0')
@@ -274,7 +266,7 @@ export async function POST(request: NextRequest) {
     // Get count of procurements this month
     const count = await db.procurement.count({
       where: {
-        sppgId: session.user.sppgId,
+        sppgId: session.user.sppgId!,
         procurementDate: {
           gte: new Date(year, now.getMonth(), 1),
           lt: new Date(year, now.getMonth() + 1, 1)
@@ -389,39 +381,38 @@ export async function POST(request: NextRequest) {
     })
 
     // 10. Success response
-    return Response.json({
+    return NextResponse.json({
       success: true,
       data: fullProcurement,
       message: 'Procurement order created successfully'
     }, { status: 201 })
 
-  } catch (error) {
-    console.error('POST /api/sppg/procurement error:', error)
-    
-    // Validation error
-    if (error instanceof Error && error.name === 'ZodError') {
-      return Response.json({ 
-        success: false, 
-        error: 'Validation failed',
-        details: error 
-      }, { status: 400 })
-    }
-
-    // Prisma error
-    if (error && typeof error === 'object' && 'code' in error) {
-      if (error.code === 'P2002') {
-        return Response.json({ 
+    } catch (error) {
+      // Validation error
+      if (error instanceof Error && error.name === 'ZodError') {
+        return NextResponse.json({ 
           success: false, 
-          error: 'Procurement with this code already exists' 
-        }, { status: 409 })
+          error: 'Validation failed',
+          details: error 
+        }, { status: 400 })
       }
-    }
 
-    // Internal server error
-    return Response.json({ 
-      success: false, 
-      error: 'Failed to create procurement',
-      details: process.env.NODE_ENV === 'development' ? error : undefined
-    }, { status: 500 })
-  }
+      // Prisma error
+      if (error && typeof error === 'object' && 'code' in error) {
+        if (error.code === 'P2002') {
+          return NextResponse.json({ 
+            success: false, 
+            error: 'Procurement with this code already exists' 
+          }, { status: 409 })
+        }
+      }
+
+      // Internal server error
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Failed to create procurement',
+        details: process.env.NODE_ENV === 'development' ? error : undefined
+      }, { status: 500 })
+    }
+  })
 }

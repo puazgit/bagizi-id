@@ -5,10 +5,11 @@
  * @see {@link /docs/copilot-instructions.md} Enterprise Development Guidelines
  */
 
-import { NextRequest } from 'next/server'
-import { auth } from '@/auth'
+import { NextRequest, NextResponse } from 'next/server'
+import { withSppgAuth } from '@/lib/api-middleware'
 import { db } from '@/lib/prisma'
-import { ProcurementStatus } from '@prisma/client'
+import { ProcurementStatus, UserRole } from '@prisma/client'
+import { hasPermission } from '@/lib/permissions'
 import { z } from 'zod'
 
 // Receiving schema for validation
@@ -52,71 +53,48 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    const { id } = await params
-    
-    // 1. Authentication Check
-    const session = await auth()
-    if (!session?.user) {
-      return Response.json({ 
-        success: false, 
-        error: 'Unauthorized - Login required' 
-      }, { status: 401 })
-    }
+  return withSppgAuth(request, async (session) => {
+    try {
+      const { id } = await params
 
-    // 2. SPPG Access Check (Multi-tenancy - CRITICAL!)
-    if (!session.user.sppgId) {
-      return Response.json({ 
-        success: false, 
-        error: 'SPPG access required' 
-      }, { status: 403 })
-    }
+      // Permission Check - PROCUREMENT_MANAGE for receiving
+      if (!session.user.userRole || !hasPermission(session.user.userRole as UserRole, 'PROCUREMENT_MANAGE')) {
+        return NextResponse.json({ 
+          success: false, 
+          error: 'Insufficient permissions - Only authorized staff can receive items' 
+        }, { status: 403 })
+      }
 
-    // 3. Role Check - Only certain roles can receive items
-    const allowedRoles = [
-      'SPPG_KEPALA',
-      'SPPG_ADMIN',
-      'SPPG_STAFF_QC',
-      'SPPG_STAFF_ADMIN'
-    ]
-    
-    if (!session.user.userRole || !allowedRoles.includes(session.user.userRole)) {
-      return Response.json({ 
-        success: false, 
-        error: 'Insufficient permissions - Only authorized staff can receive items' 
-      }, { status: 403 })
-    }
-
-    // 4. Verify procurement exists and belongs to SPPG
-    const procurement = await db.procurement.findFirst({
-      where: {
-        id,
-        sppgId: session.user.sppgId
-      },
-      include: {
-        items: {
-          include: {
-            inventoryItem: {
-              select: {
-                id: true,
-                itemName: true,
-                currentStock: true,
-                unit: true
+      // Verify procurement exists and belongs to SPPG
+      const procurement = await db.procurement.findFirst({
+        where: {
+          id,
+          sppgId: session.user.sppgId!
+        },
+        include: {
+          items: {
+            include: {
+              inventoryItem: {
+                select: {
+                  id: true,
+                  itemName: true,
+                  currentStock: true,
+                  unit: true
+                }
               }
             }
-          }
-        },
-        supplier: {
-          select: {
-            id: true,
-            supplierName: true
+          },
+          supplier: {
+            select: {
+              id: true,
+              supplierName: true
+            }
           }
         }
-      }
-    })
+      })
 
-    if (!procurement) {
-      return Response.json({ 
+      if (!procurement) {
+      return NextResponse.json({ 
         success: false, 
         error: 'Procurement not found or access denied' 
       }, { status: 404 })
@@ -124,14 +102,14 @@ export async function PATCH(
 
     // 5. Check if procurement can be received
     if (procurement.status === 'CANCELLED' || procurement.status === 'REJECTED') {
-      return Response.json({ 
+      return NextResponse.json({ 
         success: false, 
         error: `Cannot receive ${procurement.status.toLowerCase()} procurement` 
       }, { status: 403 })
     }
 
     if (procurement.status === 'FULLY_RECEIVED' || procurement.status === 'COMPLETED') {
-      return Response.json({ 
+      return NextResponse.json({ 
         success: false, 
         error: 'Procurement already fully received' 
       }, { status: 403 })
@@ -147,7 +125,7 @@ export async function PATCH(
     const invalidItems = itemIds.filter(id => !procurementItemIds.includes(id))
     
     if (invalidItems.length > 0) {
-      return Response.json({ 
+      return NextResponse.json({ 
         success: false, 
         error: 'Some items do not belong to this procurement' 
       }, { status: 400 })
@@ -311,7 +289,7 @@ export async function PATCH(
     })
 
     // 9. Success response
-    return Response.json({
+    return NextResponse.json({
       success: true,
       data: result,
       message: 'Items received and processed successfully'
@@ -322,18 +300,18 @@ export async function PATCH(
     
     // Validation error
     if (error instanceof Error && error.name === 'ZodError') {
-      return Response.json({ 
+      return NextResponse.json({ 
         success: false, 
         error: 'Validation failed',
         details: error 
       }, { status: 400 })
     }
 
-    // Internal server error
-    return Response.json({ 
+    return NextResponse.json({ 
       success: false, 
       error: 'Failed to process receiving',
       details: process.env.NODE_ENV === 'development' ? error : undefined
     }, { status: 500 })
   }
+  })
 }

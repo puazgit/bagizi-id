@@ -1,0 +1,1302 @@
+/**
+ * Admin SPPG Create Page
+ * Comprehensive form for creating new SPPG with all 48+ fields
+ * 
+ * @route /admin/sppg/new
+ * @access Platform Admin (SUPERADMIN only)
+ * 
+ * @version Next.js 15.5.4
+ * @author Bagizi-ID Development Team
+ */
+
+'use client'
+
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { useForm } from 'react-hook-form'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Separator } from '@/components/ui/separator'
+import { Badge } from '@/components/ui/badge'
+import { useCreateSppg } from '@/features/admin/sppg-management/hooks'
+import { createSppgSchema, type CreateSppgInput } from '@/features/admin/sppg-management/schemas'
+import { OrganizationType, Timezone } from '@prisma/client'
+import { ArrowLeft, Save, Building2, MapPin, Phone, User, FileText, Settings } from 'lucide-react'
+import Link from 'next/link'
+import { toast } from 'sonner'
+
+export default function CreateSppgPage() {
+  const router = useRouter()
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  
+  const { mutate: createSppg } = useCreateSppg()
+
+  const form = useForm<CreateSppgInput>({
+    resolver: zodResolver(createSppgSchema),
+    defaultValues: {
+      code: '',
+      name: '',
+      description: null,
+      organizationType: 'PEMERINTAH',
+      establishedYear: null,
+      targetRecipients: 100,
+      addressDetail: '',
+      provinceId: '',
+      regencyId: '',
+      districtId: '',
+      villageId: '',
+      postalCode: null,
+      coordinates: null,
+      timezone: 'WIB',
+      phone: '',
+      email: '',
+      picName: '',
+      picPosition: '',
+      picEmail: '',
+      picPhone: '',
+      picWhatsapp: null,
+      legalDocumentType: null,
+      legalDocumentNumber: null,
+      legalDocumentDate: null,
+      legalDocumentFile: null,
+      operationalLicense: null,
+      operationalLicenseDate: null,
+      operationalLicenseFile: null,
+      operationalStatus: null,
+      operationalHours: null,
+      operationalDays: null,
+      servingCapacity: null,
+      staffCount: null,
+      kitchenArea: null,
+      storageArea: null,
+      hasColdStorage: false,
+      hasWarehouse: false,
+      hasDeliveryVehicle: false,
+      vehicleCount: null,
+      bankName: null,
+      bankAccountNumber: null,
+      bankAccountName: null,
+      taxIdNumber: null,
+      website: null,
+      socialMedia: null,
+      isDemoAccount: false,
+      demoExpiresAt: null,
+      demoMaxRecipients: null,
+      demoAllowedFeatures: [],
+      status: 'PENDING_APPROVAL',
+    },
+  })
+
+  const onSubmit = async (data: CreateSppgInput) => {
+    setIsSubmitting(true)
+    
+    createSppg(data, {
+      onSuccess: (response) => {
+        toast.success('SPPG berhasil dibuat')
+        router.push(`/admin/sppg/${response.id}`)
+      },
+      onError: (error: Error) => {
+        toast.error(error.message || 'Gagal membuat SPPG')
+        setIsSubmitting(false)
+      },
+    })
+  }
+
+  return (
+    <div className="container mx-auto py-6 space-y-6 max-w-5xl">
+      {/* Header */}
+      <div className="flex items-center gap-4">
+        <Button variant="ghost" size="icon" asChild>
+          <Link href="/admin/sppg">
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
+        </Button>
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Tambah SPPG Baru</h1>
+          <p className="text-muted-foreground mt-1">
+            Lengkapi semua informasi untuk mendaftarkan SPPG baru
+          </p>
+        </div>
+      </div>
+
+      {/* Form */}
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          {/* 1. BASIC INFORMATION */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Building2 className="h-5 w-5 text-primary" />
+                <CardTitle>Informasi Dasar</CardTitle>
+              </div>
+              <CardDescription>
+                Identitas dan detail organisasi SPPG
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="code"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Kode SPPG *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="SPPG-JKT-001" {...field} />
+                      </FormControl>
+                      <FormDescription>
+                        Format: SPPG-[KOTA]-[NOMOR] (huruf besar)
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nama SPPG *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="SPPG Jakarta Pusat" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Deskripsi</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        placeholder="Deskripsi singkat tentang SPPG..."
+                        className="min-h-[80px]"
+                        {...field}
+                        value={field.value || ''}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <FormField
+                  control={form.control}
+                  name="organizationType"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Jenis Organisasi *</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Pilih jenis" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="PEMERINTAH">Pemerintah</SelectItem>
+                          <SelectItem value="SWASTA">Swasta</SelectItem>
+                          <SelectItem value="YAYASAN">Yayasan</SelectItem>
+                          <SelectItem value="KOMUNITAS">Komunitas</SelectItem>
+                          <SelectItem value="LAINNYA">Lainnya</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="establishedYear"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Tahun Berdiri</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          placeholder="2020"
+                          {...field}
+                          value={field.value || ''}
+                          onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : null)}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="targetRecipients"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Target Penerima *</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          placeholder="100"
+                          {...field}
+                          onChange={(e) => field.onChange(Number(e.target.value))}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Jumlah penerima manfaat
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* 2. LOCATION */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <MapPin className="h-5 w-5 text-primary" />
+                <CardTitle>Informasi Lokasi</CardTitle>
+              </div>
+              <CardDescription>
+                Alamat lengkap dan koordinat geografis
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <FormField
+                control={form.control}
+                name="addressDetail"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Alamat Lengkap *</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        placeholder="Jl. Contoh No. 123, RT 001/RW 002"
+                        className="min-h-[100px]"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="provinceId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Provinsi *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="ID Provinsi" {...field} />
+                      </FormControl>
+                      <FormDescription>
+                        TODO: Implement cascade select
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="regencyId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Kabupaten/Kota *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="ID Kabupaten/Kota" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="districtId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Kecamatan *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="ID Kecamatan" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="villageId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Desa/Kelurahan *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="ID Desa/Kelurahan" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <FormField
+                  control={form.control}
+                  name="postalCode"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Kode Pos</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="12345"
+                          {...field}
+                          value={field.value || ''}
+                        />
+                      </FormControl>
+                      <FormDescription>5 digit</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="coordinates"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Koordinat</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="-6.2088,106.8456"
+                          {...field}
+                          value={field.value || ''}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Format: lat,lng
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="timezone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Zona Waktu *</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="WIB">WIB (UTC+7)</SelectItem>
+                          <SelectItem value="WITA">WITA (UTC+8)</SelectItem>
+                          <SelectItem value="WIT">WIT (UTC+9)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* 3. CONTACT INFORMATION */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Phone className="h-5 w-5 text-primary" />
+                <CardTitle>Informasi Kontak</CardTitle>
+              </div>
+              <CardDescription>
+                Kontak resmi SPPG
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="phone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Telepon *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="021-12345678 atau 081234567890" {...field} />
+                      </FormControl>
+                      <FormDescription>
+                        Format: +62, 62, atau 0
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email *</FormLabel>
+                      <FormControl>
+                        <Input type="email" placeholder="admin@sppg.id" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="website"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Website</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="https://sppg.example.com"
+                          {...field}
+                          value={field.value || ''}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="socialMedia"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Media Sosial</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="@sppg_jakarta"
+                          {...field}
+                          value={field.value || ''}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Instagram/Facebook handle
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* 4. PERSON IN CHARGE (PIC) */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <User className="h-5 w-5 text-primary" />
+                <CardTitle>Penanggung Jawab</CardTitle>
+              </div>
+              <CardDescription>
+                Informasi person in charge (PIC) SPPG
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="picName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nama PIC *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Dr. John Doe" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="picPosition"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Jabatan PIC *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Kepala SPPG" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <FormField
+                  control={form.control}
+                  name="picEmail"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email PIC *</FormLabel>
+                      <FormControl>
+                        <Input type="email" placeholder="pic@sppg.id" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="picPhone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Telepon PIC *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="081234567890" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="picWhatsapp"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>WhatsApp PIC</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="081234567890"
+                          {...field}
+                          value={field.value || ''}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* 5. LEGAL DOCUMENTS */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <FileText className="h-5 w-5 text-primary" />
+                <CardTitle>Dokumen Legal</CardTitle>
+              </div>
+              <CardDescription>
+                Dokumen legalitas dan perizinan operasional
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-4">
+                <div className="font-medium text-sm">Dokumen Legalitas</div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="legalDocumentType"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Jenis Dokumen</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="Akta Pendirian"
+                            {...field}
+                            value={field.value || ''}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="legalDocumentNumber"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Nomor Dokumen</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="123/ABC/2020"
+                            {...field}
+                            value={field.value || ''}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="legalDocumentDate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Tanggal Dokumen</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="date"
+                            {...field}
+                            value={field.value ? new Date(field.value).toISOString().split('T')[0] : ''}
+                            onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value) : null)}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <FormField
+                  control={form.control}
+                  name="legalDocumentFile"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Upload Dokumen Legal</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="URL file atau path"
+                          {...field}
+                          value={field.value || ''}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        TODO: Implement file upload
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <Separator />
+
+              <div className="space-y-4">
+                <div className="font-medium text-sm">Izin Operasional</div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="operationalLicense"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Nomor Izin</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="456/IOP/2020"
+                            {...field}
+                            value={field.value || ''}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="operationalLicenseDate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Tanggal Izin</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="date"
+                            {...field}
+                            value={field.value ? new Date(field.value).toISOString().split('T')[0] : ''}
+                            onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value) : null)}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <FormField
+                  control={form.control}
+                  name="operationalLicenseFile"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Upload Izin Operasional</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="URL file atau path"
+                          {...field}
+                          value={field.value || ''}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* 6. OPERATIONAL DETAILS */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Settings className="h-5 w-5 text-primary" />
+                <CardTitle>Detail Operasional</CardTitle>
+              </div>
+              <CardDescription>
+                Informasi operasional dan kapasitas SPPG
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <FormField
+                  control={form.control}
+                  name="operationalStatus"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Status Operasional</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="Aktif/Tidak Aktif"
+                          {...field}
+                          value={field.value || ''}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="operationalHours"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Jam Operasional</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="08:00 - 17:00"
+                          {...field}
+                          value={field.value || ''}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="operationalDays"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Hari Operasional</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="Senin - Jumat"
+                          {...field}
+                          value={field.value || ''}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="servingCapacity"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Kapasitas Penyajian</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number"
+                          placeholder="500"
+                          {...field}
+                          value={field.value || ''}
+                          onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : null)}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Porsi per hari
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="staffCount"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Jumlah Staff</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number"
+                          placeholder="10"
+                          {...field}
+                          value={field.value || ''}
+                          onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : null)}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <Separator />
+
+              <div className="space-y-4">
+                <div className="font-medium text-sm">Fasilitas</div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="kitchenArea"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Luas Dapur (m²)</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number"
+                            placeholder="50"
+                            {...field}
+                            value={field.value || ''}
+                            onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : null)}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="storageArea"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Luas Gudang (m²)</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number"
+                            placeholder="30"
+                            {...field}
+                            value={field.value || ''}
+                            onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : null)}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="vehicleCount"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Jumlah Kendaraan</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number"
+                            placeholder="2"
+                            {...field}
+                            value={field.value || ''}
+                            onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : null)}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="hasColdStorage"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                        <div className="space-y-1 leading-none">
+                          <FormLabel>Cold Storage</FormLabel>
+                          <FormDescription>
+                            Memiliki cold storage
+                          </FormDescription>
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="hasWarehouse"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                        <div className="space-y-1 leading-none">
+                          <FormLabel>Gudang</FormLabel>
+                          <FormDescription>
+                            Memiliki gudang penyimpanan
+                          </FormDescription>
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="hasDeliveryVehicle"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                        <div className="space-y-1 leading-none">
+                          <FormLabel>Kendaraan Distribusi</FormLabel>
+                          <FormDescription>
+                            Memiliki kendaraan
+                          </FormDescription>
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* 7. FINANCIAL INFORMATION */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Informasi Keuangan</CardTitle>
+              <CardDescription>
+                Data rekening bank dan perpajakan
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <FormField
+                  control={form.control}
+                  name="bankName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nama Bank</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="Bank Mandiri"
+                          {...field}
+                          value={field.value || ''}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="bankAccountNumber"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nomor Rekening</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="1234567890"
+                          {...field}
+                          value={field.value || ''}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="bankAccountName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nama Pemilik Rekening</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="SPPG Jakarta Pusat"
+                          {...field}
+                          value={field.value || ''}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <FormField
+                control={form.control}
+                name="taxIdNumber"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>NPWP</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="12.345.678.9-012.345"
+                        {...field}
+                        value={field.value || ''}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Nomor Pokok Wajib Pajak
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </CardContent>
+          </Card>
+
+          {/* 8. DEMO ACCOUNT SETTINGS */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Pengaturan Akun Demo</CardTitle>
+              <CardDescription>
+                Konfigurasi khusus untuk akun demo (opsional)
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <FormField
+                control={form.control}
+                name="isDemoAccount"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel>
+                        Tandai sebagai Akun Demo
+                      </FormLabel>
+                      <FormDescription>
+                        Akun demo memiliki fitur dan data terbatas untuk keperluan trial
+                      </FormDescription>
+                    </div>
+                  </FormItem>
+                )}
+              />
+
+              {form.watch('isDemoAccount') && (
+                <div className="space-y-4 pl-4 border-l-2 border-muted">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="demoExpiresAt"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Tanggal Kadaluarsa</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="date"
+                              {...field}
+                              value={field.value ? new Date(field.value).toISOString().split('T')[0] : ''}
+                              onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value) : null)}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Akun akan expired setelah tanggal ini
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="demoMaxRecipients"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Maksimal Penerima Demo</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number"
+                              placeholder="50"
+                              {...field}
+                              value={field.value || ''}
+                              onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : null)}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Batas penerima untuk akun demo
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <FormField
+                    control={form.control}
+                    name="demoAllowedFeatures"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Fitur yang Diizinkan</FormLabel>
+                        <FormControl>
+                          <Textarea 
+                            placeholder="MENU_MANAGEMENT, BASIC_REPORTING"
+                            className="min-h-[60px]"
+                            {...field}
+                            value={field.value?.join(', ') || ''}
+                            onChange={(e) => field.onChange(e.target.value.split(',').map(f => f.trim()).filter(Boolean))}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Daftar fitur dipisahkan dengan koma
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* 9. SYSTEM STATUS */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Status Sistem</CardTitle>
+              <CardDescription>
+                Status dan approval SPPG
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <FormField
+                control={form.control}
+                name="status"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Status SPPG *</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="PENDING_APPROVAL">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="secondary">Menunggu Persetujuan</Badge>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="ACTIVE">
+                          <div className="flex items-center gap-2">
+                            <Badge className="bg-green-500">Aktif</Badge>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="INACTIVE">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="secondary">Tidak Aktif</Badge>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="SUSPENDED">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="destructive">Ditangguhkan</Badge>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="REJECTED">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="border-orange-500 text-orange-500">
+                              Ditolak
+                            </Badge>
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>
+                      Status awal SPPG setelah dibuat
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </CardContent>
+          </Card>
+
+          {/* Actions */}
+          <div className="flex items-center justify-between gap-4 pt-6">
+            <Button type="button" variant="outline" asChild>
+              <Link href="/admin/sppg">
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Batal
+              </Link>
+            </Button>
+            <div className="flex items-center gap-2">
+              <Button type="button" variant="outline" onClick={() => form.reset()}>
+                Reset Form
+              </Button>
+              <Button type="submit" disabled={isSubmitting} size="lg">
+                <Save className="h-4 w-4 mr-2" />
+                {isSubmitting ? 'Menyimpan...' : 'Simpan SPPG'}
+              </Button>
+            </div>
+          </div>
+        </form>
+      </Form>
+    </div>
+  )
+}

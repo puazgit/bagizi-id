@@ -9,10 +9,12 @@
  * @security Multi-tenant with ownership check
  */
 
-import { NextRequest } from 'next/server'
-import { auth } from '@/auth'
+import { NextRequest, NextResponse } from 'next/server'
+import { withSppgAuth } from '@/lib/api-middleware'
+import { hasPermission } from '@/lib/permissions'
 import { db } from '@/lib/prisma'
 import { deliveryDetailInclude } from '@/features/sppg/distribution/delivery/types'
+import { UserRole } from '@prisma/client'
 
 /**
  * GET /api/sppg/distribution/delivery/:id
@@ -22,40 +24,38 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    // 1. Authentication check
-    const session = await auth()
-    if (!session?.user) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+  return withSppgAuth(request, async (session) => {
+    try {
+      // 1. Get delivery ID from params
+      const { id } = await params
 
-    // 2. Multi-tenant check
-    if (!session.user.sppgId) {
-      return Response.json({ error: 'SPPG access required' }, { status: 403 })
-    }
+      // 2. Permission Check
+      if (!hasPermission(session.user.userRole as UserRole, 'DISTRIBUTION_MANAGE')) {
+        return NextResponse.json(
+          { success: false, error: 'Insufficient permissions' },
+          { status: 403 }
+        )
+      }
 
-    // 3. Get delivery ID from params
-    const { id } = await params
-
-    // 4. Fetch delivery with multi-tenant security
-    const delivery = await db.distributionDelivery.findFirst({
+      // 3. Fetch delivery with multi-tenant security
+      const delivery = await db.distributionDelivery.findFirst({
       where: {
         id,
         schedule: {
-          sppgId: session.user.sppgId, // CRITICAL: Multi-tenant security
+          sppgId: session.user.sppgId!, // CRITICAL: Multi-tenant security
         },
       },
       include: deliveryDetailInclude,
     })
 
     if (!delivery) {
-      return Response.json(
+      return NextResponse.json(
         { error: 'Pengiriman tidak ditemukan atau akses ditolak' },
         { status: 404 }
       )
     }
 
-    // 5. Calculate metrics (simplified - can be enhanced)
+    // 4. Calculate metrics (simplified - can be enhanced)
     const metrics = {
       isOnTime: delivery.plannedTime && delivery.actualTime
         ? new Date(delivery.actualTime) <= new Date(delivery.plannedTime)
@@ -89,7 +89,7 @@ export async function GET(
       isCancelled: delivery.status === 'CANCELLED',
     }
 
-    // 6. Parse locations
+    // 5. Parse locations
     const parseLocation = (gps: string | null) => {
       if (!gps) return null
       const [lat, lng] = gps.split(',').map(Number)
@@ -102,7 +102,7 @@ export async function GET(
       current: parseLocation(delivery.currentLocation),
     }
 
-    // 7. Parse route points
+    // 6. Parse route points
     const routePoints = (delivery.routeTrackingPoints || []).map((point: string) => {
       const [lat, lng] = point.split(',').map(Number)
       return {
@@ -113,7 +113,7 @@ export async function GET(
       }
     })
 
-    return Response.json({
+    return NextResponse.json({
       success: true,
       data: {
         ...delivery,
@@ -124,14 +124,16 @@ export async function GET(
     })
   } catch (error) {
     console.error('GET /api/sppg/distribution/delivery/[id] error:', error)
-    return Response.json(
+    return NextResponse.json(
       {
+        success: false,
         error: 'Gagal mengambil detail pengiriman',
         details: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined,
       },
       { status: 500 }
     )
   }
+  })
 }
 
 /**
@@ -142,43 +144,41 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    // 1. Authentication check
-    const session = await auth()
-    if (!session?.user) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+  return withSppgAuth(request, async (session) => {
+    try {
+      // 1. Get delivery ID from params
+      const { id } = await params
 
-    // 2. Multi-tenant check
-    if (!session.user.sppgId) {
-      return Response.json({ error: 'SPPG access required' }, { status: 403 })
-    }
+      // 2. Permission Check
+      if (!hasPermission(session.user.userRole as UserRole, 'DISTRIBUTION_MANAGE')) {
+        return NextResponse.json(
+          { success: false, error: 'Insufficient permissions' },
+          { status: 403 }
+        )
+      }
 
-    // 3. Get delivery ID from params
-    const { id } = await params
-
-    // 4. Verify ownership
-    const existing = await db.distributionDelivery.findFirst({
+      // 3. Verify ownership
+      const existing = await db.distributionDelivery.findFirst({
       where: {
         id,
         schedule: {
-          sppgId: session.user.sppgId, // CRITICAL: Multi-tenant security
+          sppgId: session.user.sppgId!, // CRITICAL: Multi-tenant security
         },
       },
       select: { id: true },
     })
 
     if (!existing) {
-      return Response.json(
+      return NextResponse.json(
         { error: 'Pengiriman tidak ditemukan atau akses ditolak' },
         { status: 404 }
       )
     }
 
-    // 5. Parse request body
+    // 4. Parse request body
     const body = await request.json()
 
-    // 6. Update delivery
+    // 5. Update delivery
     const updated = await db.distributionDelivery.update({
       where: { id },
       data: {
@@ -188,18 +188,20 @@ export async function PUT(
       include: deliveryDetailInclude,
     })
 
-    return Response.json({
+    return NextResponse.json({
       success: true,
       data: updated,
     })
   } catch (error) {
     console.error('PUT /api/sppg/distribution/delivery/[id] error:', error)
-    return Response.json(
+    return NextResponse.json(
       {
+        success: false,
         error: 'Gagal memperbarui pengiriman',
         details: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined,
       },
       { status: 500 }
     )
   }
+  })
 }

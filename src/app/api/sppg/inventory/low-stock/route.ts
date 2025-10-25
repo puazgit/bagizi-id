@@ -4,50 +4,45 @@
  * @description Fetch inventory items that are at or below minimum stock level
  * @requires Auth.js v5 - Authentication
  * @requires Prisma - Database operations
+ * 
+ * RBAC Integration:
+ * - GET: Protected by withSppgAuth
+ * - Automatic audit logging
+ * - Permission: INVENTORY_VIEW
  */
 
-import { auth } from '@/auth'
+import { NextRequest, NextResponse } from 'next/server'
+import { withSppgAuth } from '@/lib/api-middleware'
 import { db } from '@/lib/prisma'
 import { hasPermission } from '@/lib/permissions'
+import { UserRole } from '@prisma/client'
 
 /**
  * GET /api/sppg/inventory/low-stock
- * Fetch items with stock at or below minimum level
- * @security Requires authentication and INVENTORY_VIEW permission
+ * @rbac Protected by withSppgAuth
+ * @audit Automatic logging
+ * @security Requires INVENTORY_VIEW permission
  * @returns {Promise<Response>} List of low stock items with urgency levels
  */
-export async function GET() {
-  try {
-    // 1. Authentication Check
-    const session = await auth()
-    if (!session?.user) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+export async function GET(request: NextRequest) {
+  return withSppgAuth(request, async (session) => {
+    try {
+      // Permission Check
+      if (!session.user.userRole || !hasPermission(session.user.userRole as UserRole, 'INVENTORY_VIEW')) {
+        return NextResponse.json({ 
+          error: 'Insufficient permissions',
+          message: 'Anda tidak memiliki akses untuk melihat inventori'
+        }, { status: 403 })
+      }
 
-    // 2. Permission Check
-    if (!session.user.userRole || !hasPermission(session.user.userRole, 'INVENTORY_VIEW')) {
-      return Response.json({ 
-        error: 'Insufficient permissions',
-        message: 'Anda tidak memiliki akses untuk melihat inventori'
-      }, { status: 403 })
-    }
-
-    // 3. Multi-tenant Check
-    if (!session.user.sppgId) {
-      return Response.json({ 
-        error: 'SPPG access required',
-        message: 'Akses SPPG diperlukan'
-      }, { status: 403 })
-    }
-
-    // 4. Fetch all items and filter for low stock
-    // Note: Prisma doesn't support comparing two columns directly in where clause
-    // So we fetch all and filter in application layer
-    const allItems = await db.inventoryItem.findMany({
-      where: {
-        sppgId: session.user.sppgId,
-        isActive: true,
-      },
+      // Fetch all items and filter for low stock
+      // Note: Prisma doesn't support comparing two columns directly in where clause
+      // So we fetch all and filter in application layer
+      const allItems = await db.inventoryItem.findMany({
+        where: {
+          sppgId: session.user.sppgId!,
+          isActive: true,
+        },
       include: {
         preferredSupplier: {
           select: {
@@ -113,18 +108,17 @@ export async function GET() {
       outOfStock: enrichedItems.filter((i: typeof enrichedItems[0]) => i.currentStock === 0).length,
     }
 
-    return Response.json({
+    return NextResponse.json({
       success: true,
       data: enrichedItems,
       summary,
     })
-
   } catch (error) {
-    console.error('GET /api/sppg/inventory/low-stock error:', error)
-    return Response.json({ 
+    return NextResponse.json({ 
       error: 'Internal server error',
       message: 'Terjadi kesalahan saat mengambil data low stock',
       details: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined
     }, { status: 500 })
   }
+  })
 }

@@ -5,41 +5,29 @@
  * @author Bagizi-ID Development Team
  */
 
-import { NextRequest } from 'next/server'
-import { auth } from '@/auth'
+import { NextRequest, NextResponse } from 'next/server'
+import { withSppgAuth } from '@/lib/api-middleware'
+import { hasPermission } from '@/lib/permissions'
 import { db } from '@/lib/prisma'
-import { checkSppgAccess } from '@/lib/permissions'
+import { UserRole } from '@prisma/client'
 
 /**
  * GET /api/sppg/distribution/delivery
  * Fetch all deliveries for current SPPG with filters
  */
 export async function GET(request: NextRequest) {
-  try {
-    // 1. Authentication Check
-    const session = await auth()
-    if (!session?.user) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+  return withSppgAuth(request, async (session) => {
+    try {
+      // 1. Permission Check
+      if (!hasPermission(session.user.userRole as UserRole, 'DISTRIBUTION_MANAGE')) {
+        return NextResponse.json(
+          { success: false, error: 'Insufficient permissions' },
+          { status: 403 }
+        )
+      }
 
-    // 2. SPPG Access Check (CRITICAL FOR MULTI-TENANCY!)
-    if (!session.user.sppgId) {
-      return Response.json(
-        { error: 'SPPG access required' },
-        { status: 403 }
-      )
-    }
-    
-    const sppg = await checkSppgAccess(session.user.sppgId)
-    if (!sppg) {
-      return Response.json(
-        { error: 'SPPG not found or access denied' },
-        { status: 403 }
-      )
-    }
-
-    // 3. Parse Query Parameters
-    const { searchParams } = new URL(request.url)
+      // 2. Parse Query Parameters
+      const { searchParams } = new URL(request.url)
     
     // Get status array and filter out empty values
     const statusParams = searchParams.getAll('status').filter(Boolean)
@@ -60,10 +48,10 @@ export async function GET(request: NextRequest) {
     const sortField = searchParams.get('sortField') || 'estimatedArrival'
     const sortDirection = (searchParams.get('sortDirection') || 'desc') as 'asc' | 'desc'
 
-    // 4. Build Query
+    // 3. Build Query
     const where: Record<string, unknown> = {
       schedule: {
-        sppgId: session.user.sppgId, // MANDATORY multi-tenant filter via schedule
+        sppgId: session.user.sppgId!, // MANDATORY multi-tenant filter via schedule
       }
     }
 
@@ -115,7 +103,7 @@ export async function GET(request: NextRequest) {
       ]
     }
 
-    // 5. Execute Query
+    // 4. Execute Query
     const [deliveries, total] = await Promise.all([
       db.distributionDelivery.findMany({
         where,
@@ -169,7 +157,7 @@ export async function GET(request: NextRequest) {
       db.distributionDelivery.count({ where }),
     ])
 
-    // 6. Calculate Statistics
+    // 5. Calculate Statistics
     const [
       totalPlanned,
       totalInProgress,
@@ -202,7 +190,7 @@ export async function GET(request: NextRequest) {
       }),
     ])
 
-    // 7. Format Response
+    // 6. Format Response
     const formattedDeliveries = deliveries.map((delivery) => ({
       id: delivery.id,
       scheduleId: delivery.scheduleId,
@@ -235,7 +223,7 @@ export async function GET(request: NextRequest) {
       updatedAt: delivery.updatedAt,
     }))
 
-    return Response.json({
+    return NextResponse.json({
       success: true,
       data: formattedDeliveries,
       pagination: {
@@ -256,8 +244,9 @@ export async function GET(request: NextRequest) {
     console.error('GET /api/sppg/distribution/delivery error:', error)
     console.error('Error stack:', (error as Error).stack)
     console.error('Error name:', (error as Error).name)
-    return Response.json(
+    return NextResponse.json(
       {
+        success: false,
         error: 'Internal server error',
         message: 'Gagal memuat data pengiriman',
         details: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined,
@@ -266,4 +255,5 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     )
   }
+  })
 }

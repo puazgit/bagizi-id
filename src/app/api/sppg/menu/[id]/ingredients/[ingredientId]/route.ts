@@ -3,8 +3,10 @@
  * @version Next.js 15.5.4 / Prisma 6.17.1 / Enterprise-grade
  */
 
-import { NextRequest } from 'next/server'
-import { auth } from '@/auth'
+import { NextRequest, NextResponse } from 'next/server'
+import { withSppgAuth } from '@/lib/api-middleware'
+import { hasPermission } from '@/lib/permissions'
+import { UserRole } from '@prisma/client'
 import { db } from '@/lib/prisma'
 import { z } from 'zod'
 
@@ -24,114 +26,102 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string; ingredientId: string }> }
 ) {
-  try {
-    const { id: menuId, ingredientId } = await params
-    
-    // 1. Authentication Check
-    const session = await auth()
-    if (!session?.user) {
-      return Response.json({ 
-        success: false, 
-        error: 'Unauthorized - Login required' 
-      }, { status: 401 })
-    }
-
-    // 2. SPPG Access Check (Multi-tenancy)
-    if (!session.user.sppgId) {
-      return Response.json({ 
-        success: false, 
-        error: 'SPPG access required' 
-      }, { status: 403 })
-    }
-
-    // 3. Verify ingredient and menu belong to user's SPPG
-    const ingredient = await db.menuIngredient.findFirst({
-      where: {
-        id: ingredientId,
-        menuId,
-        menu: {
-          program: {
-            sppgId: session.user.sppgId
-          }
-        }
+  return withSppgAuth(request, async (session) => {
+    try {
+      if (!hasPermission(session.user.userRole as UserRole, 'WRITE')) {
+        return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 403 })
       }
-    })
 
-    if (!ingredient) {
-      return Response.json({ 
-        success: false, 
-        error: 'Ingredient not found or access denied' 
-      }, { status: 404 })
-    }
+      const { id: menuId, ingredientId } = await params
 
-    // 4. Parse and validate request body
-    const body = await request.json()
-    const validated = ingredientUpdateSchema.parse(body)
-
-    // 5. If inventoryItemId provided, verify it belongs to same SPPG
-    if (validated.inventoryItemId) {
-      const inventoryItem = await db.inventoryItem.findFirst({
+      // Verify ingredient and menu belong to user's SPPG
+      const ingredient = await db.menuIngredient.findFirst({
         where: {
-          id: validated.inventoryItemId,
-          sppgId: session.user.sppgId
+          id: ingredientId,
+          menuId,
+          menu: {
+            program: {
+              sppgId: session.user.sppgId!
+            }
+          }
         }
       })
 
-      if (!inventoryItem) {
-        return Response.json({ 
+      if (!ingredient) {
+        return NextResponse.json({ 
           success: false, 
-          error: 'Inventory item not found or access denied' 
+          error: 'Ingredient not found or access denied' 
         }, { status: 404 })
       }
-    }
 
-    // 6. Update ingredient
-    const updatedIngredient = await db.menuIngredient.update({
-      where: { id: ingredientId },
-      data: validated,
-      include: {
-        inventoryItem: {
-          select: {
-            id: true,
-            itemName: true,
-            itemCode: true,
-            category: true,
-            unit: true
+      // Parse and validate request body
+      const body = await request.json()
+      const validated = ingredientUpdateSchema.parse(body)
+
+      // If inventoryItemId provided, verify it belongs to same SPPG
+      if (validated.inventoryItemId) {
+        const inventoryItem = await db.inventoryItem.findFirst({
+          where: {
+            id: validated.inventoryItemId,
+            sppgId: session.user.sppgId!
           }
+        })
+
+        if (!inventoryItem) {
+          return NextResponse.json({ 
+            success: false, 
+            error: 'Inventory item not found or access denied' 
+          }, { status: 404 })
         }
       }
-    })
 
-    // 7. Update menu's updatedAt timestamp
-    await db.nutritionMenu.update({
-      where: { id: menuId },
-      data: { updatedAt: new Date() }
-    })
+      // Update ingredient
+      const updatedIngredient = await db.menuIngredient.update({
+        where: { id: ingredientId },
+        data: validated,
+        include: {
+          inventoryItem: {
+            select: {
+              id: true,
+              itemName: true,
+              itemCode: true,
+              category: true,
+              unit: true
+            }
+          }
+        }
+      })
 
-    return Response.json({
-      success: true,
-      data: updatedIngredient,
-      message: 'Ingredient updated successfully'
-    })
+      // Update menu's updatedAt timestamp
+      await db.nutritionMenu.update({
+        where: { id: menuId },
+        data: { updatedAt: new Date() }
+      })
 
-  } catch (error) {
-    console.error('PUT /api/sppg/menu/[id]/ingredients/[ingredientId] error:', error)
-    
-    // Handle validation errors
-    if (error instanceof z.ZodError) {
-      return Response.json({
+      return NextResponse.json({
+        success: true,
+        data: updatedIngredient,
+        message: 'Ingredient updated successfully'
+      })
+
+    } catch (error) {
+      console.error('PUT /api/sppg/menu/[id]/ingredients/[ingredientId] error:', error)
+      
+      if (error instanceof z.ZodError) {
+        return NextResponse.json({
+          success: false,
+          error: 'Validation failed',
+          details: error.issues
+        }, { status: 400 })
+      }
+
+      return NextResponse.json({
         success: false,
-        error: 'Validation failed',
-        details: error.issues
-      }, { status: 400 })
+        error: 'Failed to update ingredient',
+        details: process.env.NODE_ENV === 'development' ? error : undefined
+      }, { status: 500 })
     }
-
-    return Response.json({
-      success: false,
-      error: 'Failed to update ingredient',
-      details: process.env.NODE_ENV === 'development' ? error : undefined
-    }, { status: 500 })
-  }
+  })
 }
 
 // ================================ DELETE /api/sppg/menu/[id]/ingredients/[ingredientId] ================================
@@ -140,69 +130,58 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string; ingredientId: string }> }
 ) {
-  try {
-    const { id: menuId, ingredientId } = await params
-    
-    // 1. Authentication Check
-    const session = await auth()
-    if (!session?.user) {
-      return Response.json({ 
-        success: false, 
-        error: 'Unauthorized - Login required' 
-      }, { status: 401 })
-    }
+  return withSppgAuth(request, async (session) => {
+    try {
+      if (!hasPermission(session.user.userRole as UserRole, 'DELETE')) {
+        return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 403 })
+      }
 
-    // 2. SPPG Access Check (Multi-tenancy)
-    if (!session.user.sppgId) {
-      return Response.json({ 
-        success: false, 
-        error: 'SPPG access required' 
-      }, { status: 403 })
-    }
+      const { id: menuId, ingredientId } = await params
 
-    // 3. Verify ingredient and menu belong to user's SPPG
-    const ingredient = await db.menuIngredient.findFirst({
-      where: {
-        id: ingredientId,
-        menuId,
-        menu: {
-          program: {
-            sppgId: session.user.sppgId
+      // Verify ingredient and menu belong to user's SPPG
+      const ingredient = await db.menuIngredient.findFirst({
+        where: {
+          id: ingredientId,
+          menuId,
+          menu: {
+            program: {
+              sppgId: session.user.sppgId!
+            }
           }
         }
+      })
+
+      if (!ingredient) {
+        return NextResponse.json({ 
+          success: false, 
+          error: 'Ingredient not found or access denied' 
+        }, { status: 404 })
       }
-    })
 
-    if (!ingredient) {
-      return Response.json({ 
-        success: false, 
-        error: 'Ingredient not found or access denied' 
-      }, { status: 404 })
+      // Delete ingredient
+      await db.menuIngredient.delete({
+        where: { id: ingredientId }
+      })
+
+      // Update menu's updatedAt timestamp
+      await db.nutritionMenu.update({
+        where: { id: menuId },
+        data: { updatedAt: new Date() }
+      })
+
+      return NextResponse.json({
+        success: true,
+        message: 'Ingredient deleted successfully'
+      })
+
+    } catch (error) {
+      console.error('DELETE /api/sppg/menu/[id]/ingredients/[ingredientId] error:', error)
+      
+      return NextResponse.json({
+        success: false,
+        error: 'Failed to delete ingredient',
+        details: process.env.NODE_ENV === 'development' ? error : undefined
+      }, { status: 500 })
     }
-
-    // 4. Delete ingredient
-    await db.menuIngredient.delete({
-      where: { id: ingredientId }
-    })
-
-    // 5. Update menu's updatedAt timestamp
-    await db.nutritionMenu.update({
-      where: { id: menuId },
-      data: { updatedAt: new Date() }
-    })
-
-    return Response.json({
-      success: true,
-      message: 'Ingredient deleted successfully'
-    })
-
-  } catch (error) {
-    console.error('DELETE /api/sppg/menu/[id]/ingredients/[ingredientId] error:', error)
-    
-    return Response.json({
-      success: false,
-      error: 'Failed to delete ingredient',
-      details: process.env.NODE_ENV === 'development' ? error : undefined
-    }, { status: 500 })
-  }
+  })
 }

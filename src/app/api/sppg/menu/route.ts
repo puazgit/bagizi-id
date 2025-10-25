@@ -5,9 +5,11 @@
  * @see {@link /docs/domain-menu-workflow.md} Menu Domain Documentation
  */
 
-import { NextRequest } from 'next/server'
-import { auth } from '@/auth'
+import { NextRequest, NextResponse } from 'next/server'
+import { withSppgAuth } from '@/lib/api-middleware'
 import { db } from '@/lib/prisma'
+import { UserRole } from '@prisma/client'
+import { hasPermission } from '@/lib/permissions'
 import { 
   menuCreateSchema, 
   menuFiltersSchema,
@@ -17,47 +19,39 @@ import {
 // ================================ GET /api/sppg/menu ================================
 
 export async function GET(request: NextRequest) {
-  try {
-    // 1. Authentication Check
-    const session = await auth()
-    if (!session?.user) {
-      return Response.json({ 
-        success: false, 
-        error: 'Unauthorized - Login required' 
-      }, { status: 401 })
-    }
+  return withSppgAuth(request, async (session) => {
+    try {
+      // Permission Check
+      if (!session.user.userRole || !hasPermission(session.user.userRole as UserRole, 'READ')) {
+        return NextResponse.json({ 
+          success: false, 
+          error: 'Insufficient permissions' 
+        }, { status: 403 })
+      }
 
-    // 2. SPPG Access Check (Multi-tenancy)
-    if (!session.user.sppgId) {
-      return Response.json({ 
-        success: false, 
-        error: 'SPPG access required' 
-      }, { status: 403 })
-    }
+      // Parse and validate query parameters
+      const url = new URL(request.url)
+      const queryParams = Object.fromEntries(url.searchParams)
+      
+      // Convert string values to appropriate types
+      const processedParams = {
+        ...queryParams,
+        page: queryParams.page ? parseInt(queryParams.page) : undefined,
+        limit: queryParams.limit ? parseInt(queryParams.limit) : undefined,
+        isActive: queryParams.isActive ? queryParams.isActive === 'true' : undefined,
+        hasNutritionCalc: queryParams.hasNutritionCalc ? queryParams.hasNutritionCalc === 'true' : undefined,
+        hasCostCalc: queryParams.hasCostCalc ? queryParams.hasCostCalc === 'true' : undefined,
+        meetsAKG: queryParams.meetsAKG ? queryParams.meetsAKG === 'true' : undefined,
+      }
 
-    // 3. Parse and validate query parameters
-    const url = new URL(request.url)
-    const queryParams = Object.fromEntries(url.searchParams)
-    
-    // Convert string values to appropriate types
-    const processedParams = {
-      ...queryParams,
-      page: queryParams.page ? parseInt(queryParams.page) : undefined,
-      limit: queryParams.limit ? parseInt(queryParams.limit) : undefined,
-      isActive: queryParams.isActive ? queryParams.isActive === 'true' : undefined,
-      hasNutritionCalc: queryParams.hasNutritionCalc ? queryParams.hasNutritionCalc === 'true' : undefined,
-      hasCostCalc: queryParams.hasCostCalc ? queryParams.hasCostCalc === 'true' : undefined,
-      meetsAKG: queryParams.meetsAKG ? queryParams.meetsAKG === 'true' : undefined,
-    }
+      const filters = menuFiltersSchema.parse(processedParams)
 
-    const filters = menuFiltersSchema.parse(processedParams)
-
-    // 4. Build database query with multi-tenant filtering
-    const where = {
-      // Multi-tenant: Only get menus from user's SPPG
-      program: {
-        sppgId: session.user.sppgId
-      },
+      // Build database query with multi-tenant filtering
+      const where = {
+        // Multi-tenant: Only get menus from user's SPPG
+        program: {
+          sppgId: session.user.sppgId!
+        },
       // Apply filters
       ...(filters.search && {
         OR: [
@@ -149,7 +143,7 @@ export async function GET(request: NextRequest) {
     const totalPages = Math.ceil(total / filters.limit)
 
     // 7. Return success response (aligned with MenuListResponse interface)
-    return Response.json({
+    return NextResponse.json({
       success: true,
       data: {
         menus,
@@ -172,71 +166,56 @@ export async function GET(request: NextRequest) {
       }
     })
 
-  } catch (error) {
-    console.error('GET /api/sppg/menu error:', error)
-    
-    // Handle validation errors
-    if (error instanceof Error && error.name === 'ZodError') {
-      return Response.json({
-        success: false,
-        error: 'Invalid filter parameters',
-        details: error.message
-      }, { status: 400 })
-    }
+    } catch (error) {
+      console.error('GET /api/sppg/menu error:', error)
+      
+      // Handle validation errors
+      if (error instanceof Error && error.name === 'ZodError') {
+        return NextResponse.json({
+          success: false,
+          error: 'Invalid filter parameters',
+          details: error.message
+        }, { status: 400 })
+      }
 
-    return Response.json({
-      success: false,
-      error: 'Failed to fetch menus',
-      details: process.env.NODE_ENV === 'development' ? error : undefined
-    }, { status: 500 })
-  }
+      return NextResponse.json({
+        success: false,
+        error: 'Failed to fetch menus',
+        details: process.env.NODE_ENV === 'development' ? error : undefined
+      }, { status: 500 })
+    }
+  })
 }
 
 // ================================ POST /api/sppg/menu ================================
 
 export async function POST(request: NextRequest) {
-  try {
-    // 1. Authentication Check
-    const session = await auth()
-    if (!session?.user) {
-      return Response.json({ 
-        success: false, 
-        error: 'Unauthorized - Login required' 
-      }, { status: 401 })
-    }
-
-    // 2. SPPG Access Check (Multi-tenancy)
-    if (!session.user.sppgId) {
-      return Response.json({ 
-        success: false, 
-        error: 'SPPG access required' 
-      }, { status: 403 })
-    }
-
-    // 3. Role Check - Only SPPG users with menu management permission
-    if (!session.user.userRole?.startsWith('SPPG_')) {
-      return Response.json({ 
-        success: false, 
-        error: 'Insufficient permissions for menu management' 
-      }, { status: 403 })
-    }
-
-    // 4. Parse and validate request body
-    const body = await request.json()
-    const validated = menuCreateSchema.parse(body) as MenuCreateInput
-
-    // 5. Verify program belongs to user's SPPG
-    const program = await db.nutritionProgram.findFirst({
-      where: {
-        id: validated.programId,
-        sppgId: session.user.sppgId // Multi-tenant safety
+  return withSppgAuth(request, async (session) => {
+    try {
+      // Permission Check
+      if (!session.user.userRole || !hasPermission(session.user.userRole as UserRole, 'WRITE')) {
+        return NextResponse.json({
+          success: false,
+          error: 'Insufficient permissions for menu management'
+        }, { status: 403 })
       }
-    })
 
-    if (!program) {
-      return Response.json({
-        success: false,
-        error: 'Program not found or access denied'
+      // Parse and validate request body
+      const body = await request.json()
+      const validated = menuCreateSchema.parse(body) as MenuCreateInput
+
+      // Verify program belongs to user's SPPG
+      const program = await db.nutritionProgram.findFirst({
+        where: {
+          id: validated.programId,
+          sppgId: session.user.sppgId! // Multi-tenant safety
+        }
+      })
+
+      if (!program) {
+        return NextResponse.json({
+          success: false,
+          error: 'Program not found or access denied'
       }, { status: 404 })
     }
 
@@ -249,7 +228,7 @@ export async function POST(request: NextRequest) {
     })
 
     if (existingMenu) {
-      return Response.json({
+      return NextResponse.json({
         success: false,
         error: 'Menu code already exists in this program',
         details: { field: 'menuCode', code: 'DUPLICATE_CODE' }
@@ -300,7 +279,7 @@ export async function POST(request: NextRequest) {
     console.log(`Menu created: ${menu.id} by user ${session.user.id} in SPPG ${session.user.sppgId}`)
 
     // 10. Return success response
-    return Response.json({
+    return NextResponse.json({
       success: true,
       data: {
         menu,
@@ -308,31 +287,32 @@ export async function POST(request: NextRequest) {
       }
     }, { status: 201 })
 
-  } catch (error) {
-    console.error('POST /api/sppg/menu error:', error)
-    
-    // Handle validation errors
-    if (error instanceof Error && error.name === 'ZodError') {
-      return Response.json({
-        success: false,
-        error: 'Validation failed',
-        details: error.message
-      }, { status: 400 })
-    }
+    } catch (error) {
+      console.error('POST /api/sppg/menu error:', error)
+      
+      // Handle validation errors
+      if (error instanceof Error && error.name === 'ZodError') {
+        return NextResponse.json({
+          success: false,
+          error: 'Validation failed',
+          details: error.message
+        }, { status: 400 })
+      }
 
-    // Handle Prisma errors
-    if (error instanceof Error && error.message.includes('Unique constraint')) {
-      return Response.json({
-        success: false,
-        error: 'Menu with this code already exists',
-        details: { field: 'menuCode', code: 'UNIQUE_VIOLATION' }
-      }, { status: 409 })
-    }
+      // Handle Prisma errors
+      if (error instanceof Error && error.message.includes('Unique constraint')) {
+        return NextResponse.json({
+          success: false,
+          error: 'Menu with this code already exists',
+          details: { field: 'menuCode', code: 'UNIQUE_VIOLATION' }
+        }, { status: 409 })
+      }
 
-    return Response.json({
-      success: false,
-      error: 'Failed to create menu',
-      details: process.env.NODE_ENV === 'development' ? error : undefined
-    }, { status: 500 })
-  }
+      return NextResponse.json({
+        success: false,
+        error: 'Failed to create menu',
+        details: process.env.NODE_ENV === 'development' ? error : undefined
+      }, { status: 500 })
+    }
+  })
 }

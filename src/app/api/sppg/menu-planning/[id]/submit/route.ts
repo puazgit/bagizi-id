@@ -4,8 +4,10 @@
  * @see {@link /docs/copilot-instructions.md} Multi-tenant security patterns
  */
 
-import { NextRequest } from 'next/server'
-import { auth } from '@/auth'
+import { NextRequest, NextResponse } from 'next/server'
+import { withSppgAuth } from '@/lib/api-middleware'
+import { hasPermission } from '@/lib/permissions'
+import { UserRole } from '@prisma/client'
 import { db } from '@/lib/prisma'
 import { submitForReviewSchema } from '@/features/sppg/menu-planning/schemas'
 
@@ -20,62 +22,54 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    // 1. Authentication check
-    const session = await auth()
-    if (!session?.user) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+  return withSppgAuth(request, async (session) => {
+    try {
+      if (!hasPermission(session.user.userRole as UserRole, 'WRITE')) {
+        return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 403 })
+      }
 
-    // 2. Multi-tenant security check
-    if (!session.user.sppgId) {
-      return Response.json({ 
-        error: 'SPPG access required' 
-      }, { status: 403 })
-    }
+      // 3. Extract planId
+      const { id: planId } = await params
 
-    // 3. Extract planId
-    const { id: planId } = await params
+      // 4. Parse and validate request body
+      const body = await request.json()
+      const validated = submitForReviewSchema.safeParse(body)
 
-    // 4. Parse and validate request body
-    const body = await request.json()
-    const validated = submitForReviewSchema.safeParse(body)
+      if (!validated.success) {
+        return NextResponse.json({
+          success: false,
+          error: 'Validation failed',
+          details: validated.error.format()
+        }, { status: 400 })
+      }
 
-    if (!validated.success) {
-      return Response.json({
-        success: false,
-        error: 'Validation failed',
-        details: validated.error.format()
-      }, { status: 400 })
-    }
+      const { submitNotes } = validated.data
 
-    const { submitNotes } = validated.data
-
-    // 5. Verify plan exists and belongs to user's SPPG
-    const plan = await db.menuPlan.findFirst({
-      where: {
-        id: planId,
-        sppgId: session.user.sppgId
-      },
-      include: {
-        assignments: {
-          select: {
-            id: true
+      // 5. Verify plan exists and belongs to user's SPPG
+      const plan = await db.menuPlan.findFirst({
+        where: {
+          id: planId,
+          sppgId: session.user.sppgId!
+        },
+        include: {
+          assignments: {
+            select: {
+              id: true
+            }
           }
         }
+      })
+
+      if (!plan) {
+        return NextResponse.json({
+          success: false,
+          error: 'Plan not found'
+        }, { status: 404 })
       }
-    })
 
-    if (!plan) {
-      return Response.json({
-        success: false,
-        error: 'Plan not found'
-      }, { status: 404 })
-    }
-
-    // 6. Business Rule: Only DRAFT plans can be submitted
-    if (plan.status !== 'DRAFT') {
-      return Response.json({
+      // 6. Business Rule: Only DRAFT plans can be submitted
+      if (plan.status !== 'DRAFT') {
+      return NextResponse.json({
         success: false,
         error: `Cannot submit plan with status ${plan.status}. Only DRAFT plans can be submitted.`
       }, { status: 400 })
@@ -83,7 +77,7 @@ export async function POST(
 
     // 7. Business Rule: Plan must have at least one assignment
     if (!plan.assignments || plan.assignments.length === 0) {
-      return Response.json({
+      return NextResponse.json({
         success: false,
         error: 'Cannot submit empty plan. Please add at least one menu assignment.'
       }, { status: 400 })
@@ -138,17 +132,18 @@ export async function POST(
       }
     })
 
-    return Response.json({
-      success: true,
-      message: 'Plan submitted for review successfully',
-      data: updatedPlan
-    }, { status: 200 })
+      return NextResponse.json({
+        success: true,
+        message: 'Plan submitted for review successfully',
+        data: updatedPlan
+      }, { status: 200 })
 
-  } catch (error) {
-    console.error('Submit for review error:', error)
-    return Response.json({
-      success: false,
-      error: 'Failed to submit plan for review'
-    }, { status: 500 })
-  }
+    } catch (error) {
+      console.error('Submit for review error:', error)
+      return NextResponse.json({
+        success: false,
+        error: 'Failed to submit plan for review'
+      }, { status: 500 })
+    }
+  })
 }

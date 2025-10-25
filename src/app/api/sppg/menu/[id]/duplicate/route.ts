@@ -3,8 +3,10 @@
  * @version Next.js 15.5.4 / Prisma / Multi-tenant Security
  */
 
-import { NextRequest } from 'next/server'
-import { auth } from '@/auth'
+import { NextRequest, NextResponse } from 'next/server'
+import { withSppgAuth } from '@/lib/api-middleware'
+import { hasPermission } from '@/lib/permissions'
+import { UserRole } from '@prisma/client'
 import { db } from '@/lib/prisma'
 import { z } from 'zod'
 
@@ -22,27 +24,20 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    // Await params (Next.js 15 requirement)
-    const { id } = await params
-    
-    // 1. Authentication Check
-    const session = await auth()
-    if (!session?.user) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+  return withSppgAuth(request, async (session) => {
+    try {
+      if (!hasPermission(session.user.userRole as UserRole, 'WRITE')) {
+        return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 403 })
+      }
 
-    // 2. SPPG Access Check (Multi-tenant Security)
-    if (!session.user.sppgId) {
-      return Response.json({ error: 'SPPG access required' }, { status: 403 })
-    }
+      const { id } = await params
 
-    // 3. Parse Request Body
+      // Parse Request Body
     const body = await request.json()
     const validated = duplicateMenuSchema.safeParse(body)
     
     if (!validated.success) {
-      return Response.json({ 
+      return NextResponse.json({ 
         error: 'Validation failed',
         details: validated.error.issues
       }, { status: 400 })
@@ -58,14 +53,14 @@ export async function POST(
       copyCostData
     } = validated.data
 
-    // 4. Get Original Menu with all relations
-    const originalMenu = await db.nutritionMenu.findUnique({
-      where: { 
-        id: id,
-        program: {
-          sppgId: session.user.sppgId // Multi-tenant security
-        }
-      },
+      // Get Original Menu with all relations
+      const originalMenu = await db.nutritionMenu.findUnique({
+        where: { 
+          id: id,
+          program: {
+            sppgId: session.user.sppgId! // Multi-tenant security
+          }
+        },
       include: {
         program: true,
         ingredients: {
@@ -81,24 +76,24 @@ export async function POST(
         nutritionCalc: true,
         costCalc: true,
       }
-    })
+      })
 
-    if (!originalMenu) {
-      return Response.json({ error: 'Menu not found or access denied' }, { status: 404 })
-    }
+      if (!originalMenu) {
+        return NextResponse.json({ error: 'Menu not found or access denied' }, { status: 404 })
+      }
 
-    // 5. Check for duplicate menu code
-    const existingMenu = await db.nutritionMenu.findFirst({
-      where: {
-        menuCode: newMenuCode,
-        program: {
-          sppgId: session.user.sppgId
+      // Check for duplicate menu code
+      const existingMenu = await db.nutritionMenu.findFirst({
+        where: {
+          menuCode: newMenuCode,
+          program: {
+            sppgId: session.user.sppgId!
         }
       }
     })
 
     if (existingMenu) {
-      return Response.json({ 
+      return NextResponse.json({ 
         error: 'Menu code already exists',
         details: 'Kode menu sudah digunakan. Gunakan kode lain.'
       }, { status: 400 })
@@ -110,12 +105,12 @@ export async function POST(
       const program = await db.nutritionProgram.findFirst({
         where: {
           id: programId,
-          sppgId: session.user.sppgId
+          sppgId: session.user.sppgId!
         }
       })
 
       if (!program) {
-        return Response.json({ 
+        return NextResponse.json({ 
           error: 'Program not found or access denied' 
         }, { status: 404 })
       }
@@ -323,7 +318,7 @@ export async function POST(
     })
 
     // 8. Return duplicated menu
-    return Response.json({ 
+    return NextResponse.json({ 
       success: true, 
       data: duplicatedMenu,
       message: 'Menu berhasil diduplikasi'
@@ -331,9 +326,10 @@ export async function POST(
 
   } catch (error) {
     console.error('Duplicate menu error:', error)
-    return Response.json({ 
+    return NextResponse.json({ 
       error: 'Failed to duplicate menu',
       details: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined
     }, { status: 500 })
   }
+  })
 }

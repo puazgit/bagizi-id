@@ -3,101 +3,94 @@
  * @version Next.js 15.5.4 / Prisma 6.17.1 / Enterprise-grade
  * @author Bagizi-ID Development Team
  * @see {@link /docs/copilot-instructions.md} Enterprise Development Guidelines
+ * 
+ * RBAC Integration:
+ * - GET: Protected by withSppgAuth
+ * - Automatic audit logging
+ * - Multi-tenant: Supplier ownership verified
  */
 
-import { NextRequest } from 'next/server'
-import { auth } from '@/auth'
+import { NextRequest, NextResponse } from 'next/server'
+import { withSppgAuth } from '@/lib/api-middleware'
 import { db } from '@/lib/prisma'
 
 // ================================ GET /api/sppg/suppliers/[id]/performance ================================
 
+/**
+ * @rbac Protected by withSppgAuth
+ * @audit Automatic logging
+ */
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    const { id } = await params
-    
-    // 1. Authentication Check
-    const session = await auth()
-    if (!session?.user) {
-      return Response.json({ 
-        success: false, 
-        error: 'Unauthorized - Login required' 
-      }, { status: 401 })
-    }
+  return withSppgAuth(request, async (session) => {
+    try {
+      const { id } = await params
 
-    // 2. SPPG Access Check (Multi-tenancy - CRITICAL!)
-    if (!session.user.sppgId) {
-      return Response.json({ 
-        success: false, 
-        error: 'SPPG access required' 
-      }, { status: 403 })
-    }
-
-    // 3. Verify supplier exists and belongs to SPPG
-    const supplier = await db.supplier.findFirst({
-      where: {
-        id,
-        sppgId: session.user.sppgId
-      },
-      include: {
-        procurements: {
-          select: {
-            id: true,
-            procurementCode: true,
-            procurementDate: true,
-            totalAmount: true,
-            status: true,
-            deliveryStatus: true,
-            paymentStatus: true,
-            items: {
-              select: {
-                orderedQuantity: true,
-                receivedQuantity: true,
-                gradeReceived: true
+      // Verify supplier exists and belongs to SPPG
+      const supplier = await db.supplier.findFirst({
+        where: {
+          id,
+          sppgId: session.user.sppgId!
+        },
+        include: {
+          procurements: {
+            select: {
+              id: true,
+              procurementCode: true,
+              procurementDate: true,
+              totalAmount: true,
+              status: true,
+              deliveryStatus: true,
+              paymentStatus: true,
+              items: {
+                select: {
+                  orderedQuantity: true,
+                  receivedQuantity: true,
+                  gradeReceived: true
+                }
               }
+            },
+            orderBy: {
+              procurementDate: 'desc'
             }
           },
-          orderBy: {
-            procurementDate: 'desc'
-          }
-        },
-        supplierEvaluations: {
-          select: {
-            id: true,
-            evaluationType: true,
-            evaluationPeriod: true,
-            overallScore: true,
-            qualityScore: true,
-            deliveryScore: true,
-            priceScore: true,
-            serviceScore: true,
-            evaluationDate: true,
-            recommendations: true,
-            strengths: true,
-            weaknesses: true
+          supplierEvaluations: {
+            select: {
+              id: true,
+              evaluationType: true,
+              evaluationPeriod: true,
+              overallScore: true,
+              qualityScore: true,
+              deliveryScore: true,
+              priceScore: true,
+              serviceScore: true,
+              evaluationDate: true,
+              recommendations: true,
+              strengths: true,
+              weaknesses: true
+            },
+            orderBy: {
+              evaluationDate: 'desc'
+            }
           },
-          orderBy: {
-            evaluationDate: 'desc'
-          }
-        },
-        supplierContracts: {
-          select: {
-            id: true,
-            contractNumber: true,
-            contractType: true,
-            contractStatus: true,
-            startDate: true,
-            endDate: true,
-            contractValue: true
+          supplierContracts: {
+            select: {
+              id: true,
+              contractNumber: true,
+              contractType: true,
+              contractStatus: true,
+              startDate: true,
+              endDate: true,
+              contractValue: true
+            }
           }
         }
-      }
-    })
+      })
 
     if (!supplier) {
-      return Response.json({ 
+      return NextResponse.json({ 
         success: false, 
         error: 'Supplier not found or access denied' 
       }, { status: 404 })
@@ -250,7 +243,7 @@ export async function GET(
     })
 
     // 5. Success response
-    return Response.json({
+    return NextResponse.json({
       success: true,
       data: {
         supplierId: supplier.id,
@@ -294,15 +287,16 @@ export async function GET(
       }
     })
 
-  } catch (error) {
-    console.error('GET /api/sppg/suppliers/[id]/performance error:', error)
-    
-    return Response.json({ 
-      success: false, 
-      error: 'Failed to fetch supplier performance',
-      details: process.env.NODE_ENV === 'development' ? error : undefined
-    }, { status: 500 })
-  }
+    } catch (error) {
+      console.error('GET /api/sppg/suppliers/[id]/performance error:', error)
+      
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Failed to fetch supplier performance',
+        details: process.env.NODE_ENV === 'development' ? error : undefined
+      }, { status: 500 })
+    }
+  })
 }
 
 // Helper function to calculate risk score

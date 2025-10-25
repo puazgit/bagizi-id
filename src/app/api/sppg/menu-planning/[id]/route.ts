@@ -5,8 +5,10 @@
  * @see {@link /docs/MENU_PLANNING_DOMAIN_IMPLEMENTATION.md} Implementation guide
  */
 
-import { NextRequest } from 'next/server'
-import { auth } from '@/auth'
+import { NextRequest, NextResponse } from 'next/server'
+import { withSppgAuth } from '@/lib/api-middleware'
+import { hasPermission } from '@/lib/permissions'
+import { UserRole } from '@prisma/client'
 import { db } from '@/lib/prisma'
 import { MenuPlanStatus, Prisma } from '@prisma/client'
 
@@ -16,29 +18,21 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    // 1. Authentication check
-    const session = await auth()
-    if (!session?.user) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+  return withSppgAuth(request, async (session) => {
+    try {
+      if (!hasPermission(session.user.userRole as UserRole, 'READ')) {
+        return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 403 })
+      }
 
-    // 2. Multi-tenant security check
-    if (!session.user.sppgId) {
-      return Response.json({ 
-        error: 'SPPG access required' 
-      }, { status: 403 })
-    }
+      // 3. Extract planId
+      const { id: planId } = await params
 
-    // 3. Extract planId
-    const { id: planId } = await params
-
-    // 4. Fetch plan with full details (multi-tenant security)
-    const plan = await db.menuPlan.findFirst({
-      where: {
-        id: planId,
-        sppgId: session.user.sppgId // MANDATORY multi-tenant filter
-      },
+      // 4. Fetch plan with full details (multi-tenant security)
+      const plan = await db.menuPlan.findFirst({
+        where: {
+          id: planId,
+          sppgId: session.user.sppgId! // MANDATORY multi-tenant filter
+        },
       include: {
         program: {
           select: {
@@ -129,7 +123,7 @@ export async function GET(
     })
 
     if (!plan) {
-      return Response.json({
+      return NextResponse.json({
         success: false,
         error: 'Menu plan not found or access denied'
       }, { status: 404 })
@@ -165,22 +159,23 @@ export async function GET(
       }
     }
 
-    return Response.json({
-      success: true,
-      data: {
-        ...plan,
-        metrics
-      }
-    })
+    return NextResponse.json({
+        success: true,
+        data: {
+          ...plan,
+          metrics
+        }
+      })
 
-  } catch (error) {
-    console.error('GET /api/sppg/menu-planning/[id] error:', error)
-    return Response.json({
-      success: false,
-      error: 'Failed to fetch menu plan',
-      details: process.env.NODE_ENV === 'development' ? error : undefined
-    }, { status: 500 })
-  }
+    } catch (error) {
+      console.error('GET /api/sppg/menu-planning/[id] error:', error)
+      return NextResponse.json({
+        success: false,
+        error: 'Failed to fetch menu plan',
+        details: process.env.NODE_ENV === 'development' ? error : undefined
+      }, { status: 500 })
+    }
+  })
 }
 
 // ================================ PUT /api/sppg/menu-planning/[id] ================================
@@ -189,134 +184,127 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    // 1. Authentication check
-    const session = await auth()
-    if (!session?.user) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    // 2. Multi-tenant security check
-    if (!session.user.sppgId) {
-      return Response.json({ 
-        error: 'SPPG access required' 
-      }, { status: 403 })
-    }
-
-    // 3. Extract planId
-    const { id: planId } = await params
-
-    // 4. Verify plan exists and belongs to user's SPPG
-    const existingPlan = await db.menuPlan.findFirst({
-      where: {
-        id: planId,
-        sppgId: session.user.sppgId
+  return withSppgAuth(request, async (session) => {
+    try {
+      if (!hasPermission(session.user.userRole as UserRole, 'WRITE')) {
+        return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 403 })
       }
-    })
 
-    if (!existingPlan) {
-      return Response.json({
-        success: false,
-        error: 'Menu plan not found or access denied'
-      }, { status: 404 })
-    }
+      // 3. Extract planId
+      const { id: planId } = await params
 
-    // 5. Check if plan can be edited
-    if (existingPlan.status === MenuPlanStatus.PUBLISHED) {
-      return Response.json({
-        success: false,
-        error: 'Cannot edit published plan. Create a new version instead.'
-      }, { status: 400 })
-    }
+      // 4. Parse request body
+      const body = await request.json()
 
-    if (existingPlan.status === MenuPlanStatus.ARCHIVED) {
-      return Response.json({
-        success: false,
-        error: 'Cannot edit archived plan'
-      }, { status: 400 })
-    }
+      // 5. Verify plan exists and belongs to user's SPPG
+      const existingPlan = await db.menuPlan.findFirst({
+        where: {
+          id: planId,
+          sppgId: session.user.sppgId!
+        }
+      })
 
-    // 6. Parse request body
-    const body = await request.json()
-
-    // 7. Build update data
-    const updateData: {
-      name?: string
-      description?: string | null
-      planningRules?: Prisma.InputJsonValue // Fixed: use Prisma JSON type
-      startDate?: Date
-      endDate?: Date
-      totalDays?: number
-      updatedAt?: Date
-    } = {}
-
-    if (body.name !== undefined) updateData.name = body.name
-    if (body.description !== undefined) updateData.description = body.description
-    if (body.planningRules !== undefined) updateData.planningRules = body.planningRules as Prisma.InputJsonValue
-
-    // Handle date changes
-    if (body.startDate || body.endDate) {
-      const startDate = body.startDate ? new Date(body.startDate) : existingPlan.startDate
-      const endDate = body.endDate ? new Date(body.endDate) : existingPlan.endDate
-
-      if (endDate <= startDate) {
-        return Response.json({
+      if (!existingPlan) {
+        return NextResponse.json({
           success: false,
-          error: 'End date must be after start date'
+          error: 'Menu plan not found or access denied'
+        }, { status: 404 })
+      }
+
+      // 6. Check if plan can be edited
+      if (existingPlan.status === MenuPlanStatus.PUBLISHED) {
+        return NextResponse.json({
+          success: false,
+          error: 'Cannot edit published plan. Create a new version instead.'
         }, { status: 400 })
       }
 
-      updateData.startDate = startDate
-      updateData.endDate = endDate
-      updateData.totalDays = Math.ceil(
-        (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
-      )
-    }
+      if (existingPlan.status === MenuPlanStatus.ARCHIVED) {
+        return NextResponse.json({
+          success: false,
+          error: 'Cannot edit archived plan'
+        }, { status: 400 })
+      }
 
-    // 8. Update plan
-    const updatedPlan = await db.menuPlan.update({
-      where: { id: planId },
-      data: {
-        ...updateData,
-        updatedAt: new Date()
-      },
-      include: {
-        program: {
-          select: {
-            id: true,
-            name: true,
-            programCode: true
-          }
+      // 7. Build update data
+      const updateData: {
+        name?: string
+        description?: string | null
+        planningRules?: Prisma.InputJsonValue // Fixed: use Prisma JSON type
+        startDate?: Date
+        endDate?: Date
+        totalDays?: number
+        updatedAt?: Date
+      } = {}
+
+      if (body.name !== undefined) updateData.name = body.name
+      if (body.description !== undefined) updateData.description = body.description
+      if (body.planningRules !== undefined) updateData.planningRules = body.planningRules as Prisma.InputJsonValue
+
+      // 8. Handle date changes
+      if (body.startDate || body.endDate) {
+        const startDate = body.startDate ? new Date(body.startDate) : existingPlan.startDate
+        const endDate = body.endDate ? new Date(body.endDate) : existingPlan.endDate
+
+        if (endDate <= startDate) {
+          return NextResponse.json({
+            success: false,
+            error: 'End date must be after start date'
+          }, { status: 400 })
+        }
+
+        updateData.startDate = startDate
+        updateData.endDate = endDate
+        updateData.totalDays = Math.ceil(
+          (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
+        )
+      }
+
+      // 9. Update plan
+      const updatedPlan = await db.menuPlan.update({
+        where: { id: planId },
+        data: {
+          ...updateData,
+          updatedAt: new Date()
         },
-        creator: {
-          select: {
-            id: true,
-            name: true,
-            email: true
-          }
-        },
-        _count: {
-          select: {
-            assignments: true
+        include: {
+          program: {
+            select: {
+              id: true,
+              name: true,
+              programCode: true
+            }
+          },
+          creator: {
+            select: {
+              id: true,
+              name: true,
+              email: true
+            }
+          },
+          _count: {
+            select: {
+              assignments: true
+            }
           }
         }
-      }
-    })
+      })
 
-    return Response.json({
-      success: true,
-      message: 'Menu plan updated successfully',
-      data: updatedPlan
-    })
+      return NextResponse.json({
+        success: true,
+        message: 'Menu plan updated successfully',
+        data: updatedPlan
+      })
 
-  } catch (error) {
-    console.error('PUT /api/sppg/menu-planning/[id] error:', error)
-    return Response.json({
-      success: false,
-      error: 'Failed to update menu plan',
-      details: process.env.NODE_ENV === 'development' ? error : undefined
-    }, { status: 500 })
-  }
+    } catch (error) {
+      console.error('PUT /api/sppg/menu-planning/[id] error:', error)
+      return NextResponse.json({
+        success: false,
+        error: 'Failed to update menu plan',
+        details: process.env.NODE_ENV === 'development' ? error : undefined
+      }, { status: 500 })
+    }
+  })
 }
 
 // ================================ DELETE /api/sppg/menu-planning/[id] ================================
@@ -325,80 +313,66 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    // 1. Authentication check
-    const session = await auth()
-    if (!session?.user) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+  return withSppgAuth(request, async (session) => {
+    try {
+      if (!hasPermission(session.user.userRole as UserRole, 'DELETE')) {
+        return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 403 })
+      }
 
-    // 2. Multi-tenant security check
-    if (!session.user.sppgId) {
-      return Response.json({ 
-        error: 'SPPG access required' 
-      }, { status: 403 })
-    }
+      // 3. Extract planId
+      const { id: planId } = await params
 
-    // 3. Extract planId
-    const { id: planId } = await params
-
-    // 4. Verify plan exists and belongs to user's SPPG
-    const existingPlan = await db.menuPlan.findFirst({
-      where: {
-        id: planId,
-        sppgId: session.user.sppgId
-      },
-      include: {
-        _count: {
-          select: {
-            assignments: true
-          }
+      // 4. Verify plan exists and belongs to user's SPPG
+      const existingPlan = await db.menuPlan.findFirst({
+        where: {
+          id: planId,
+          sppgId: session.user.sppgId!
         }
-      }
-    })
+      })
 
-    if (!existingPlan) {
-      return Response.json({
+      if (!existingPlan) {
+        return NextResponse.json({
+          success: false,
+          error: 'Menu plan not found or access denied'
+        }, { status: 404 })
+      }
+
+      // 5. Check if plan can be deleted
+      if (existingPlan.status === MenuPlanStatus.PUBLISHED) {
+        return NextResponse.json({
+          success: false,
+          error: 'Cannot delete published plan. Archive it instead.'
+        }, { status: 400 })
+      }
+
+      // 6. Soft delete: Archive the plan instead of hard delete
+      const archivedPlan = await db.menuPlan.update({
+        where: { id: planId },
+        data: {
+          status: MenuPlanStatus.ARCHIVED,
+          isArchived: true,
+          isActive: false,
+          archivedAt: new Date()
+        }
+      })
+
+      return NextResponse.json({
+        success: true,
+        message: 'Menu plan archived successfully',
+        data: {
+          id: archivedPlan.id,
+          status: archivedPlan.status,
+          archivedAt: archivedPlan.archivedAt
+        }
+      })
+
+    } catch (error) {
+      console.error('DELETE /api/sppg/menu-planning/[id] error:', error)
+      return NextResponse.json({
         success: false,
-        error: 'Menu plan not found or access denied'
-      }, { status: 404 })
+        error: 'Failed to delete menu plan',
+        details: process.env.NODE_ENV === 'development' ? error : undefined
+      }, { status: 500 })
     }
-
-    // 5. Check if plan can be deleted
-    if (existingPlan.status === MenuPlanStatus.PUBLISHED) {
-      return Response.json({
-        success: false,
-        error: 'Cannot delete published plan. Archive it instead.'
-      }, { status: 400 })
-    }
-
-    // 6. Soft delete: Archive the plan instead of hard delete
-    const archivedPlan = await db.menuPlan.update({
-      where: { id: planId },
-      data: {
-        status: MenuPlanStatus.ARCHIVED,
-        isArchived: true,
-        isActive: false,
-        archivedAt: new Date()
-      }
-    })
-
-    return Response.json({
-      success: true,
-      message: 'Menu plan archived successfully',
-      data: {
-        id: archivedPlan.id,
-        status: archivedPlan.status,
-        archivedAt: archivedPlan.archivedAt
-      }
-    })
-
-  } catch (error) {
-    console.error('DELETE /api/sppg/menu-planning/[id] error:', error)
-    return Response.json({
-      success: false,
-      error: 'Failed to delete menu plan',
-      details: process.env.NODE_ENV === 'development' ? error : undefined
-    }, { status: 500 })
-  }
+  })
 }

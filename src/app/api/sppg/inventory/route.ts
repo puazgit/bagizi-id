@@ -5,83 +5,52 @@
  * @requires Auth.js v5 - Authentication
  * @requires Prisma - Database operations
  * @requires Zod - Request validation
+ * 
+ * RBAC Integration:
+ * - GET/POST: Protected by withSppgAuth
+ * - Automatic audit logging
+ * - Multi-tenant: Inventory ownership verified
  */
 
-import { NextRequest } from 'next/server'
-import { auth } from '@/auth'
+import { NextRequest, NextResponse } from 'next/server'
+import { withSppgAuth } from '@/lib/api-middleware'
 import { db } from '@/lib/prisma'
 import { hasPermission } from '@/lib/permissions'
 import type { Prisma } from '@prisma/client'
+import { UserRole, InventoryCategory } from '@prisma/client'
 import { 
   createInventorySchema, 
   inventoryFiltersSchema 
 } from '@/features/sppg/inventory/schemas'
-import { InventoryCategory } from '@prisma/client'
 
 /**
  * GET /api/sppg/inventory
- * Fetch all inventory items with optional filters
- * @security Requires authentication and INVENTORY_VIEW permission
- * @returns {Promise<Response>} List of inventory items with metadata
+ * @rbac Protected by withSppgAuth
+ * @audit Automatic logging
+ * @security Requires INVENTORY_VIEW permission
  */
 export async function GET(request: NextRequest) {
-  try {
-    // 1. Authentication Check
-    const session = await auth()
-    
-    console.log('🔐 [Inventory API] Auth Check:', {
-      hasSession: !!session,
-      hasUser: !!session?.user,
-      userId: session?.user?.id,
-      userRole: session?.user?.userRole,
-      sppgId: session?.user?.sppgId,
-    })
-    
-    if (!session?.user) {
-      console.error('❌ [Inventory API] No session or user')
-      return Response.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+  return withSppgAuth(request, async (session) => {
+    try {
+      // Permission Check
+      const hasInventoryPermission = session.user.userRole && hasPermission(session.user.userRole as UserRole, 'INVENTORY_VIEW')
+      
+      if (!hasInventoryPermission) {
+        return NextResponse.json({ 
+          error: 'Insufficient permissions',
+          message: 'Anda tidak memiliki akses untuk melihat inventori'
+        }, { status: 403 })
+      }
 
-    // 2. Permission Check
-    const hasInventoryPermission = session.user.userRole && hasPermission(session.user.userRole, 'INVENTORY_VIEW')
-    
-    console.log('🔑 [Inventory API] Permission Check:', {
-      userRole: session.user.userRole,
-      hasInventoryPermission
-    })
-    
-    if (!hasInventoryPermission) {
-      console.error('❌ [Inventory API] Insufficient permissions')
-      return Response.json({ 
-        error: 'Insufficient permissions',
-        message: 'Anda tidak memiliki akses untuk melihat inventori',
-        debug: {
-          userRole: session.user.userRole,
-          requiredPermission: 'INVENTORY_VIEW'
-        }
-      }, { status: 403 })
-    }
-
-    // 3. Multi-tenant Check
-    if (!session.user.sppgId) {
-      console.error('❌ [Inventory API] No SPPG ID')
-      return Response.json({ 
-        error: 'SPPG access required',
-        message: 'Akses SPPG diperlukan'
-      }, { status: 403 })
-    }
-    
-    console.log('✅ [Inventory API] All checks passed, fetching data...')
-
-    // 4. Parse and validate query parameters
-    const { searchParams } = new URL(request.url)
-    
-    // Parse category with validation
-    const categoryParam = searchParams.get('category')
-    const validCategories = ['PROTEIN', 'KARBOHIDRAT', 'SAYUR', 'BUAH', 'SUSU', 'LEMAK', 'BUMBU', 'LAINNYA']
-    const category = categoryParam && validCategories.includes(categoryParam) 
-      ? categoryParam as InventoryCategory 
-      : undefined
+      // Parse and validate query parameters
+      const { searchParams } = new URL(request.url)
+      
+      // Parse category with validation
+      const categoryParam = searchParams.get('category')
+      const validCategories = ['PROTEIN', 'KARBOHIDRAT', 'SAYUR', 'BUAH', 'SUSU', 'LEMAK', 'BUMBU', 'LAINNYA']
+      const category = categoryParam && validCategories.includes(categoryParam) 
+        ? categoryParam as InventoryCategory 
+        : undefined
     
     const filters = {
       search: searchParams.get('search') || undefined,
@@ -100,7 +69,7 @@ export async function GET(request: NextRequest) {
     const validated = inventoryFiltersSchema.safeParse(filters)
     if (!validated.success) {
       console.error('❌ [Inventory API] Validation failed:', JSON.stringify(validated.error.issues, null, 2))
-      return Response.json({ 
+      return NextResponse.json({ 
         error: 'Invalid filters',
         details: validated.error.issues,
         receivedFilters: filters
@@ -199,7 +168,7 @@ export async function GET(request: NextRequest) {
     const hasNextPage = validated.data.page < totalPages
     const hasPreviousPage = validated.data.page > 1
 
-    return Response.json({
+    return NextResponse.json({
       success: true,
       data: filteredItems,
       meta: {
@@ -211,54 +180,39 @@ export async function GET(request: NextRequest) {
         hasPreviousPage,
       }
     })
-
   } catch (error) {
-    console.error('GET /api/sppg/inventory error:', error)
-    return Response.json({ 
+    return NextResponse.json({ 
       error: 'Internal server error',
       message: 'Terjadi kesalahan saat mengambil data inventori',
       details: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined
     }, { status: 500 })
   }
+  })
 }
 
 /**
  * POST /api/sppg/inventory
- * Create new inventory item
- * @security Requires authentication and INVENTORY_MANAGE permission
- * @body {CreateInventoryInput} Inventory item data
- * @returns {Promise<Response>} Created inventory item
+ * @rbac Protected by withSppgAuth
+ * @audit Automatic logging
+ * @security Requires INVENTORY_MANAGE permission
  */
 export async function POST(request: NextRequest) {
-  try {
-    // 1. Authentication Check
-    const session = await auth()
-    if (!session?.user) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+  return withSppgAuth(request, async (session) => {
+    try {
+      // Permission Check
+      if (!session.user.userRole || !hasPermission(session.user.userRole as UserRole, 'INVENTORY_MANAGE')) {
+        return NextResponse.json({ 
+          error: 'Insufficient permissions',
+          message: 'Anda tidak memiliki akses untuk mengelola inventori'
+        }, { status: 403 })
+      }
 
-    // 2. Permission Check
-    if (!session.user.userRole || !hasPermission(session.user.userRole, 'INVENTORY_MANAGE')) {
-      return Response.json({ 
-        error: 'Insufficient permissions',
-        message: 'Anda tidak memiliki akses untuk mengelola inventori'
-      }, { status: 403 })
-    }
-
-    // 3. Multi-tenant Check
-    if (!session.user.sppgId) {
-      return Response.json({ 
-        error: 'SPPG access required',
-        message: 'Akses SPPG diperlukan'
-      }, { status: 403 })
-    }
-
-    // 4. Parse and validate request body
-    const body = await request.json()
-    const validated = createInventorySchema.safeParse(body)
+      // Parse and validate request body
+      const body = await request.json()
+      const validated = createInventorySchema.safeParse(body)
     
     if (!validated.success) {
-      return Response.json({ 
+      return NextResponse.json({ 
         error: 'Validation failed',
         message: 'Data tidak valid',
         details: validated.error.issues
@@ -270,12 +224,12 @@ export async function POST(request: NextRequest) {
       const existing = await db.inventoryItem.findFirst({
         where: {
           itemCode: validated.data.itemCode,
-          sppgId: session.user.sppgId,
+          sppgId: session.user.sppgId!,
         }
       })
 
       if (existing) {
-        return Response.json({
+        return NextResponse.json({
           error: 'Duplicate item code',
           message: `Kode item "${validated.data.itemCode}" sudah digunakan`
         }, { status: 409 })
@@ -287,12 +241,12 @@ export async function POST(request: NextRequest) {
       const supplier = await db.supplier.findFirst({
         where: {
           id: validated.data.preferredSupplierId,
-          sppgId: session.user.sppgId, // Multi-tenant check
+          sppgId: session.user.sppgId!, // Multi-tenant check
         }
       })
 
       if (!supplier) {
-        return Response.json({
+        return NextResponse.json({
           error: 'Supplier not found',
           message: 'Supplier tidak ditemukan'
         }, { status: 404 })
@@ -303,7 +257,7 @@ export async function POST(request: NextRequest) {
     const item = await db.inventoryItem.create({
       data: {
         ...validated.data,
-        sppgId: session.user.sppgId, // CRITICAL: Multi-tenant assignment
+        sppgId: session.user.sppgId!, // CRITICAL: Multi-tenant assignment
       },
       include: {
         preferredSupplier: {
@@ -333,18 +287,18 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    return Response.json({ 
+    return NextResponse.json({ 
       success: true, 
       data: item,
       message: 'Item inventori berhasil dibuat'
     }, { status: 201 })
 
   } catch (error) {
-    console.error('POST /api/sppg/inventory error:', error)
-    return Response.json({ 
+    return NextResponse.json({ 
       error: 'Internal server error',
       message: 'Terjadi kesalahan saat membuat item inventori',
       details: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined
     }, { status: 500 })
   }
+  })
 }

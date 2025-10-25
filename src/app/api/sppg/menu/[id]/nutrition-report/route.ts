@@ -3,8 +3,10 @@
  * @version Next.js 15.5.4 / Prisma 6.17.1 / Enterprise-grade
  */
 
-import { NextRequest } from 'next/server'
-import { auth } from '@/auth'
+import { NextRequest, NextResponse } from 'next/server'
+import { withSppgAuth } from '@/lib/api-middleware'
+import { hasPermission } from '@/lib/permissions'
+import { UserRole } from '@prisma/client'
 import { db } from '@/lib/prisma'
 
 // Helper types
@@ -36,72 +38,60 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    const { id: menuId } = await params
-    
-    // 1. Authentication Check
-    const session = await auth()
-    if (!session?.user) {
-      return Response.json({ 
-        success: false, 
-        error: 'Unauthorized - Login required' 
-      }, { status: 401 })
-    }
+  return withSppgAuth(request, async (session) => {
+    try {
+      if (!hasPermission(session.user.userRole as UserRole, 'READ')) {
+        return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 403 })
+      }
 
-    // 2. SPPG Access Check (Multi-tenancy)
-    if (!session.user.sppgId) {
-      return Response.json({ 
-        success: false, 
-        error: 'SPPG access required' 
-      }, { status: 403 })
-    }
+      const { id: menuId } = await params
 
-    // 3. Verify menu belongs to user's SPPG and get nutrition data
-    const menu = await db.nutritionMenu.findFirst({
-      where: {
-        id: menuId,
-        program: {
-          sppgId: session.user.sppgId
-        }
-      },
-      include: {
-        program: {
-          select: {
-            id: true,
-            name: true,
-            targetGroup: true
+      // Verify menu belongs to user's SPPG and get nutrition data
+      const menu = await db.nutritionMenu.findFirst({
+        where: {
+          id: menuId,
+          program: {
+            sppgId: session.user.sppgId!
           }
         },
-        nutritionCalc: true,
-        ingredients: {
-          include: {
-            inventoryItem: {
-              select: {
-                id: true,
-                itemName: true,
-                unit: true,
-                category: true,
-                calories: true,
-                protein: true,
-                carbohydrates: true,
-                fat: true,
-                fiber: true
+        include: {
+          program: {
+            select: {
+              id: true,
+              name: true,
+              targetGroup: true
+            }
+          },
+          nutritionCalc: true,
+          ingredients: {
+            include: {
+              inventoryItem: {
+                select: {
+                  id: true,
+                  itemName: true,
+                  unit: true,
+                  category: true,
+                  calories: true,
+                  protein: true,
+                  carbohydrates: true,
+                  fat: true,
+                  fiber: true
+                }
               }
             }
           }
         }
-      }
-    })
+      })
 
-    if (!menu) {
-      return Response.json({ 
-        success: false, 
-        error: 'Menu not found or access denied' 
-      }, { status: 404 })
-    }
+      if (!menu) {
+        return NextResponse.json({ 
+          success: false, 
+          error: 'Menu not found or access denied' 
+        }, { status: 404 })
+      }
 
     if (!menu.nutritionCalc) {
-      return Response.json({ 
+      return NextResponse.json({ 
         success: false, 
         error: 'Nutrisi belum dihitung. Silakan hitung nutrisi terlebih dahulu.' 
       }, { status: 404 })
@@ -219,18 +209,19 @@ export async function GET(
       calculatedAt: menu.nutritionCalc.calculatedAt.toISOString()
     }
 
-    return Response.json({
-      success: true,
-      data: report
-    })
+      return NextResponse.json({
+        success: true,
+        data: report
+      })
 
-  } catch (error) {
-    console.error('GET /api/sppg/menu/[id]/nutrition-report error:', error)
-    
-    return Response.json({
-      success: false,
-      error: 'Failed to generate nutrition report',
-      details: process.env.NODE_ENV === 'development' ? error : undefined
-    }, { status: 500 })
-  }
+    } catch (error) {
+      console.error('GET /api/sppg/menu/[id]/nutrition-report error:', error)
+      
+      return NextResponse.json({
+        success: false,
+        error: 'Failed to generate nutrition report',
+        details: process.env.NODE_ENV === 'development' ? error : undefined
+      }, { status: 500 })
+    }
+  })
 }

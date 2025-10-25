@@ -2,62 +2,35 @@
  * @fileoverview Dashboard statistics API endpoint - Real-time SPPG statistics
  * @version Next.js 15.5.4 / Prisma 6.17.1 / Enterprise-grade
  * @author Bagizi-ID Development Team
+ * 
+ * RBAC Integration:
+ * - GET: Protected by withSppgAuth (all SPPG roles)
+ * - Automatic audit logging for dashboard access
+ * - Multi-tenant: Statistics filtered by session.user.sppgId
  */
 
-import { NextResponse } from 'next/server'
-import { auth } from '@/auth'
+import { NextRequest, NextResponse } from 'next/server'
+import { withSppgAuth } from '@/lib/api-middleware'
 import { db } from '@/lib/prisma'
 
 /**
  * GET /api/sppg/dashboard/stats
  * Fetch real-time dashboard statistics for authenticated SPPG
+ * 
+ * @rbac Protected by withSppgAuth - requires valid SPPG session
+ * @audit Automatic logging via middleware
  */
-export async function GET() {
-  try {
-    // 1. Authentication Check
-    const session = await auth()
-    if (!session?.user) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
+export async function GET(request: NextRequest) {
+  return withSppgAuth(request, async (session) => {
+    try {
+      const sppgId = session.user.sppgId
 
-    // 2. SPPG Access Check (CRITICAL FOR MULTI-TENANCY!)
-    const sppgId = session.user.sppgId
-    if (!sppgId) {
-      return NextResponse.json(
-        { success: false, error: 'SPPG access required' },
-        { status: 403 }
-      )
-    }
-
-    // 3. Verify SPPG exists and is active
-    const sppg = await db.sPPG.findUnique({
-      where: {
-        id: sppgId,
-        status: 'ACTIVE'
-      },
-      select: {
-        id: true,
-        name: true,
-        code: true
-      }
-    })
-
-    if (!sppg) {
-      return NextResponse.json(
-        { success: false, error: 'SPPG not found or inactive' },
-        { status: 403 }
-      )
-    }
-
-    // 4. Fetch real dashboard statistics
+      // Fetch real dashboard statistics
     
     // Active Programs Count
     const activeProgramsCount = await db.nutritionProgram.count({
       where: {
-        sppgId,
+        sppgId: sppgId!,
         status: 'ACTIVE'
       }
     })
@@ -68,7 +41,7 @@ export async function GET() {
     
     const newProgramsThisWeek = await db.nutritionProgram.count({
       where: {
-        sppgId,
+        sppgId: sppgId!,
         createdAt: {
           gte: oneWeekAgo
         }
@@ -79,7 +52,7 @@ export async function GET() {
     const activeMenusCount = await db.nutritionMenu.count({
       where: {
         program: {
-          sppgId
+          sppgId: sppgId!
         }
       }
     })
@@ -88,7 +61,7 @@ export async function GET() {
     const newMenusThisWeek = await db.nutritionMenu.count({
       where: {
         program: {
-          sppgId
+          sppgId: sppgId!
         },
         createdAt: {
           gte: oneWeekAgo
@@ -100,7 +73,7 @@ export async function GET() {
     const totalSchools = await db.schoolBeneficiary.count({
       where: {
         program: {
-          sppgId
+          sppgId: sppgId!
         }
       }
     })
@@ -109,7 +82,7 @@ export async function GET() {
     const newSchoolsThisWeek = await db.schoolBeneficiary.count({
       where: {
         program: {
-          sppgId
+          sppgId: sppgId!
         },
         createdAt: {
           gte: oneWeekAgo
@@ -120,7 +93,7 @@ export async function GET() {
     // Total Beneficiaries Recipients (Sum of targetRecipients from programs)
     const programsWithRecipients = await db.nutritionProgram.findMany({
       where: {
-        sppgId,
+        sppgId: sppgId!,
         status: 'ACTIVE'
       },
       select: {
@@ -139,7 +112,7 @@ export async function GET() {
     
     const pendingDistributions = await db.foodDistribution.count({
       where: {
-        sppgId,
+        sppgId: sppgId!,
         distributionDate: {
           gte: today
         },
@@ -152,7 +125,7 @@ export async function GET() {
     // Completed Distributions This Week
     const completedDistributionsThisWeek = await db.foodDistribution.count({
       where: {
-        sppgId,
+        sppgId: sppgId!,
         distributionDate: {
           gte: oneWeekAgo
         },
@@ -163,7 +136,7 @@ export async function GET() {
     // Budget Utilization
     const totalBudget = await db.nutritionProgram.aggregate({
       where: {
-        sppgId,
+        sppgId: sppgId!,
         status: 'ACTIVE'
       },
       _sum: {
@@ -178,7 +151,7 @@ export async function GET() {
 
     const monthlyProcurementCost = await db.procurement.aggregate({
       where: {
-        sppgId,
+        sppgId: sppgId!,
         procurementDate: {
           gte: firstDayOfMonth
         },
@@ -191,8 +164,8 @@ export async function GET() {
       }
     })
 
-    const budget = totalBudget._sum.totalBudget || 0
-    const spent = monthlyProcurementCost._sum.totalAmount || 0
+    const budget = totalBudget._sum?.totalBudget || 0
+    const spent = monthlyProcurementCost._sum?.totalAmount || 0
     const budgetPercentage = budget > 0 ? Math.round((spent / budget) * 100) : 0
 
     // 5. Build response
@@ -253,4 +226,5 @@ export async function GET() {
       { status: 500 }
     )
   }
+  })
 }

@@ -5,34 +5,28 @@
  * @author Bagizi-ID Development Team
  */
 
-import { NextRequest } from 'next/server'
-import { auth } from '@/auth'
-import { checkSppgAccess } from '@/lib/permissions'
+import { NextRequest, NextResponse } from 'next/server'
+import { withSppgAuth } from '@/lib/api-middleware'
+import { hasPermission } from '@/lib/permissions'
 import { db } from '@/lib/prisma'
+import { UserRole } from '@prisma/client'
 
 /**
  * GET /api/sppg/distribution/execution/statistics
  * Fetch execution statistics with optional date filtering
  */
 export async function GET(request: NextRequest) {
-  try {
-    // 1. Authentication Check
-    const session = await auth()
-    if (!session?.user) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+  return withSppgAuth(request, async (session) => {
+    try {
+      // Permission Check
+      if (!hasPermission(session.user.userRole as UserRole, 'DISTRIBUTION_MANAGE')) {
+        return NextResponse.json(
+          { success: false, error: 'Insufficient permissions' },
+          { status: 403 }
+        )
+      }
 
-    // 2. SPPG Access Check (Multi-tenant Security)
-    if (!session.user.sppgId) {
-      return Response.json({ error: 'SPPG access required' }, { status: 403 })
-    }
-
-    const sppg = await checkSppgAccess(session.user.sppgId)
-    if (!sppg) {
-      return Response.json({ error: 'SPPG not found or access denied' }, { status: 403 })
-    }
-
-    // 3. Parse Query Parameters
+      // Parse Query Parameters
     const { searchParams } = new URL(request.url)
     const dateFrom = searchParams.get('dateFrom') ? new Date(searchParams.get('dateFrom')!) : undefined
     const dateTo = searchParams.get('dateTo') ? new Date(searchParams.get('dateTo')!) : undefined
@@ -41,7 +35,7 @@ export async function GET(request: NextRequest) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const where: any = {
       schedule: {
-        sppgId: session.user.sppgId, // CRITICAL: Multi-tenant filtering
+        sppgId: session.user.sppgId!, // CRITICAL: Multi-tenant filtering
       },
     }
 
@@ -101,7 +95,7 @@ export async function GET(request: NextRequest) {
         where: {
           distribution: {
             schedule: {
-              sppgId: session.user.sppgId,
+              sppgId: session.user.sppgId!,
             },
             ...(dateFrom || dateTo ? {
               actualStartTime: where.actualStartTime,
@@ -115,7 +109,7 @@ export async function GET(request: NextRequest) {
         where: {
           distribution: {
             schedule: {
-              sppgId: session.user.sppgId,
+              sppgId: session.user.sppgId!,
             },
             ...(dateFrom || dateTo ? {
               actualStartTime: where.actualStartTime,
@@ -145,16 +139,18 @@ export async function GET(request: NextRequest) {
       completionRate: total > 0 ? (completedCount / total) * 100 : 0,
     }
 
-    return Response.json({ 
+    return NextResponse.json({ 
       success: true, 
       data: statistics 
     })
   } catch (error) {
     console.error('GET /api/sppg/distribution/execution/statistics error:', error)
     
-    return Response.json({ 
+    return NextResponse.json({ 
+      success: false,
       error: 'Failed to fetch statistics',
       details: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined
     }, { status: 500 })
   }
+  })
 }

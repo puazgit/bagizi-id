@@ -8,10 +8,12 @@
  * @security Multi-tenant with ownership check
  */
 
-import { NextRequest } from 'next/server'
-import { auth } from '@/auth'
+import { NextRequest, NextResponse } from 'next/server'
+import { withSppgAuth } from '@/lib/api-middleware'
+import { hasPermission } from '@/lib/permissions'
 import { db } from '@/lib/prisma'
 import { updateDeliveryStatusSchema } from '@/features/sppg/distribution/delivery/schemas'
+import { UserRole } from '@prisma/client'
 
 /**
  * PUT /api/sppg/distribution/delivery/:id/status
@@ -21,27 +23,24 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    // 1. Authentication check
-    const session = await auth()
-    if (!session?.user) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+  return withSppgAuth(request, async (session) => {
+    try {
+      const { id } = await params
 
-    // 2. Multi-tenant check
-    if (!session.user.sppgId) {
-      return Response.json({ error: 'SPPG access required' }, { status: 403 })
-    }
+      // 2. Permission Check
+      if (!hasPermission(session.user.userRole as UserRole, 'DISTRIBUTION_MANAGE')) {
+        return NextResponse.json(
+          { success: false, error: 'Insufficient permissions' },
+          { status: 403 }
+        )
+      }
 
-    // 3. Get delivery ID from params
-    const { id } = await params
-
-    // 4. Verify ownership
+      // 3. Verify ownership
     const existing = await db.distributionDelivery.findFirst({
       where: {
         id,
         schedule: {
-          sppgId: session.user.sppgId, // CRITICAL: Multi-tenant security
+          sppgId: session.user.sppgId!, // CRITICAL: Multi-tenant security
         },
       },
       select: { 
@@ -53,18 +52,18 @@ export async function PUT(
     })
 
     if (!existing) {
-      return Response.json(
+      return NextResponse.json(
         { error: 'Pengiriman tidak ditemukan atau akses ditolak' },
         { status: 404 }
       )
     }
 
-    // 5. Parse and validate request body
+    // 4. Parse and validate request body
     const body = await request.json()
     const validated = updateDeliveryStatusSchema.safeParse(body)
 
     if (!validated.success) {
-      return Response.json(
+      return NextResponse.json(
         {
           error: 'Data tidak valid',
           details: validated.error.issues,
@@ -75,7 +74,7 @@ export async function PUT(
 
     const { status, currentLocation, notes } = validated.data
 
-    // 6. Status transition validation
+    // 5. Status transition validation
     const validTransitions: Record<string, string[]> = {
       ASSIGNED: ['DEPARTED', 'CANCELLED', 'FAILED'],
       DEPARTED: ['DELIVERED', 'FAILED', 'CANCELLED'],
@@ -86,7 +85,7 @@ export async function PUT(
 
     const allowedNextStatuses = validTransitions[existing.status] || []
     if (!allowedNextStatuses.includes(status)) {
-      return Response.json(
+      return NextResponse.json(
         {
           error: 'Transisi status tidak valid',
           details: `Tidak dapat mengubah status dari ${existing.status} ke ${status}`,
@@ -95,7 +94,7 @@ export async function PUT(
       )
     }
 
-    // 7. Update delivery status
+    // 6. Update delivery status
     const updated = await db.distributionDelivery.update({
       where: { id },
       data: {
@@ -106,19 +105,21 @@ export async function PUT(
       },
     })
 
-    return Response.json({
+    return NextResponse.json({
       success: true,
       data: updated,
       message: `Status pengiriman berhasil diubah menjadi ${status}`,
     })
   } catch (error) {
     console.error('PUT /api/sppg/distribution/delivery/[id]/status error:', error)
-    return Response.json(
+    return NextResponse.json(
       {
+        success: false,
         error: 'Gagal memperbarui status pengiriman',
         details: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined,
       },
       { status: 500 }
     )
   }
+  })
 }

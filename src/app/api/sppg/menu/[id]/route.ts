@@ -5,8 +5,10 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/auth'
+import { withSppgAuth } from '@/lib/api-middleware'
 import { db } from '@/lib/prisma'
+import { UserRole } from '@prisma/client'
+import { hasPermission } from '@/lib/permissions'
 
 /**
  * GET /api/sppg/menu/[id]
@@ -16,48 +18,40 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    // 1. Authentication check
-    const session = await auth()
-    if (!session?.user) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
+  return withSppgAuth(request, async (session) => {
+    try {
+      // Permission Check
+      if (!session.user.userRole || !hasPermission(session.user.userRole as UserRole, 'READ')) {
+        return NextResponse.json(
+          { success: false, error: 'Insufficient permissions' },
+          { status: 403 }
+        )
+      }
 
-    // 2. Multi-tenant check
-    if (!session.user.sppgId) {
-      return NextResponse.json(
-        { success: false, error: 'SPPG access required' },
-        { status: 403 }
-      )
-    }
+      // Get menu ID from params
+      const { id } = await params
 
-    // 3. Get menu ID from params
-    const { id } = await params
-
-    // 4. Fetch menu with all details
-    const menu = await db.nutritionMenu.findFirst({
-      where: {
-        id,
-        program: {
-          sppgId: session.user.sppgId, // Multi-tenant security
-        },
-      },
-      include: {
-        program: {
-          select: {
-            id: true,
-            name: true,
-            sppgId: true,
-            programType: true,
-            targetGroup: true,
+      // Fetch menu with all details
+      const menu = await db.nutritionMenu.findFirst({
+        where: {
+          id,
+          program: {
+            sppgId: session.user.sppgId!, // Multi-tenant security
           },
         },
-        ingredients: {
-          include: {
-            inventoryItem: {
+        include: {
+          program: {
+            select: {
+              id: true,
+              name: true,
+              sppgId: true,
+              programType: true,
+              targetGroup: true,
+            },
+          },
+          ingredients: {
+            include: {
+              inventoryItem: {
               select: {
                 id: true,
                 itemName: true,
@@ -103,7 +97,8 @@ export async function GET(
       },
       { status: 500 }
     )
-  }
+    }
+  })
 }
 
 /**
@@ -114,100 +109,93 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    // 1. Authentication check
-    const session = await auth()
-    if (!session?.user) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
+  return withSppgAuth(request, async (session) => {
+    try {
+      // Permission Check
+      if (!session.user.userRole || !hasPermission(session.user.userRole as UserRole, 'WRITE')) {
+        return NextResponse.json(
+          { success: false, error: 'Insufficient permissions' },
+          { status: 403 }
+        )
+      }
 
-    // 2. Multi-tenant check
-    if (!session.user.sppgId) {
-      return NextResponse.json(
-        { success: false, error: 'SPPG access required' },
-        { status: 403 }
-      )
-    }
+      // Get menu ID from params
+      const { id } = await params
 
-    // 3. Get menu ID from params
-    const { id } = await params
-
-    // 4. Verify menu exists and belongs to user's SPPG
-    const existingMenu = await db.nutritionMenu.findFirst({
-      where: {
-        id,
-        program: {
-          sppgId: session.user.sppgId,
-        },
-      },
-    })
-
-    if (!existingMenu) {
-      return NextResponse.json(
-        { success: false, error: 'Menu tidak ditemukan atau tidak dapat diakses' },
-        { status: 404 }
-      )
-    }
-
-    // 5. Parse request body
-    const body = await request.json()
-
-    // 6. Update menu
-    const updatedMenu = await db.nutritionMenu.update({
-      where: { id },
-      data: {
-        menuName: body.menuName,
-        menuCode: body.menuCode,
-        description: body.description,
-        mealType: body.mealType,
-        servingSize: body.servingSize,
-        preparationTime: body.preparationTime,
-        cookingTime: body.cookingTime,
-        difficulty: body.difficulty,
-        cookingMethod: body.cookingMethod,
-      },
-      include: {
-        program: {
-          select: {
-            id: true,
-            name: true,
-            sppgId: true,
+      // Verify menu exists and belongs to user's SPPG
+      const existingMenu = await db.nutritionMenu.findFirst({
+        where: {
+          id,
+          program: {
+            sppgId: session.user.sppgId!,
           },
         },
-        ingredients: {
-          include: {
-            inventoryItem: true,
-          },
-        },
-        recipeSteps: {
-          orderBy: {
-            stepNumber: 'asc',
-          },
-        },
-        nutritionCalc: true,
-        costCalc: true,
-      },
-    })
+      })
 
-    // 7. Return updated menu
-    return NextResponse.json({
-      success: true,
-      data: updatedMenu,
-    })
-  } catch (error) {
-    console.error('PUT /api/sppg/menu/[id] error:', error)
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Gagal memperbarui menu',
-        details: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined,
-      },
-      { status: 500 }
-    )
-  }
+      if (!existingMenu) {
+        return NextResponse.json(
+          { success: false, error: 'Menu tidak ditemukan atau tidak dapat diakses' },
+          { status: 404 }
+        )
+      }
+
+      // Parse request body
+      const body = await request.json()
+
+      // Update menu
+      const updatedMenu = await db.nutritionMenu.update({
+        where: { id },
+        data: {
+          menuName: body.menuName,
+          menuCode: body.menuCode,
+          description: body.description,
+          mealType: body.mealType,
+          servingSize: body.servingSize,
+          preparationTime: body.preparationTime,
+          cookingTime: body.cookingTime,
+          difficulty: body.difficulty,
+          cookingMethod: body.cookingMethod,
+        },
+        include: {
+          program: {
+            select: {
+              id: true,
+              name: true,
+              sppgId: true,
+            },
+          },
+          ingredients: {
+            include: {
+              inventoryItem: true,
+            },
+          },
+          recipeSteps: {
+            orderBy: {
+              stepNumber: 'asc',
+            },
+          },
+          nutritionCalc: true,
+          costCalc: true,
+        },
+      })
+
+      // Return updated menu
+      return NextResponse.json({
+        success: true,
+        data: updatedMenu,
+      })
+    } catch (error) {
+      console.error('PUT /api/sppg/menu/[id] error:', error)
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Gagal memperbarui menu',
+          details: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined,
+        },
+        { status: 500 }
+      )
+    }
+  })
 }
 
 /**
@@ -218,17 +206,16 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    // 1. Authentication check
-    const session = await auth()
-    if (!session?.user) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
+  return withSppgAuth(request, async (session) => {
+    try {
+      // Permission Check
+      if (!session.user.userRole || !hasPermission(session.user.userRole as UserRole, 'DELETE')) {
+        return NextResponse.json(
+          { success: false, error: 'Insufficient permissions' },
+          { status: 403 }
+        )
+      }
 
-    // 2. Multi-tenant check
     if (!session.user.sppgId) {
       return NextResponse.json(
         { success: false, error: 'SPPG access required' },
@@ -240,42 +227,43 @@ export async function DELETE(
     const { id } = await params
 
     // 4. Verify menu exists and belongs to user's SPPG
-    const existingMenu = await db.nutritionMenu.findFirst({
-      where: {
-        id,
-        program: {
-          sppgId: session.user.sppgId,
+      const existingMenu = await db.nutritionMenu.findFirst({
+        where: {
+          id,
+          program: {
+            sppgId: session.user.sppgId!,
+          },
         },
-      },
-    })
+      })
 
-    if (!existingMenu) {
+      if (!existingMenu) {
+        return NextResponse.json(
+          { success: false, error: 'Menu tidak ditemukan atau tidak dapat diakses' },
+          { status: 404 }
+        )
+      }
+
+      // Delete menu and related data
+      // Note: Prisma will cascade delete related records based on schema
+      await db.nutritionMenu.delete({
+        where: { id },
+      })
+
+      // Return success
+      return NextResponse.json({
+        success: true,
+        message: 'Menu berhasil dihapus',
+      })
+    } catch (error) {
+      console.error('DELETE /api/sppg/menu/[id] error:', error)
       return NextResponse.json(
-        { success: false, error: 'Menu tidak ditemukan atau tidak dapat diakses' },
-        { status: 404 }
+        {
+          success: false,
+          error: 'Gagal menghapus menu',
+          details: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined,
+        },
+        { status: 500 }
       )
     }
-
-    // 5. Delete menu and related data
-    // Note: Prisma will cascade delete related records based on schema
-    await db.nutritionMenu.delete({
-      where: { id },
-    })
-
-    // 6. Return success
-    return NextResponse.json({
-      success: true,
-      message: 'Menu berhasil dihapus',
-    })
-  } catch (error) {
-    console.error('DELETE /api/sppg/menu/[id] error:', error)
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Gagal menghapus menu',
-        details: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined,
-      },
-      { status: 500 }
-    )
-  }
+  })
 }

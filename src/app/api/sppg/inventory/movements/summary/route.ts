@@ -4,44 +4,38 @@
  * @description Provides summary statistics for stock movements
  * @requires Auth.js v5 - Authentication
  * @requires Prisma - Database operations
+ * 
+ * RBAC Integration:
+ * - GET: Protected by withSppgAuth
+ * - Automatic audit logging
+ * - Permission: INVENTORY_VIEW
  */
 
-import { auth } from '@/auth'
+import { NextRequest, NextResponse } from 'next/server'
+import { withSppgAuth } from '@/lib/api-middleware'
 import { db } from '@/lib/prisma'
 import { hasPermission } from '@/lib/permissions'
-import { MovementType } from '@prisma/client'
+import { UserRole, MovementType } from '@prisma/client'
 
 /**
  * GET /api/sppg/inventory/movements/summary
- * Fetch stock movement summary statistics
- * @security Requires authentication and INVENTORY_VIEW permission
+ * @rbac Protected by withSppgAuth
+ * @audit Automatic logging
+ * @security Requires INVENTORY_VIEW permission
  * @query {string} startDate - Optional start date filter
  * @query {string} endDate - Optional end date filter
  * @returns {Promise<Response>} Movement summary by type and date range
  */
-export async function GET(request: Request) {
-  try {
-    // 1. Authentication Check
-    const session = await auth()
-    if (!session?.user) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    // 2. Permission Check
-    if (!session.user.userRole || !hasPermission(session.user.userRole, 'INVENTORY_VIEW')) {
-      return Response.json({ 
-        error: 'Insufficient permissions',
-        message: 'Anda tidak memiliki akses untuk melihat ringkasan pergerakan stok'
-      }, { status: 403 })
-    }
-
-    // 3. Multi-tenant Check
-    if (!session.user.sppgId) {
-      return Response.json({ 
-        error: 'SPPG access required',
-        message: 'Akses SPPG diperlukan'
-      }, { status: 403 })
-    }
+export async function GET(request: NextRequest) {
+  return withSppgAuth(request, async (session) => {
+    try {
+      // Permission Check
+      if (!session.user.userRole || !hasPermission(session.user.userRole as UserRole, 'INVENTORY_VIEW')) {
+        return NextResponse.json({ 
+          error: 'Insufficient permissions',
+          message: 'Anda tidak memiliki akses untuk melihat ringkasan pergerakan stok'
+        }, { status: 403 })
+      }
 
     // 4. Parse query parameters
     const { searchParams } = new URL(request.url)
@@ -61,14 +55,20 @@ export async function GET(request: Request) {
       dateFilter.lte = new Date(endDate)
     }
 
-    // 5. Fetch movements for summary
-    const movements = await db.stockMovement.findMany({
-      where: {
-        inventory: {
-          sppgId: session.user.sppgId,
-        },
-        movedAt: dateFilter,
+    // 5. Build where clause
+    const where: {
+      inventory: { sppgId: string }
+      movedAt: { gte?: Date; lte?: Date }
+    } = {
+      inventory: {
+        sppgId: session.user.sppgId!,
       },
+      movedAt: dateFilter,
+    }
+
+    // 6. Fetch movements for summary
+    const movements = await db.stockMovement.findMany({
+      where,
       select: {
         movementType: true,
         quantity: true,
@@ -122,7 +122,7 @@ export async function GET(request: Request) {
       .filter((m) => m.movementType === 'DAMAGED')
       .reduce((sum: number, m) => sum + m.quantity, 0)
 
-    return Response.json({
+    return NextResponse.json({
       success: true,
       data: {
         overview: {
@@ -146,13 +146,12 @@ export async function GET(request: Request) {
         }
       }
     })
-
   } catch (error) {
-    console.error('GET /api/sppg/inventory/movements/summary error:', error)
-    return Response.json({ 
+    return NextResponse.json({ 
       error: 'Internal server error',
       message: 'Terjadi kesalahan saat mengambil ringkasan pergerakan stok',
       details: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined
     }, { status: 500 })
   }
+  })
 }

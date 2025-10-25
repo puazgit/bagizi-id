@@ -19,6 +19,7 @@ import { seedProcurement } from './seeds/procurement-seed'
 import { seedProduction } from './seeds/production-seed'
 import { seedVehicles } from './seeds/vehicle-seed'
 import { seedDistributionComprehensive } from './seeds/distribution-seed'
+import { seedDemoRequests } from './seeds/demo-requests-seed'
 
 const prisma = new PrismaClient()
 
@@ -104,6 +105,10 @@ async function main() {
     console.log('👥 Step 3: Seeding demo users 2025 (16 users with all roles)...')
     const users = await seedDemoUsers2025(prisma, sppgs)
 
+    console.log('📝 Step 3.5: Seeding demo requests (6 requests - various statuses)...')
+    const supportUser = users.find(u => u.userRole === 'PLATFORM_SUPPORT')
+    await seedDemoRequests(prisma, supportUser)
+
     // 2. Master Data
     console.log('🥗 Step 4: Seeding nutrition standards...')
     await seedNutrition(prisma)
@@ -150,16 +155,19 @@ async function main() {
     console.log('')
     console.log('✅ Bagizi-ID Demo 2025 Database Seeding Completed!')
     console.log('')
-    console.log('📋 Summary (October 22, 2025):')
+    console.log('📋 Summary (January 19, 2025):')
     console.log(`   - SPPG Demo: ${sppgs.length} entity (DEMO-2025)`)
-    console.log(`   - Demo Users: ${users.length} accounts (all 16 roles)`)
+    console.log(`   - Demo Users: ${users.length} accounts (platform + SPPG roles)`)
     console.log(`   - Default Password: demo2025`)
     console.log(`   - Demo Period: January 1 - December 31, 2025`)
     console.log('')
     console.log('🚀 Quick Start:')
     console.log('   1. npm run dev')
     console.log('   2. http://localhost:3000/login')
-    console.log('   3. See DEMO_CREDENTIALS.md for login info')
+    console.log('   3. Platform Admin: superadmin@bagizi.id / demo2025')
+    console.log('   4. Platform Support: support@bagizi.id / demo2025')
+    console.log('   5. Platform Analyst: analyst@bagizi.id / demo2025')
+    console.log('   6. See DEMO_CREDENTIALS.md for complete login info')
     console.log('')
   } catch (error) {
     console.error('❌ Error during seeding:', error)

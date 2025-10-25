@@ -5,11 +5,12 @@
  * @author Bagizi-ID Development Team
  */
 
-import { NextRequest } from 'next/server'
-import { auth } from '@/auth'
-import { checkSppgAccess } from '@/lib/permissions'
+import { NextRequest, NextResponse } from 'next/server'
+import { withSppgAuth } from '@/lib/api-middleware'
+import { hasPermission } from '@/lib/permissions'
 import { db } from '@/lib/prisma'
 import { resolveIssueSchema } from '@/features/sppg/distribution/execution/schemas'
+import { UserRole } from '@prisma/client'
 
 /**
  * POST /api/sppg/distribution/execution/[id]/issue/[issueId]/resolve
@@ -19,39 +20,32 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string; issueId: string }> }
 ) {
-  try {
-    const { id, issueId } = await params
+  return withSppgAuth(request, async (session) => {
+    try {
+      const { id, issueId } = await params
 
-    // 1. Authentication Check
-    const session = await auth()
-    if (!session?.user) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+      // 2. Permission Check
+      if (!hasPermission(session.user.userRole as UserRole, 'DISTRIBUTION_MANAGE')) {
+        return NextResponse.json(
+          { success: false, error: 'Insufficient permissions' },
+          { status: 403 }
+        )
+      }
 
-    // 2. SPPG Access Check (Multi-tenant Security)
-    if (!session.user.sppgId) {
-      return Response.json({ error: 'SPPG access required' }, { status: 403 })
-    }
-
-    const sppg = await checkSppgAccess(session.user.sppgId)
-    if (!sppg) {
-      return Response.json({ error: 'SPPG not found or access denied' }, { status: 403 })
-    }
-
-    // 3. Verify Execution Exists & Belongs to SPPG
+      // 3. Verify Execution Exists & Belongs to SPPG
     const execution = await db.foodDistribution.findFirst({
       where: { 
         id,
         schedule: {
-          sppgId: session.user.sppgId, // Multi-tenant safety
+          sppgId: session.user.sppgId!, // Multi-tenant safety
         },
       },
     })
 
     if (!execution) {
-      return Response.json({ 
+      return NextResponse.json({ 
         error: 'Execution not found or access denied' 
-      }, { status: 404 })
+      }, { status: 400 })
     }
 
     // 4. Verify Issue Exists & Belongs to Execution
@@ -63,7 +57,7 @@ export async function POST(
     })
 
     if (!issue) {
-      return Response.json({ 
+      return NextResponse.json({ 
         error: 'Issue not found' 
       }, { status: 404 })
     }
@@ -73,7 +67,7 @@ export async function POST(
     const validated = resolveIssueSchema.safeParse(body)
     
     if (!validated.success) {
-      return Response.json({ 
+      return NextResponse.json({ 
         error: 'Validation failed',
         details: validated.error.issues
       }, { status: 400 })
@@ -81,12 +75,12 @@ export async function POST(
 
     // 6. Business Logic Validation
     if (issue.resolvedAt) {
-      return Response.json({ 
+      return NextResponse.json({ 
         error: 'Issue already resolved' 
       }, { status: 400 })
     }
 
-    // 7. Resolve Issue
+    // 6. Resolve Issue
     await db.distributionIssue.update({
       where: { id: issueId },
       data: {
@@ -96,7 +90,7 @@ export async function POST(
       },
     })
 
-    // 8. Fetch Updated Execution
+    // 7. Fetch Updated Execution
     const updatedExecution = await db.foodDistribution.findFirst({
       where: { id },
       include: {
@@ -119,7 +113,7 @@ export async function POST(
       },
     })
 
-    return Response.json({ 
+    return NextResponse.json({ 
       success: true, 
       data: updatedExecution,
       message: 'Issue resolved successfully'
@@ -127,9 +121,11 @@ export async function POST(
   } catch (error) {
     console.error('POST /api/sppg/distribution/execution/[id]/issue/[issueId]/resolve error:', error)
     
-    return Response.json({ 
+    return NextResponse.json({ 
+      success: false,
       error: 'Failed to resolve issue',
       details: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined
     }, { status: 500 })
   }
+  })
 }

@@ -5,9 +5,11 @@
  * @see {@link /docs/copilot-instructions.md} Enterprise Development Guidelines
  */
 
-import { NextRequest } from 'next/server'
-import { auth } from '@/auth'
+import { NextRequest, NextResponse } from 'next/server'
+import { withSppgAuth } from '@/lib/api-middleware'
 import { db } from '@/lib/prisma'
+import { UserRole } from '@prisma/client'
+import { hasPermission } from '@/lib/permissions'
 import { 
   procurementPlanCreateSchema, 
   procurementPlanFiltersSchema
@@ -16,48 +18,40 @@ import {
 // ================================ GET /api/sppg/procurement/plans ================================
 
 export async function GET(request: NextRequest) {
-  try {
-    // 1. Authentication Check
-    const session = await auth()
-    if (!session?.user) {
-      return Response.json({ 
-        success: false, 
-        error: 'Unauthorized - Login required' 
-      }, { status: 401 })
-    }
+  return withSppgAuth(request, async (session) => {
+    try {
+      // Permission Check
+      if (!session.user.userRole || !hasPermission(session.user.userRole as UserRole, 'READ')) {
+        return NextResponse.json({ 
+          success: false, 
+          error: 'Insufficient permissions' 
+        }, { status: 403 })
+      }
 
-    // 2. SPPG Access Check (Multi-tenancy - CRITICAL!)
-    if (!session.user.sppgId) {
-      return Response.json({ 
-        success: false, 
-        error: 'SPPG access required' 
-      }, { status: 403 })
-    }
-
-    // 3. Parse and validate query parameters
-    const url = new URL(request.url)
-    const queryParams = Object.fromEntries(url.searchParams)
-    
-    // Convert string values to appropriate types
-    const processedParams = {
-      ...queryParams,
-      page: queryParams.page ? parseInt(queryParams.page) : undefined,
-      limit: queryParams.limit ? parseInt(queryParams.limit) : undefined,
-      planYear: queryParams.planYear ? parseInt(queryParams.planYear) : undefined,
-      planQuarter: queryParams.planQuarter ? parseInt(queryParams.planQuarter) : undefined,
-    }
-
-    const filters = procurementPlanFiltersSchema.parse(processedParams)
-
-    // 4. Build database query with multi-tenant filtering
-    const where = {
-      // Multi-tenant: Only get plans from user's SPPG
-      sppgId: session.user.sppgId,
+      // Parse and validate query parameters
+      const url = new URL(request.url)
+      const queryParams = Object.fromEntries(url.searchParams)
       
-      // Apply filters
-      ...(filters.search && {
-        OR: [
-          { planName: { contains: filters.search, mode: 'insensitive' as const } },
+      // Convert string values to appropriate types
+      const processedParams = {
+        ...queryParams,
+        page: queryParams.page ? parseInt(queryParams.page) : undefined,
+        limit: queryParams.limit ? parseInt(queryParams.limit) : undefined,
+        planYear: queryParams.planYear ? parseInt(queryParams.planYear) : undefined,
+        planQuarter: queryParams.planQuarter ? parseInt(queryParams.planQuarter) : undefined,
+      }
+
+      const filters = procurementPlanFiltersSchema.parse(processedParams)
+
+      // Build database query with multi-tenant filtering
+      const where = {
+        // Multi-tenant: Only get plans from user's SPPG
+        sppgId: session.user.sppgId!,
+        
+        // Apply filters
+        ...(filters.search && {
+          OR: [
+            { planName: { contains: filters.search, mode: 'insensitive' as const } },
           { notes: { contains: filters.search, mode: 'insensitive' as const } }
         ]
       }),
@@ -116,7 +110,7 @@ export async function GET(request: NextRequest) {
     })
 
     // 7. Success response with pagination
-    return Response.json({
+    return NextResponse.json({
       success: true,
       data: transformedPlans,
       pagination: {
@@ -127,43 +121,36 @@ export async function GET(request: NextRequest) {
       }
     })
 
-  } catch (error) {
-    console.error('GET /api/sppg/procurement/plans error:', error)
-    
-    // Validation error
-    if (error instanceof Error && error.name === 'ZodError') {
-      return Response.json({ 
-        success: false, 
-        error: 'Invalid query parameters',
-        details: error 
-      }, { status: 400 })
-    }
+    } catch (error) {
+      console.error('GET /api/sppg/procurement/plans error:', error)
+      
+      // Validation error
+      if (error instanceof Error && error.name === 'ZodError') {
+        return NextResponse.json({ 
+          success: false, 
+          error: 'Invalid query parameters',
+          details: error 
+        }, { status: 400 })
+      }
 
-    // Internal server error
-    return Response.json({ 
-      success: false, 
-      error: 'Failed to fetch procurement plans',
-      details: process.env.NODE_ENV === 'development' ? error : undefined
-    }, { status: 500 })
-  }
+      // Internal server error
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Failed to fetch procurement plans',
+        details: process.env.NODE_ENV === 'development' ? error : undefined
+      }, { status: 500 })
+    }
+  })
 }
 
 // ================================ POST /api/sppg/procurement/plans ================================
 
 export async function POST(request: NextRequest) {
-  try {
-    // 1. Authentication Check
-    const session = await auth()
-    if (!session?.user) {
-      return Response.json({ 
-        success: false, 
-        error: 'Unauthorized - Login required' 
-      }, { status: 401 })
-    }
-
-    // 2. SPPG Access Check (Multi-tenancy - CRITICAL!)
-    if (!session.user.sppgId) {
-      return Response.json({ 
+  return withSppgAuth(request, async (session) => {
+    try {
+      // Permission Check
+      if (!session.user.userRole || !hasPermission(session.user.userRole as UserRole, 'PROCUREMENT_MANAGE')) {
+        return NextResponse.json({ 
         success: false, 
         error: 'SPPG access required' 
       }, { status: 403 })
@@ -178,7 +165,7 @@ export async function POST(request: NextRequest) {
     ]
     
     if (!session.user.userRole || !allowedRoles.includes(session.user.userRole)) {
-      return Response.json({ 
+      return NextResponse.json({ 
         success: false, 
         error: 'Insufficient permissions - Only managers can create procurement plans' 
       }, { status: 403 })
@@ -188,48 +175,57 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const validated = procurementPlanCreateSchema.parse(body)
 
-    // 5. Verify program belongs to SPPG if programId provided
+    // Verify program belongs to SPPG if programId provided
     if (validated.programId) {
+      const programWhere: {
+        id: string
+        sppgId: string
+      } = {
+        id: validated.programId,
+        sppgId: session.user.sppgId!
+      }
       const program = await db.nutritionProgram.findFirst({
-        where: {
-          id: validated.programId,
-          sppgId: session.user.sppgId
-        }
+        where: programWhere
       })
 
       if (!program) {
-        return Response.json({ 
+        return NextResponse.json({ 
           success: false, 
           error: 'Program not found or does not belong to your SPPG' 
         }, { status: 404 })
       }
     }
 
-    // 6. Check for duplicate plan (same month/year)
+    // Check for duplicate plan (same month/year)
+    const planWhere: {
+      sppgId: string
+      planMonth: string
+      planYear: number
+    } = {
+      sppgId: session.user.sppgId!,
+      planMonth: validated.planMonth,
+      planYear: validated.planYear
+    }
     const existingPlan = await db.procurementPlan.findFirst({
-      where: {
-        sppgId: session.user.sppgId,
-        planMonth: validated.planMonth,
-        planYear: validated.planYear
-      }
+      where: planWhere
     })
 
     if (existingPlan) {
-      return Response.json({ 
+      return NextResponse.json({ 
         success: false, 
         error: `Procurement plan for ${validated.planMonth} already exists` 
       }, { status: 409 })
     }
 
-    // 7. Calculate initial budget allocation
+    // Calculate initial budget allocation
     const allocatedBudget = 0 // Will be updated as items are added
     const usedBudget = 0 // Will be updated as procurements are created
     const remainingBudget = validated.totalBudget
 
-    // 8. Create procurement plan
+    // Create procurement plan
     const plan = await db.procurementPlan.create({
       data: {
-        sppgId: session.user.sppgId,
+        sppgId: session.user.sppgId!,
         programId: validated.programId,
         planName: validated.planName,
         planMonth: validated.planMonth,
@@ -276,7 +272,7 @@ export async function POST(request: NextRequest) {
     })
 
     // 9. Success response
-    return Response.json({
+    return NextResponse.json({
       success: true,
       data: plan,
       message: 'Procurement plan created successfully'
@@ -287,7 +283,7 @@ export async function POST(request: NextRequest) {
     
     // Validation error
     if (error instanceof Error && error.name === 'ZodError') {
-      return Response.json({ 
+      return NextResponse.json({ 
         success: false, 
         error: 'Validation failed',
         details: error 
@@ -297,7 +293,7 @@ export async function POST(request: NextRequest) {
     // Prisma error
     if (error && typeof error === 'object' && 'code' in error) {
       if (error.code === 'P2002') {
-        return Response.json({ 
+        return NextResponse.json({ 
           success: false, 
           error: 'Procurement plan with this code already exists' 
         }, { status: 409 })
@@ -305,10 +301,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Internal server error
-    return Response.json({ 
+    return NextResponse.json({ 
       success: false, 
       error: 'Failed to create procurement plan',
       details: process.env.NODE_ENV === 'development' ? error : undefined
     }, { status: 500 })
   }
+  })
 }

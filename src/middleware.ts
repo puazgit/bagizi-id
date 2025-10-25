@@ -7,6 +7,7 @@
 
 import { auth } from '@/auth'
 import { NextResponse } from 'next/server'
+import { logAdminAccess, getClientIp, getUserAgent } from '@/lib/audit-log'
 
 export default auth((req) => {
   const { pathname } = req.nextUrl
@@ -95,7 +96,19 @@ export default auth((req) => {
       email: session?.user?.email
     })
 
-    // Must have sppgId
+    // Skip SPPG checks for admin users
+    const userRole = session?.user.userRole ?? ''
+    const isAdminUser = 
+      userRole === 'PLATFORM_SUPERADMIN' ||
+      userRole === 'PLATFORM_SUPPORT' ||
+      userRole === 'PLATFORM_ANALYST'
+    
+    if (isAdminUser) {
+      console.log('[Middleware] 👑 Admin user accessing SPPG route - redirecting to /admin')
+      return NextResponse.redirect(new URL('/admin', req.url))
+    }
+
+    // Must have sppgId for non-admin users
     if (!session?.user.sppgId) {
       console.log('[Middleware] ❌ FAILED: No sppgId - redirecting to access-denied')
       return NextResponse.redirect(new URL('/access-denied', req.url))
@@ -121,19 +134,125 @@ export default auth((req) => {
     console.log('[Middleware] ✅ SPPG user validation passed')
   }
 
-  // Check admin access
+  // Check admin access with fine-grained permissions
   if (isAdminRoute) {
+    const userRole = session?.user.userRole ?? ''
     const isAdmin = 
-      session?.user.userRole === 'PLATFORM_SUPERADMIN' ||
-      session?.user.userRole === 'PLATFORM_SUPPORT' ||
-      session?.user.userRole === 'PLATFORM_ANALYST'
+      userRole === 'PLATFORM_SUPERADMIN' ||
+      userRole === 'PLATFORM_SUPPORT' ||
+      userRole === 'PLATFORM_ANALYST'
     
-    console.log('[Middleware] 👑 Admin Access Check:', { isAdmin })
+    console.log('[Middleware] 👑 Admin Access Check:', { 
+      userRole,
+      isAdmin,
+      pathname 
+    })
+    
+    // Extract client info for audit logging
+    const ipAddress = getClientIp(req.headers)
+    const userAgent = getUserAgent(req.headers)
     
     if (!isAdmin) {
-      console.log('[Middleware] ❌ FAILED: Not admin - redirecting to dashboard')
-      return NextResponse.redirect(new URL('/dashboard', req.url))
+      console.log('[Middleware] ❌ FAILED: Not admin - redirecting to unauthorized')
+      
+      // Log failed admin access attempt (non-blocking)
+      logAdminAccess({
+        userId: session?.user?.id,
+        userEmail: session?.user?.email || undefined,
+        userRole: userRole || undefined,
+        pathname,
+        method: req.method,
+        success: false,
+        ipAddress,
+        userAgent,
+        errorMessage: 'Unauthorized: User does not have admin role'
+      }).catch(err => console.error('[Middleware] Audit log failed:', err))
+      
+      return NextResponse.redirect(new URL(`/unauthorized?error=unauthorized&from=${encodeURIComponent(pathname)}`, req.url))
     }
+
+    // Fine-grained permissions for admin sub-routes
+    const isSuperAdmin = userRole === 'PLATFORM_SUPERADMIN'
+    const isSupport = userRole === 'PLATFORM_SUPPORT'
+    const isAnalyst = userRole === 'PLATFORM_ANALYST'
+
+    // PLATFORM_ANALYST has very limited access (read-only)
+    if (isAnalyst) {
+      const isReadOnlyRoute = 
+        pathname === '/admin' ||
+        pathname.startsWith('/admin/analytics') ||
+        pathname.startsWith('/admin/activity-logs') ||
+        pathname.startsWith('/admin/demo-requests') || // ✅ Allow demo requests viewing
+        pathname.startsWith('/admin/subscriptions') || // ✅ Allow subscriptions viewing
+        pathname.startsWith('/admin/invoices') || // ✅ Allow invoices viewing
+        pathname.startsWith('/admin/notifications') || // ✅ Allow notifications viewing
+        (pathname.startsWith('/admin/settings') && req.method === 'GET') || // ✅ Allow settings viewing (read-only)
+        (pathname.startsWith('/admin/sppg') && req.method === 'GET') ||
+        (pathname.startsWith('/admin/users') && req.method === 'GET')
+
+      if (!isReadOnlyRoute) {
+        console.log('[Middleware] ❌ ANALYST RESTRICTION: Read-only access only')
+        
+        // Log restricted access attempt (non-blocking)
+        logAdminAccess({
+          userId: session?.user?.id,
+          userEmail: session?.user?.email || undefined,
+          userRole,
+          pathname,
+          method: req.method,
+          success: false,
+          ipAddress,
+          userAgent,
+          errorMessage: 'Analyst role restricted to read-only access'
+        }).catch(err => console.error('[Middleware] Audit log failed:', err))
+        
+        return NextResponse.redirect(new URL(`/unauthorized?error=read-only&from=${encodeURIComponent(pathname)}`, req.url))
+      }
+    }
+
+    // PLATFORM_SUPPORT has limited write access
+    if (isSupport && !isSuperAdmin) {
+      const restrictedRoutes = [
+        '/admin/database',
+        '/admin/security',
+        '/admin/settings/platform'
+      ]
+
+      const isRestricted = restrictedRoutes.some(route => pathname.startsWith(route))
+      
+      if (isRestricted) {
+        console.log('[Middleware] ❌ SUPPORT RESTRICTION: Restricted route')
+        
+        // Log restricted access attempt (non-blocking)
+        logAdminAccess({
+          userId: session?.user?.id,
+          userEmail: session?.user?.email || undefined,
+          userRole,
+          pathname,
+          method: req.method,
+          success: false,
+          ipAddress,
+          userAgent,
+          errorMessage: 'Support role does not have access to restricted routes'
+        }).catch(err => console.error('[Middleware] Audit log failed:', err))
+        
+        return NextResponse.redirect(new URL(`/unauthorized?error=restricted&from=${encodeURIComponent(pathname)}`, req.url))
+      }
+    }
+
+    // Log successful admin access (non-blocking)
+    logAdminAccess({
+      userId: session?.user?.id,
+      userEmail: session?.user?.email || undefined,
+      userRole,
+      pathname,
+      method: req.method,
+      success: true,
+      ipAddress,
+      userAgent
+    }).catch(err => console.error('[Middleware] Audit log failed:', err))
+
+    console.log('[Middleware] ✅ Admin access granted:', { userRole, pathname })
   }
 
   // **CRITICAL: Role-Based Access Control for SPPG Routes**
@@ -142,6 +261,18 @@ export default auth((req) => {
   // Menu Management - Nutrition experts and administrators
   if (pathname.startsWith('/menu')) {
     const userRole = session?.user?.userRole ?? ''
+    
+    // Skip check for admin users - they shouldn't access SPPG routes
+    const isAdminUser = 
+      userRole === 'PLATFORM_SUPERADMIN' ||
+      userRole === 'PLATFORM_SUPPORT' ||
+      userRole === 'PLATFORM_ANALYST'
+    
+    if (isAdminUser) {
+      console.log('[Middleware] 👑 Admin user accessing menu route - redirecting to /admin')
+      return NextResponse.redirect(new URL('/admin', req.url))
+    }
+    
     const allowedRoles = ['SPPG_KEPALA', 'SPPG_ADMIN', 'SPPG_AHLI_GIZI']
     const hasAccess = allowedRoles.includes(userRole)
     
@@ -153,13 +284,25 @@ export default auth((req) => {
     
     if (!hasAccess) {
       console.log('[Middleware] ❌ FAILED: Menu access denied')
-      return NextResponse.redirect(new URL('/dashboard?error=access-denied', req.url))
+      return NextResponse.redirect(new URL(`/access-denied?error=access-denied&from=${encodeURIComponent(pathname)}`, req.url))
     }
   }
 
   // Production Management - Production staff and quality control
   if (pathname.startsWith('/production')) {
     const userRole = session?.user?.userRole ?? ''
+    
+    // Skip check for admin users - they shouldn't access SPPG routes
+    const isAdminUser = 
+      userRole === 'PLATFORM_SUPERADMIN' ||
+      userRole === 'PLATFORM_SUPPORT' ||
+      userRole === 'PLATFORM_ANALYST'
+    
+    if (isAdminUser) {
+      console.log('[Middleware] 👑 Admin user accessing production route - redirecting to /admin')
+      return NextResponse.redirect(new URL('/admin', req.url))
+    }
+    
     const allowedRoles = ['SPPG_KEPALA', 'SPPG_ADMIN', 'SPPG_PRODUKSI_MANAGER', 'SPPG_STAFF_DAPUR', 'SPPG_STAFF_QC', 'SPPG_AHLI_GIZI']
     const hasAccess = allowedRoles.includes(userRole)
     
@@ -180,9 +323,9 @@ export default auth((req) => {
     })
     
     if (!hasAccess) {
-      console.log('[Middleware] ❌❌❌ FAILED: Production access DENIED - REDIRECTING TO DASHBOARD')
+      console.log('[Middleware] ❌❌❌ FAILED: Production access DENIED - REDIRECTING TO ACCESS-DENIED')
       console.log('[Middleware] 🔴 Redirect reason: userRole not in allowedRoles')
-      return NextResponse.redirect(new URL('/dashboard?error=access-denied', req.url))
+      return NextResponse.redirect(new URL(`/access-denied?error=access-denied&from=${encodeURIComponent(pathname)}`, req.url))
     }
     
     console.log('[Middleware] ✅✅✅ Production access GRANTED - allowing request to proceed')

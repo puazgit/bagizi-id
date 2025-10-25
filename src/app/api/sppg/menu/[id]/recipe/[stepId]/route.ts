@@ -3,8 +3,10 @@
  * @version Next.js 15.5.4 / Prisma 6.17.1 / Enterprise-grade
  */
 
-import { NextRequest } from 'next/server'
-import { auth } from '@/auth'
+import { NextRequest, NextResponse } from 'next/server'
+import { withSppgAuth } from '@/lib/api-middleware'
+import { hasPermission } from '@/lib/permissions'
+import { UserRole } from '@prisma/client'
 import { db } from '@/lib/prisma'
 import { z } from 'zod'
 
@@ -28,104 +30,92 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string; stepId: string }> }
 ) {
-  try {
-    const { id: menuId, stepId } = await params
-    
-    // 1. Authentication Check
-    const session = await auth()
-    if (!session?.user) {
-      return Response.json({ 
-        success: false, 
-        error: 'Unauthorized - Login required' 
-      }, { status: 401 })
-    }
-
-    // 2. SPPG Access Check (Multi-tenancy)
-    if (!session.user.sppgId) {
-      return Response.json({ 
-        success: false, 
-        error: 'SPPG access required' 
-      }, { status: 403 })
-    }
-
-    // 3. Verify recipe step and menu belong to user's SPPG
-    const recipeStep = await db.recipeStep.findFirst({
-      where: {
-        id: stepId,
-        menuId,
-        menu: {
-          program: {
-            sppgId: session.user.sppgId
-          }
-        }
+  return withSppgAuth(request, async (session) => {
+    try {
+      if (!hasPermission(session.user.userRole as UserRole, 'WRITE')) {
+        return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 403 })
       }
-    })
 
-    if (!recipeStep) {
-      return Response.json({ 
-        success: false, 
-        error: 'Recipe step not found or access denied' 
-      }, { status: 404 })
-    }
+      const { id: menuId, stepId } = await params
 
-    // 4. Parse and validate request body
-    const body = await request.json()
-    const validated = recipeStepUpdateSchema.parse(body)
-
-    // 5. If step number is being changed, check for conflicts
-    if (validated.stepNumber && validated.stepNumber !== recipeStep.stepNumber) {
-      const conflictingStep = await db.recipeStep.findFirst({
+      // Verify recipe step and menu belong to user's SPPG
+      const recipeStep = await db.recipeStep.findFirst({
         where: {
+          id: stepId,
           menuId,
-          stepNumber: validated.stepNumber,
-          id: { not: stepId }
+          menu: {
+            program: {
+              sppgId: session.user.sppgId!
+            }
+          }
         }
       })
 
-      if (conflictingStep) {
-        return Response.json({ 
+      if (!recipeStep) {
+        return NextResponse.json({ 
           success: false, 
-          error: `Step number ${validated.stepNumber} already exists` 
+          error: 'Recipe step not found or access denied' 
+        }, { status: 404 })
+      }
+
+      // Parse and validate request body
+      const body = await request.json()
+      const validated = recipeStepUpdateSchema.parse(body)
+
+      // If step number is being changed, check for conflicts
+      if (validated.stepNumber && validated.stepNumber !== recipeStep.stepNumber) {
+        const conflictingStep = await db.recipeStep.findFirst({
+          where: {
+            menuId,
+            stepNumber: validated.stepNumber,
+            id: { not: stepId }
+          }
+        })
+
+        if (conflictingStep) {
+          return NextResponse.json({ 
+            success: false, 
+            error: `Step number ${validated.stepNumber} already exists` 
+          }, { status: 400 })
+        }
+      }
+
+      // Update recipe step
+      const updatedStep = await db.recipeStep.update({
+        where: { id: stepId },
+        data: validated
+      })
+
+      // Update menu's updatedAt timestamp
+      await db.nutritionMenu.update({
+        where: { id: menuId },
+        data: { updatedAt: new Date() }
+      })
+
+      return NextResponse.json({
+        success: true,
+        data: updatedStep,
+        message: 'Recipe step updated successfully'
+      })
+
+    } catch (error) {
+      console.error('PUT /api/sppg/menu/[id]/recipe/[stepId] error:', error)
+      
+      if (error instanceof z.ZodError) {
+        return NextResponse.json({
+          success: false,
+          error: 'Validation failed',
+          details: error.issues
         }, { status: 400 })
       }
-    }
 
-    // 6. Update recipe step
-    const updatedStep = await db.recipeStep.update({
-      where: { id: stepId },
-      data: validated
-    })
-
-    // 7. Update menu's updatedAt timestamp
-    await db.nutritionMenu.update({
-      where: { id: menuId },
-      data: { updatedAt: new Date() }
-    })
-
-    return Response.json({
-      success: true,
-      data: updatedStep,
-      message: 'Recipe step updated successfully'
-    })
-
-  } catch (error) {
-    console.error('PUT /api/sppg/menu/[id]/recipe/[stepId] error:', error)
-    
-    // Handle validation errors
-    if (error instanceof z.ZodError) {
-      return Response.json({
+      return NextResponse.json({
         success: false,
-        error: 'Validation failed',
-        details: error.issues
-      }, { status: 400 })
+        error: 'Failed to update recipe step',
+        details: process.env.NODE_ENV === 'development' ? error : undefined
+      }, { status: 500 })
     }
-
-    return Response.json({
-      success: false,
-      error: 'Failed to update recipe step',
-      details: process.env.NODE_ENV === 'development' ? error : undefined
-    }, { status: 500 })
-  }
+  })
 }
 
 // ================================ DELETE /api/sppg/menu/[id]/recipe/[stepId] ================================
@@ -134,69 +124,58 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string; stepId: string }> }
 ) {
-  try {
-    const { id: menuId, stepId } = await params
-    
-    // 1. Authentication Check
-    const session = await auth()
-    if (!session?.user) {
-      return Response.json({ 
-        success: false, 
-        error: 'Unauthorized - Login required' 
-      }, { status: 401 })
-    }
+  return withSppgAuth(request, async (session) => {
+    try {
+      if (!hasPermission(session.user.userRole as UserRole, 'DELETE')) {
+        return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 403 })
+      }
 
-    // 2. SPPG Access Check (Multi-tenancy)
-    if (!session.user.sppgId) {
-      return Response.json({ 
-        success: false, 
-        error: 'SPPG access required' 
-      }, { status: 403 })
-    }
+      const { id: menuId, stepId } = await params
 
-    // 3. Verify recipe step and menu belong to user's SPPG
-    const recipeStep = await db.recipeStep.findFirst({
-      where: {
-        id: stepId,
-        menuId,
-        menu: {
-          program: {
-            sppgId: session.user.sppgId
+      // Verify recipe step and menu belong to user's SPPG
+      const recipeStep = await db.recipeStep.findFirst({
+        where: {
+          id: stepId,
+          menuId,
+          menu: {
+            program: {
+              sppgId: session.user.sppgId!
+            }
           }
         }
+      })
+
+      if (!recipeStep) {
+        return NextResponse.json({ 
+          success: false, 
+          error: 'Recipe step not found or access denied' 
+        }, { status: 404 })
       }
-    })
 
-    if (!recipeStep) {
-      return Response.json({ 
-        success: false, 
-        error: 'Recipe step not found or access denied' 
-      }, { status: 404 })
+      // Delete recipe step
+      await db.recipeStep.delete({
+        where: { id: stepId }
+      })
+
+      // Update menu's updatedAt timestamp
+      await db.nutritionMenu.update({
+        where: { id: menuId },
+        data: { updatedAt: new Date() }
+      })
+
+      return NextResponse.json({
+        success: true,
+        message: 'Recipe step deleted successfully'
+      })
+
+    } catch (error) {
+      console.error('DELETE /api/sppg/menu/[id]/recipe/[stepId] error:', error)
+      
+      return NextResponse.json({
+        success: false,
+        error: 'Failed to delete recipe step',
+        details: process.env.NODE_ENV === 'development' ? error : undefined
+      }, { status: 500 })
     }
-
-    // 4. Delete recipe step
-    await db.recipeStep.delete({
-      where: { id: stepId }
-    })
-
-    // 5. Update menu's updatedAt timestamp
-    await db.nutritionMenu.update({
-      where: { id: menuId },
-      data: { updatedAt: new Date() }
-    })
-
-    return Response.json({
-      success: true,
-      message: 'Recipe step deleted successfully'
-    })
-
-  } catch (error) {
-    console.error('DELETE /api/sppg/menu/[id]/recipe/[stepId] error:', error)
-    
-    return Response.json({
-      success: false,
-      error: 'Failed to delete recipe step',
-      details: process.env.NODE_ENV === 'development' ? error : undefined
-    }, { status: 500 })
-  }
+  })
 }

@@ -225,17 +225,18 @@ export function useLogin() {
         // Redirect with success animation
         await new Promise(resolve => setTimeout(resolve, 500))
         
-        // Manual redirect after successful login
-        const redirectUrl = result.url || options?.callbackUrl || '/dashboard'
+        // Get redirect URL from result or use callback
+        // Auth.js will handle the redirect based on middleware
+        const redirectUrl = result.url || options?.callbackUrl
         
-        if (typeof window !== 'undefined') {
+        if (redirectUrl && typeof window !== 'undefined') {
           // Use window.location for full page reload to ensure session is loaded
           window.location.href = redirectUrl
         }
         
         return {
           success: true,
-          redirectUrl
+          redirectUrl: redirectUrl || undefined
         }
       }
       

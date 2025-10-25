@@ -3,8 +3,10 @@
  * @version Next.js 15.5.4 / Prisma 6.17.1 / Enterprise-grade
  */
 
-import { NextRequest } from 'next/server'
-import { auth } from '@/auth'
+import { NextRequest, NextResponse } from 'next/server'
+import { withSppgAuth } from '@/lib/api-middleware'
+import { hasPermission } from '@/lib/permissions'
+import { UserRole } from '@prisma/client'
 import { db } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 
@@ -14,34 +16,22 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    const { id: menuId } = await params
-    
-    // 1. Authentication Check
-    const session = await auth()
-    if (!session?.user) {
-      return Response.json({ 
-        success: false, 
-        error: 'Unauthorized - Login required' 
-      }, { status: 401 })
-    }
+  return withSppgAuth(request, async (session) => {
+    try {
+      if (!hasPermission(session.user.userRole as UserRole, 'WRITE')) {
+        return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 403 })
+      }
 
-    // 2. SPPG Access Check (Multi-tenancy)
-    if (!session.user.sppgId) {
-      return Response.json({ 
-        success: false, 
-        error: 'SPPG access required' 
-      }, { status: 403 })
-    }
+      const { id: menuId } = await params
 
-    // 3. Verify menu belongs to user's SPPG
-    const menu = await db.nutritionMenu.findFirst({
-      where: {
-        id: menuId,
-        program: {
-          sppgId: session.user.sppgId
-        }
-      },
+      // Verify menu belongs to user's SPPG
+      const menu = await db.nutritionMenu.findFirst({
+        where: {
+          id: menuId,
+          program: {
+            sppgId: session.user.sppgId!
+          }
+        },
       include: {
         ingredients: {
           include: {
@@ -85,14 +75,14 @@ export async function POST(
     })
 
     if (!menu) {
-      return Response.json({ 
+      return NextResponse.json({ 
         success: false, 
         error: 'Menu not found or access denied' 
       }, { status: 404 })
     }
 
     if (menu.ingredients.length === 0) {
-      return Response.json({ 
+      return NextResponse.json({ 
         success: false, 
         error: 'Tidak dapat menghitung nutrisi: menu belum memiliki bahan' 
       }, { status: 400 })
@@ -324,7 +314,7 @@ export async function POST(
       }
     })
 
-    return Response.json({
+    return NextResponse.json({
       success: true,
       data: nutritionCalc,
       message: 'Nutrition calculated successfully'
@@ -333,10 +323,11 @@ export async function POST(
   } catch (error) {
     console.error('POST /api/sppg/menu/[id]/calculate-nutrition error:', error)
     
-    return Response.json({
+    return NextResponse.json({
       success: false,
       error: 'Gagal menghitung nutrisi',
       details: process.env.NODE_ENV === 'development' ? error : undefined
     }, { status: 500 })
   }
+  })
 }

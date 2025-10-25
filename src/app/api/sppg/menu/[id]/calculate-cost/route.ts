@@ -4,8 +4,10 @@
  * @see {@link /docs/copilot-instructions.md} Multi-tenant security patterns
  */
 
-import { NextRequest } from 'next/server'
-import { auth } from '@/auth'
+import { NextRequest, NextResponse } from 'next/server'
+import { withSppgAuth } from '@/lib/api-middleware'
+import { hasPermission } from '@/lib/permissions'
+import { UserRole } from '@prisma/client'
 import { db } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { ingredientBreakdownSchema } from '@/features/sppg/menu/schemas'
@@ -16,60 +18,58 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    // 1. Authentication check
-    const session = await auth()
-    if (!session?.user) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+  return withSppgAuth(request, async (session) => {
+    try {
+      if (!hasPermission(session.user.userRole as UserRole, 'WRITE')) {
+        return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 403 })
+      }
 
-    // 2. Extract menuId
-    const { id: menuId } = await params
+      const { id: menuId } = await params
 
-    // 3. Verify menu belongs to user's SPPG (multi-tenant security)
-    const menu = await db.nutritionMenu.findFirst({
-      where: {
-        id: menuId,
-        program: {
-          sppgId: session.user.sppgId!
-        }
-      },
-      include: {
-        program: {
-          select: {
-            sppgId: true,
-            name: true
+      // Verify menu belongs to user's SPPG (multi-tenant security)
+      const menu = await db.nutritionMenu.findFirst({
+        where: {
+          id: menuId,
+          program: {
+            sppgId: session.user.sppgId!
           }
         },
-        ingredients: {
-          include: {
-            inventoryItem: {
-              select: {
-                itemName: true,
-                unit: true,
-                currentStock: true,
-                minStock: true,
-                costPerUnit: true
+        include: {
+          program: {
+            select: {
+              sppgId: true,
+              name: true
+            }
+          },
+          ingredients: {
+            include: {
+              inventoryItem: {
+                select: {
+                  itemName: true,
+                  unit: true,
+                  currentStock: true,
+                  minStock: true,
+                  costPerUnit: true
+                }
               }
             }
           }
         }
+      })
+
+      if (!menu) {
+        return NextResponse.json({ 
+          error: 'Menu not found or access denied' 
+        }, { status: 404 })
       }
-    })
 
-    if (!menu) {
-      return Response.json({ 
-        error: 'Menu not found or access denied' 
-      }, { status: 404 })
-    }
-
-    // 4. Check if menu has ingredients
-    if (menu.ingredients.length === 0) {
-      return Response.json({
-        success: false,
-        error: 'Tidak dapat menghitung biaya: menu belum memiliki bahan'
-      }, { status: 400 })
-    }
+      // Check if menu has ingredients
+      if (menu.ingredients.length === 0) {
+        return NextResponse.json({
+          success: false,
+          error: 'Tidak dapat menghitung biaya: menu belum memiliki bahan'
+        }, { status: 400 })
+      }
 
     // 5. Calculate total ingredient cost
     // CRITICAL: Scale ingredient quantities from 100g base to actual serving size
@@ -178,7 +178,7 @@ export async function POST(
     // 11. Validate ingredient breakdown structure
     const validatedBreakdown = ingredientBreakdownSchema.safeParse(ingredientBreakdown)
     if (!validatedBreakdown.success) {
-      return Response.json({
+      return NextResponse.json({
         success: false,
         error: 'Invalid ingredient breakdown structure',
         details: validatedBreakdown.error.issues
@@ -276,7 +276,7 @@ export async function POST(
       }
     })
 
-    return Response.json({
+    return NextResponse.json({
       success: true,
       message: 'Cost calculation completed successfully',
       data: {
@@ -291,13 +291,13 @@ export async function POST(
         calculatedAt: costCalc.calculatedAt
       }
     })
-
-  } catch (error) {
-    console.error('POST /api/sppg/menu/[id]/calculate-cost error:', error)
-    return Response.json({
-      success: false,
-      error: 'Gagal menghitung biaya',
-      details: process.env.NODE_ENV === 'development' ? error : undefined
-    }, { status: 500 })
-  }
+    } catch (error) {
+      console.error('POST /api/sppg/menu/[id]/calculate-cost error:', error)
+      return NextResponse.json({
+        success: false,
+        error: 'Gagal menghitung biaya',
+        details: process.env.NODE_ENV === 'development' ? error : undefined
+      }, { status: 500 })
+    }
+  })
 }

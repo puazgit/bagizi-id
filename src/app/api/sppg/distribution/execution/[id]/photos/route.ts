@@ -10,11 +10,11 @@
  * @author Bagizi-ID Development Team
  */
 
-import { NextRequest } from 'next/server'
-import { auth } from '@/auth'
-import { checkSppgAccess } from '@/lib/permissions'
+import { NextRequest, NextResponse } from 'next/server'
+import { withSppgAuth } from '@/lib/api-middleware'
+import { hasPermission } from '@/lib/permissions'
 import { db } from '@/lib/prisma'
-import type { PhotoType } from '@prisma/client'
+import type { PhotoType ,  UserRole } from '@prisma/client'
 
 /**
  * GET /api/sppg/distribution/execution/[id]/photos
@@ -30,25 +30,22 @@ export async function GET(
   request: NextRequest,
   props: { params: Promise<{ id: string }> }
 ) {
-  try {
-    // 1. Authentication Check
-    const session = await auth()
-    if (!session?.user) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+  return withSppgAuth(request, async (session) => {
+    try {
+      // 1. Get execution ID from params (await in Next.js 15)
+      const params = await props.params
+      const executionId = params.id
 
-    // 2. SPPG Access Check (multi-tenancy)
-    const sppg = await checkSppgAccess(session.user.sppgId || null)
-    if (!sppg) {
-      return Response.json({ error: 'SPPG access denied' }, { status: 403 })
-    }
+      // 2. Permission Check
+      if (!hasPermission(session.user.userRole as UserRole, 'DISTRIBUTION_MANAGE')) {
+        return NextResponse.json(
+          { success: false, error: 'Insufficient permissions' },
+          { status: 403 }
+        )
+      }
 
-    // 3. Get execution ID from params (await in Next.js 15)
-    const params = await props.params
-    const executionId = params.id
-
-    // 4. Verify execution belongs to user's SPPG
-    const execution = await db.foodDistribution.findFirst({
+      // 3. Verify execution belongs to user's SPPG
+      const execution = await db.foodDistribution.findFirst({
       where: {
         id: executionId,
         sppgId: session.user.sppgId || undefined,
@@ -59,17 +56,17 @@ export async function GET(
     })
 
     if (!execution) {
-      return Response.json(
+      return NextResponse.json(
         { error: 'Execution not found or access denied' },
         { status: 404 }
       )
     }
 
-    // 5. Parse query parameters
+    // 4. Parse query parameters
     const { searchParams } = new URL(request.url)
     const photoType = searchParams.get('photoType') as PhotoType | null
 
-    // 6. Fetch photos from all deliveries in this execution
+    // 5. Fetch photos from all deliveries in this execution
     const photos = await db.deliveryPhoto.findMany({
       where: {
         delivery: {
@@ -112,7 +109,7 @@ export async function GET(
       },
     })
 
-    return Response.json({
+    return NextResponse.json({
       success: true,
       data: {
         photos,
@@ -121,12 +118,14 @@ export async function GET(
     })
   } catch (error) {
     console.error('GET /api/sppg/distribution/execution/[id]/photos error:', error)
-    return Response.json(
+    return NextResponse.json(
       {
+        success: false,
         error: 'Failed to fetch photos',
         details: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined,
       },
       { status: 500 }
     )
   }
+  })
 }
