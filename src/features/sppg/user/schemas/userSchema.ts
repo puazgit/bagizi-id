@@ -47,7 +47,6 @@ const phoneSchema = z
     return val
   })
   .optional()
-  .nullable()
 
 /**
  * Create user schema
@@ -80,30 +79,26 @@ export const createUserSchema = z.object({
     .min(1, 'Nama depan minimal 1 karakter')
     .max(100, 'Nama depan maksimal 100 karakter')
     .trim()
-    .optional()
-    .nullable(),
+    .optional(),
   
   lastName: z
     .string()
     .min(1, 'Nama belakang minimal 1 karakter')
     .max(100, 'Nama belakang maksimal 100 karakter')
     .trim()
-    .optional()
-    .nullable(),
+    .optional(),
   
   jobTitle: z
     .string()
     .max(150, 'Jabatan maksimal 150 karakter')
     .trim()
-    .optional()
-    .nullable(),
+    .optional(),
   
   department: z
     .string()
     .max(100, 'Departemen maksimal 100 karakter')
     .trim()
-    .optional()
-    .nullable(),
+    .optional(),
   
   // Optional settings
   timezone: z
@@ -140,37 +135,32 @@ export const updateUserSchema = z.object({
     .min(1, 'Nama depan minimal 1 karakter')
     .max(100, 'Nama depan maksimal 100 karakter')
     .trim()
-    .optional()
-    .nullable(),
+    .optional(),
   
   lastName: z
     .string()
     .min(1, 'Nama belakang minimal 1 karakter')
     .max(100, 'Nama belakang maksimal 100 karakter')
     .trim()
-    .optional()
-    .nullable(),
+    .optional(),
   
   jobTitle: z
     .string()
     .max(150, 'Jabatan maksimal 150 karakter')
     .trim()
-    .optional()
-    .nullable(),
+    .optional(),
   
   department: z
     .string()
     .max(100, 'Departemen maksimal 100 karakter')
     .trim()
-    .optional()
-    .nullable(),
+    .optional(),
   
   location: z
     .string()
     .max(255, 'Lokasi maksimal 255 karakter')
     .trim()
-    .optional()
-    .nullable(),
+    .optional(),
   
   timezone: z
     .enum(['WIB', 'WITA', 'WIT'])
@@ -185,23 +175,20 @@ export const updateUserSchema = z.object({
   personalPhone: phoneSchema,
   
   alternateEmail: emailSchema
-    .optional()
-    .nullable(),
+    .optional(),
   
   address: z
     .string()
     .max(500, 'Alamat maksimal 500 karakter')
     .trim()
-    .optional()
-    .nullable(),
+    .optional(),
   
   // Emergency contact
   emergencyContact: z
     .string()
     .max(255, 'Nama kontak darurat maksimal 255 karakter')
     .trim()
-    .optional()
-    .nullable(),
+    .optional(),
   
   emergencyPhone: phoneSchema,
   
@@ -209,8 +196,7 @@ export const updateUserSchema = z.object({
     .string()
     .max(50, 'Hubungan maksimal 50 karakter')
     .trim()
-    .optional()
-    .nullable(),
+    .optional(),
   
   // Role can be changed
   userRole: z.nativeEnum(UserRole, {

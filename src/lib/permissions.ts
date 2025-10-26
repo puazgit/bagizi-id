@@ -234,7 +234,7 @@ const rolePermissions: Record<UserRole, PermissionType[]> = {
     'INVENTORY_MANAGE',
   ],
   SPPG_DISTRIBUSI_MANAGER: ['READ', 'WRITE', 'DISTRIBUTION_MANAGE', 'INVENTORY_VIEW'],
-  SPPG_HRD_MANAGER: ['READ', 'WRITE', 'HR_MANAGE'],
+  SPPG_HRD_MANAGER: ['READ', 'WRITE', 'HR_MANAGE', 'USER_MANAGE'],
 
   // SPPG Staff
   SPPG_STAFF_DAPUR: ['READ', 'PRODUCTION_MANAGE'],
@@ -303,6 +303,14 @@ export function canManageProduction(role: UserRole): boolean {
  */
 export function canManageDistribution(role: UserRole): boolean {
   return hasPermission(role, 'DISTRIBUTION_MANAGE')
+}
+
+/**
+ * Check if user can manage users
+ * Roles: SPPG_KEPALA, SPPG_ADMIN, SPPG_HRD_MANAGER
+ */
+export function canManageUsers(role: UserRole): boolean {
+  return hasPermission(role, 'USER_MANAGE')
 }
 
 /**

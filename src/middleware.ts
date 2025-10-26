@@ -46,7 +46,8 @@ export default auth((req) => {
     pathname.startsWith('/distribution') ||
     pathname.startsWith('/inventory') ||
     pathname.startsWith('/hrd') ||
-    pathname.startsWith('/reports')
+    pathname.startsWith('/reports') ||
+    pathname.startsWith('/sppg/users')
 
   console.log('[Middleware] 📋 Route Classification:', {
     isPublicRoute,

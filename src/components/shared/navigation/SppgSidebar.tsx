@@ -170,6 +170,13 @@ const sppgNavigation: NavigationGroup[] = [
         resource: 'inventory'
       },
       {
+        title: 'User Management',
+        href: '/users',
+        icon: UserCog,
+        badge: null,
+        resource: 'users'
+      },
+      {
         title: 'HRD',
         href: '/hrd',
         icon: Users,
