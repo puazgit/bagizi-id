@@ -338,6 +338,127 @@ export async function withAdminAuth(
 }
 
 /**
+ * Permission type for RBAC checks
+ */
+export type Permission = 
+  | 'user:create'
+  | 'user:read'
+  | 'user:update'
+  | 'user:delete'
+  | 'menu:create'
+  | 'menu:update'
+  | 'menu:delete'
+  | 'procurement:create'
+  | 'procurement:update'
+  | 'procurement:delete'
+  | 'production:manage'
+  | 'distribution:manage'
+  | 'financial:view'
+  | 'financial:manage'
+  | 'hr:manage'
+  | 'analytics:view'
+  | 'quality:manage'
+  | 'approval:submit'
+  | 'approval:approve'
+
+/**
+ * Role-based permissions mapping
+ */
+const ROLE_PERMISSIONS: Record<string, Permission[]> = {
+  // Platform Level
+  PLATFORM_SUPERADMIN: [
+    'user:create', 'user:read', 'user:update', 'user:delete',
+    'menu:create', 'menu:update', 'menu:delete',
+    'procurement:create', 'procurement:update', 'procurement:delete',
+    'production:manage', 'distribution:manage',
+    'financial:view', 'financial:manage',
+    'hr:manage', 'analytics:view', 'quality:manage',
+    'approval:submit', 'approval:approve'
+  ],
+  
+  // SPPG Management
+  SPPG_KEPALA: [
+    'user:create', 'user:read', 'user:update', 'user:delete',
+    'menu:create', 'menu:update', 'menu:delete',
+    'procurement:create', 'procurement:update', 'procurement:delete',
+    'production:manage', 'distribution:manage',
+    'financial:view', 'financial:manage',
+    'hr:manage', 'analytics:view', 'quality:manage',
+    'approval:submit', 'approval:approve'
+  ],
+  
+  SPPG_ADMIN: [
+    'user:create', 'user:read', 'user:update',
+    'menu:create', 'menu:update', 'menu:delete',
+    'procurement:create', 'procurement:update',
+    'analytics:view'
+  ],
+  
+  // SPPG Operational
+  SPPG_HRD_MANAGER: [
+    'user:create', 'user:read', 'user:update',
+    'hr:manage', 'analytics:view'
+  ],
+  
+  SPPG_AHLI_GIZI: [
+    'user:read',
+    'menu:create', 'menu:update', 'menu:delete',
+    'quality:manage', 'analytics:view'
+  ],
+  
+  SPPG_AKUNTAN: [
+    'user:read',
+    'financial:view', 'financial:manage',
+    'procurement:create', 'procurement:update',
+    'analytics:view'
+  ],
+  
+  SPPG_PRODUKSI_MANAGER: [
+    'user:read',
+    'production:manage', 'quality:manage',
+    'analytics:view'
+  ],
+  
+  SPPG_DISTRIBUSI_MANAGER: [
+    'user:read',
+    'distribution:manage', 'analytics:view'
+  ],
+  
+  // SPPG Staff
+  SPPG_STAFF_DAPUR: ['user:read', 'production:manage'],
+  SPPG_STAFF_DISTRIBUSI: ['user:read', 'distribution:manage'],
+  SPPG_STAFF_QC: ['user:read', 'quality:manage'],
+  SPPG_STAFF_ADMIN: ['user:read', 'analytics:view'],
+  
+  // Limited
+  SPPG_VIEWER: ['user:read', 'analytics:view'],
+  DEMO_USER: ['user:read', 'analytics:view']
+}
+
+/**
+ * Check if user role has specific permission
+ * 
+ * @param userRole - User's role from session
+ * @param permission - Permission to check
+ * @returns true if user has permission, false otherwise
+ * 
+ * @example
+ * ```typescript
+ * if (!hasPermission(session.user.userRole, 'user:delete')) {
+ *   return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 })
+ * }
+ * ```
+ */
+export function hasPermission(
+  userRole: string | null | undefined,
+  permission: Permission
+): boolean {
+  if (!userRole) return false
+  
+  const permissions = ROLE_PERMISSIONS[userRole] || []
+  return permissions.includes(permission)
+}
+/**
  * Wrapper for SPPG API routes with automatic RBAC
  * 
  * @example
