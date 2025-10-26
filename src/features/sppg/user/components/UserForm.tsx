@@ -104,6 +104,15 @@ export function UserForm({ mode, userId }: UserFormProps) {
   // Load existing user data in edit mode
   useEffect(() => {
     if (mode === 'edit' && existingUser) {
+      console.log('[UserForm] Loading existing user data:', {
+        userId: existingUser.id,
+        email: existingUser.email,
+        name: existingUser.name,
+        userRole: existingUser.userRole,
+        userType: existingUser.userType,
+        rawData: existingUser
+      })
+      
       form.reset({
         email: existingUser.email,
         name: existingUser.name,
@@ -119,6 +128,8 @@ export function UserForm({ mode, userId }: UserFormProps) {
         language: (existingUser.language as 'id' | 'en') || 'id',
         isActive: existingUser.isActive,
       })
+      
+      console.log('[UserForm] Form values after reset:', form.getValues())
     }
   }, [existingUser, mode, form])
 
