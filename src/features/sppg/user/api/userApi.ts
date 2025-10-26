@@ -304,6 +304,8 @@ export const userApi = {
       const baseUrl = getBaseUrl()
       const url = `${baseUrl}/api/sppg/users/${id}/status`
       
+      console.log('[userApi.updateStatus] Request:', { id, isActive, url })
+      
       const response = await fetch(url, {
         ...getFetchOptions(headers),
         method: 'PATCH',
@@ -314,14 +316,19 @@ export const userApi = {
         body: JSON.stringify({ isActive }),
       })
       
+      console.log('[userApi.updateStatus] Response status:', response.status)
+      
       if (!response.ok) {
         const error = await response.json()
-        throw new Error(error.error || 'Failed to update status')
+        console.error('[userApi.updateStatus] Error response:', error)
+        throw new Error(error.error || error.message || 'Failed to update user status')
       }
       
-      return response.json()
+      const result = await response.json()
+      console.log('[userApi.updateStatus] Success:', result)
+      return result
     } catch (error) {
-      console.error('[userApi.updateStatus] Error:', error)
+      console.error('[userApi.updateStatus] Exception:', error)
       throw error
     }
   },
