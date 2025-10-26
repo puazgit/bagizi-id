@@ -52,6 +52,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Input } from '@/components/ui/input'
 import {
   Table,
@@ -94,6 +104,18 @@ export function UserList() {
   const [globalFilter, setGlobalFilter] = useState('')
   const [roleFilter, setRoleFilter] = useState<string>('all')
   const [statusFilter, setStatusFilter] = useState<string>('all')
+
+  // AlertDialog state
+  const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; userId: string; name: string }>({
+    open: false,
+    userId: '',
+    name: '',
+  })
+  const [resetDialog, setResetDialog] = useState<{ open: boolean; userId: string; email: string }>({
+    open: false,
+    userId: '',
+    email: '',
+  })
 
   // Hooks
   const { data: users, isLoading } = useUsers({
@@ -255,13 +277,13 @@ export function UserList() {
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Aksi</DropdownMenuLabel>
               <DropdownMenuItem
-                onClick={() => router.push(`/sppg/users/${user.id}`)}
+                onClick={() => router.push(`/users/${user.id}`)}
               >
                 <Eye className="mr-2 h-4 w-4" />
                 Lihat Detail
               </DropdownMenuItem>
               <DropdownMenuItem
-                onClick={() => router.push(`/sppg/users/${user.id}/edit`)}
+                onClick={() => router.push(`/users/${user.id}/edit`)}
               >
                 <Edit className="mr-2 h-4 w-4" />
                 Edit User
@@ -323,23 +345,22 @@ export function UserList() {
 
   // Action handlers
   const handleResetPassword = (userId: string, email: string) => {
-    if (
-      confirm(
-        `Reset password untuk ${email}?\n\nPassword baru akan dikirim ke email user.`
-      )
-    ) {
-      const newPassword = generateRandomPassword()
-      resetPassword(
-        { id: userId, data: { newPassword, confirmPassword: newPassword } },
-        {
-          onSuccess: () => {
-            toast.success('Password berhasil direset', {
-              description: `Password baru: ${newPassword}`,
-            })
-          },
-        }
-      )
-    }
+    setResetDialog({ open: true, userId, email })
+  }
+
+  const confirmResetPassword = () => {
+    const newPassword = generateRandomPassword()
+    resetPassword(
+      { id: resetDialog.userId, data: { newPassword, confirmPassword: newPassword } },
+      {
+        onSuccess: () => {
+          toast.success('Password berhasil direset', {
+            description: `Password baru: ${newPassword}`,
+          })
+          setResetDialog({ open: false, userId: '', email: '' })
+        },
+      }
+    )
   }
 
   const handleToggleStatus = (userId: string, isActive: boolean) => {
@@ -356,17 +377,16 @@ export function UserList() {
   }
 
   const handleDeleteUser = (userId: string, name: string) => {
-    if (
-      confirm(
-        `Hapus user "${name}"?\n\nUser akan dinonaktifkan dan tidak bisa login lagi.`
-      )
-    ) {
-      deleteUser(userId, {
-        onSuccess: () => {
-          toast.success('User berhasil dihapus')
-        },
-      })
-    }
+    setDeleteDialog({ open: true, userId, name })
+  }
+
+  const confirmDeleteUser = () => {
+    deleteUser(deleteDialog.userId, {
+      onSuccess: () => {
+        toast.success('User berhasil dihapus')
+        setDeleteDialog({ open: false, userId: '', name: '' })
+      },
+    })
   }
 
   // Loading state
@@ -427,7 +447,7 @@ export function UserList() {
 
         {/* Add User Button */}
         <Button asChild>
-          <Link href="/sppg/users/new">
+          <Link href="/users/new">
             <Plus className="mr-2 h-4 w-4" />
             Tambah User
           </Link>
@@ -481,7 +501,7 @@ export function UserList() {
                   <div className="flex flex-col items-center gap-2 text-muted-foreground">
                     <p>Tidak ada user ditemukan</p>
                     <Button asChild variant="outline" size="sm">
-                      <Link href="/sppg/users/new">
+                      <Link href="/users/new">
                         <Plus className="mr-2 h-4 w-4" />
                         Tambah User Pertama
                       </Link>
@@ -524,6 +544,48 @@ export function UserList() {
           </Button>
         </div>
       </div>
+
+      {/* Delete User AlertDialog */}
+      <AlertDialog open={deleteDialog.open} onOpenChange={(open) => !open && setDeleteDialog({ open: false, userId: '', name: '' })}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Hapus User?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Apakah Anda yakin ingin menghapus user <strong>{deleteDialog.name}</strong>?
+              <br />
+              <br />
+              User akan dinonaktifkan dan tidak bisa login lagi. Aksi ini tidak dapat dibatalkan.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeleteUser} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Hapus User
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Reset Password AlertDialog */}
+      <AlertDialog open={resetDialog.open} onOpenChange={(open) => !open && setResetDialog({ open: false, userId: '', email: '' })}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reset Password?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Apakah Anda yakin ingin reset password untuk <strong>{resetDialog.email}</strong>?
+              <br />
+              <br />
+              Password baru akan di-generate secara otomatis dan ditampilkan setelah reset berhasil. Pastikan Anda menyimpan password baru tersebut.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmResetPassword}>
+              Reset Password
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

@@ -162,7 +162,7 @@ export function UserForm({ mode, userId }: UserFormProps) {
       createUser(processedData, {
         onSuccess: () => {
           toast.success('User berhasil dibuat')
-          router.push('/sppg/users')
+          router.push('/users')
         },
         onError: (error) => {
           toast.error('Gagal membuat user', {
@@ -200,7 +200,7 @@ export function UserForm({ mode, userId }: UserFormProps) {
         {
           onSuccess: () => {
             toast.success('User berhasil diperbarui')
-            router.push(`/sppg/users/${userId}`)
+            router.push(`/users/${userId}`)
           },
           onError: (error) => {
             toast.error('Gagal memperbarui user', {
