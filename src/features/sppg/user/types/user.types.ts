@@ -45,8 +45,8 @@ export interface UserDetail extends UserListItem {
   jobTitle: string | null
   department: string | null
   location: string | null
-  timezone: string
-  language: string
+  timezone: 'WIB' | 'WITA' | 'WIT'
+  language: 'id' | 'en'
   workPhone: string | null
   personalPhone: string | null
   alternateEmail: string | null
@@ -91,8 +91,8 @@ export interface CreateUserInput {
   department?: string
   
   // Optional settings
-  timezone?: string
-  language?: string
+  timezone?: 'WIB' | 'WITA' | 'WIT'
+  language?: 'id' | 'en'
   isActive?: boolean
 }
 
@@ -108,8 +108,8 @@ export interface UpdateUserInput {
   jobTitle?: string
   department?: string
   location?: string
-  timezone?: string
-  language?: string
+  timezone?: 'WIB' | 'WITA' | 'WIT'
+  language?: 'id' | 'en'
   workPhone?: string
   personalPhone?: string
   alternateEmail?: string
