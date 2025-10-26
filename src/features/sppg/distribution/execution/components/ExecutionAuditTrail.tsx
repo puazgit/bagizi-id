@@ -79,6 +79,13 @@ function getActionLabel(action: AuditAction): string {
     APPROVE_PLAN: 'Rencana Disetujui',
     REJECT_PLAN: 'Rencana Ditolak',
     PUBLISH_PLAN: 'Rencana Dipublikasikan',
+    CREATE_USER: 'Pengguna Dibuat',
+    UPDATE_USER: 'Pengguna Diperbarui',
+    DELETE_USER: 'Pengguna Dihapus',
+    CHANGE_PASSWORD: 'Password Diubah',
+    RESET_PASSWORD: 'Password Direset',
+    ACTIVATE_USER: 'Pengguna Diaktifkan',
+    DEACTIVATE_USER: 'Pengguna Dinonaktifkan',
   }
   return labels[action] || action
 }
