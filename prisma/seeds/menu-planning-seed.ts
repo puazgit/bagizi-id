@@ -65,15 +65,15 @@ export async function seedMenuPlanning(
     return
   }
 
-  // Get creator user (admin@sppg-purwakarta.com)
-  const adminUser = users.find(u => u.email === 'admin@sppg-purwakarta.com')
+  // Get creator user (admin@demo.sppg.id - from user-seed.ts)
+  const adminUser = users.find(u => u.email === 'admin@demo.sppg.id')
   if (!adminUser) {
     console.log('  ⚠️  Admin user for Purwakarta not found. Skipping.')
     return
   }
 
-  // Get approver user (kepala@sppg-purwakarta.com or same admin)
-  const kepalaUser = users.find(u => u.email === 'kepala@sppg-purwakarta.com')
+  // Get approver user (kepala@demo.sppg.id or same admin)
+  const kepalaUser = users.find(u => u.email === 'kepala@demo.sppg.id')
   const approverUser = kepalaUser || adminUser
 
   // Clean up existing data to avoid duplicates
