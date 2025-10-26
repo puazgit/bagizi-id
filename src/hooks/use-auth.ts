@@ -244,6 +244,9 @@ export function useAuth(): UseAuthReturn {
       case 'hrd':
         hasAccess = hasRole(['SPPG_KEPALA', 'SPPG_ADMIN', 'SPPG_HRD_MANAGER'])
         break
+      case 'users':
+        hasAccess = hasRole(['SPPG_KEPALA', 'SPPG_ADMIN', 'SPPG_HRD_MANAGER'])
+        break
       case 'reports':
         hasAccess = isSppgUser() && !hasRole('SPPG_STAFF_DAPUR')
         break
